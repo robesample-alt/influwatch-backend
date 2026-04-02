@@ -7,10 +7,10 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --maxsockets 1
 
 COPY . .
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=512" npm run build
 
 # ── Production image ──────────────────────────────────────
 FROM node:20-alpine AS runner
@@ -19,7 +19,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --maxsockets 1
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
