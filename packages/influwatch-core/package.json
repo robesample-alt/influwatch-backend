@@ -1,0 +1,19 @@
+{
+  "name": "@robesample-alt/influwatch-core",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Proprietary compliance detection logic for InfluWatch — Fundurex Phase 1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
