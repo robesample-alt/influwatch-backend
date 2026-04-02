@@ -1,30 +1,20 @@
 # ============================================================
 # FUNDUREX — INFLUWATCH PHASE 1
-# Dockerfile — production build
+# Dockerfile — production build (single-stage for low memory)
 # ============================================================
 
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --maxsockets 1
-
-COPY . .
-RUN NODE_OPTIONS="--max-old-space-size=512" npm run build
-
-# ── Production image ──────────────────────────────────────
-FROM node:20-alpine AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
 
 COPY package*.json ./
 RUN npm ci --omit=dev --maxsockets 1
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY prisma ./prisma
+RUN npx prisma generate
 
+COPY dist ./dist
+
+ENV NODE_ENV=production
 EXPOSE 3001
 
 CMD ["node", "dist/server.js"]
