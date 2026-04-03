@@ -19,6 +19,8 @@ export declare function getAmbassadorById(tenantId: string, id: string): Promise
     status: import(".prisma/client").$Enums.AmbassadorStatus;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
+    phylloUserId: string | null;
+    phylloAccountId: string | null;
 }) | null>;
 export declare function listAmbassadors(tenantId: string, status?: AmbassadorStatus): Promise<({
     assignedSupervisor: {
@@ -40,6 +42,8 @@ export declare function listAmbassadors(tenantId: string, status?: AmbassadorSta
     status: import(".prisma/client").$Enums.AmbassadorStatus;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
+    phylloUserId: string | null;
+    phylloAccountId: string | null;
 })[]>;
 /**
  * Full ambassador detail view — profile + all content records + derived counts.
@@ -66,6 +70,8 @@ export declare function getAmbassadorDetail(tenantId: string, id: string): Promi
         status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
         assignedSupervisorId: string | null;
+        phylloUserId: string | null;
+        phylloAccountId: string | null;
     };
     records: {
         id: string;
@@ -113,6 +119,8 @@ export declare function createAmbassador(tenantId: string, input: {
     status: import(".prisma/client").$Enums.AmbassadorStatus;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
+    phylloUserId: string | null;
+    phylloAccountId: string | null;
 }>;
 export declare function assignSupervisor(tenantId: string, id: string, supervisorId: string | null): Promise<{
     assignedSupervisor: {
@@ -134,6 +142,8 @@ export declare function assignSupervisor(tenantId: string, id: string, superviso
     status: import(".prisma/client").$Enums.AmbassadorStatus;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
+    phylloUserId: string | null;
+    phylloAccountId: string | null;
 }>;
 export declare function getCampaignById(tenantId: string, id: string): Promise<{
     tenantId: string;

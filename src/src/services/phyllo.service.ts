@@ -1,0 +1,144 @@
+// ============================================================
+// FUNDUREX — INFLUWATCH
+// Service — Phyllo Integration
+//
+// API client for Phyllo social content ingestion.
+// Handles: user creation, SDK token generation, content fetch,
+// and account linkage to AmbassadorProfile.
+// ============================================================
+
+import { withTenantContext } from '../utils/tenantContext';
+import logger from '../utils/logger';
+
+const PHYLLO_BASE_URL    = process.env.PHYLLO_BASE_URL || 'https://api.staging.getphyllo.com/v1';
+const PHYLLO_CLIENT_ID   = process.env.PHYLLO_CLIENT_ID || '';
+const PHYLLO_CLIENT_SECRET = process.env.PHYLLO_CLIENT_SECRET || '';
+
+function getAuthHeader(): string {
+  return 'Basic ' + Buffer.from(`${PHYLLO_CLIENT_ID}:${PHYLLO_CLIENT_SECRET}`).toString('base64');
+}
+
+async function phylloFetch(path: string, options: RequestInit = {}): Promise<any> {
+  const url = `${PHYLLO_BASE_URL}${path}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Authorization': getAuthHeader(),
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    logger.error({ status: res.status, body: text, path }, 'Phyllo API error');
+    throw new Error(`Phyllo API error (${res.status}): ${text.slice(0, 200)}`);
+  }
+
+  return res.json();
+}
+
+// ─────────────────────────────────────────
+// Create a Phyllo user for an ambassador
+// ─────────────────────────────────────────
+
+export async function createPhylloUser(tenantId: string, ambassadorId: string, displayName: string) {
+  const externalId = `${tenantId}-${ambassadorId}`;
+
+  const data = await phylloFetch('/users', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: displayName,
+      external_id: externalId,
+    }),
+  });
+
+  // Store the Phyllo user ID on the ambassador profile
+  await withTenantContext({ tenantId }, async (tx) => {
+    await tx.ambassadorProfile.update({
+      where: { id: ambassadorId },
+      data: { phylloUserId: data.id },
+    });
+  });
+
+  logger.info({ ambassadorId, phylloUserId: data.id }, 'Phyllo user created');
+  return data;
+}
+
+// ─────────────────────────────────────────
+// Generate an SDK token for the Connect widget
+// ─────────────────────────────────────────
+
+export async function createSdkToken(tenantId: string, ambassadorId: string) {
+  // Get the ambassador's Phyllo user ID
+  const ambassador = await withTenantContext({ tenantId }, async (tx) => {
+    return tx.ambassadorProfile.findFirst({
+      where: { id: ambassadorId, tenantId },
+      select: { phylloUserId: true, displayName: true },
+    });
+  });
+
+  if (!ambassador) {
+    throw new Error('Ambassador not found');
+  }
+
+  // Create Phyllo user if not yet linked
+  let phylloUserId = ambassador.phylloUserId;
+  if (!phylloUserId) {
+    const user = await createPhylloUser(tenantId, ambassadorId, ambassador.displayName);
+    phylloUserId = user.id;
+  }
+
+  const data = await phylloFetch('/sdk-tokens', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: phylloUserId,
+      products: ['IDENTITY', 'ENGAGEMENT', 'ACTIVITY'],
+    }),
+  });
+
+  return {
+    token: data.sdk_token,
+    phylloUserId,
+  };
+}
+
+// ─────────────────────────────────────────
+// Store a connected account ID on the ambassador
+// ─────────────────────────────────────────
+
+export async function linkPhylloAccount(tenantId: string, ambassadorId: string, phylloAccountId: string) {
+  await withTenantContext({ tenantId }, async (tx) => {
+    await tx.ambassadorProfile.update({
+      where: { id: ambassadorId },
+      data: { phylloAccountId },
+    });
+  });
+
+  logger.info({ ambassadorId, phylloAccountId }, 'Phyllo account linked');
+}
+
+// ─────────────────────────────────────────
+// Fetch content from Phyllo for a connected account
+// ─────────────────────────────────────────
+
+export async function fetchPhylloContent(phylloAccountId: string) {
+  const data = await phylloFetch(`/social/contents?account_id=${phylloAccountId}&limit=50`);
+  return data.data || [];
+}
+
+// ─────────────────────────────────────────
+// Look up an ambassador by Phyllo account ID
+// (used by the webhook handler)
+// ─────────────────────────────────────────
+
+export async function findAmbassadorByPhylloAccount(phylloAccountId: string) {
+  // This query needs system context since we don't know the tenant yet
+  const { withSystemContext } = require('../utils/tenantContext');
+  return withSystemContext('Phyllo webhook — resolve ambassador by account ID', async (tx: any) => {
+    return tx.ambassadorProfile.findFirst({
+      where: { phylloAccountId },
+      select: { id: true, tenantId: true, displayName: true, handle: true },
+    });
+  });
+}

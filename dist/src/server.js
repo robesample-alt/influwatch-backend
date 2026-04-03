@@ -3,6 +3,39 @@
 // FUNDUREX — INFLUWATCH PHASE 1 / PHASE 2
 // Server entry point
 // ============================================================
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -29,6 +62,7 @@ const preApproval_routes_1 = __importDefault(require("./routes/preApproval.route
 const ingest_routes_1 = __importDefault(require("./routes/ingest.routes"));
 const compensationStructure_routes_1 = __importDefault(require("./routes/compensationStructure.routes"));
 const affiliateLinks_routes_1 = __importDefault(require("./routes/affiliateLinks.routes"));
+const phyllo_routes_1 = __importStar(require("./routes/phyllo.routes"));
 const authenticate_1 = require("./middleware/authenticate");
 const tenantGuard_1 = require("./middleware/tenantGuard");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -64,6 +98,8 @@ app.use('/uploads', express_1.default.static(path_1.default.resolve(UPLOAD_DIR))
 app.get('/health', (_req, res) => res.json({ status: 'ok', module: 'influwatch', phase: 1 }));
 // ── Auth (open — no token required) ──────
 app.use('/api/influwatch/auth', rateLimiter_1.loginLimiter, auth_router_1.default);
+// ── Phyllo webhook (public — no JWT, verified by Phyllo) ──
+app.post('/api/influwatch/phyllo/webhook', phyllo_routes_1.phylloWebhookHandler);
 // ── Protected Routes ──────────────────────
 // All routes below require a valid JWT bearer token + tenant context.
 // tenantGuard sets app.tenant_id in PostgreSQL for RLS enforcement.
@@ -81,6 +117,7 @@ app.use('/api/influwatch/pre-approvals', authenticate_1.authenticate, tenantGuar
 app.use('/api/influwatch/ingest', authenticate_1.authenticate, tenantGuard_1.tenantGuard, ingest_routes_1.default);
 app.use('/api/influwatch/compensation-structures', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, compensationStructure_routes_1.default);
 app.use('/api/influwatch/affiliate-links', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, affiliateLinks_routes_1.default);
+app.use('/api/influwatch/phyllo', authenticate_1.authenticate, tenantGuard_1.tenantGuard, phyllo_routes_1.default);
 // ── Error handler (must be last) ──────────
 app.use(errorHandler_1.errorHandler);
 if (process.env.NODE_ENV !== 'test') {
