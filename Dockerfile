@@ -19,10 +19,9 @@ RUN npm ci --maxsockets 1 \
 # Copy pre-built dist
 COPY dist ./dist
 
-# Dummy DATABASE_URL so Prisma client can initialize at import time.
-# Railway injects the real value at runtime, which overrides this.
-ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 ENV NODE_ENV=production
 EXPOSE 3001
 
-CMD ["node", "dist/src/server.js"]
+# Use shell form so Railway-injected env vars are visible
+ENTRYPOINT ["sh", "-c"]
+CMD ["exec node dist/src/server.js"]
