@@ -1,0 +1,1 @@
+{"version":3,"file":"tenantPrisma.d.ts","sourceRoot":"","sources":["../../../src/utils/tenantPrisma.ts"],"names":[],"mappings":"AAgBA;;;;;;;;;;GAUG;AACH,wBAAgB,kBAAkB,CAAC,QAAQ,EAAE,MAAM;IAM/C,iEAAiE;mBAC5C,CAAC,MAAM,CAAC,EAAE,EAAE,GAAG,KAAK,OAAO,CAAC,CAAC,CAAC,KAAG,OAAO,CAAC,CAAC,CAAC;IAQhE,oCAAoC;;IASpC,sCAAsC;;;EAWzC"}
