@@ -35,6 +35,9 @@ const errorHandler_1 = require("./middleware/errorHandler");
 const rlsCheck_1 = require("./utils/rlsCheck");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
+// Trust proxy — required behind Render/Vercel/Cloudflare reverse proxies.
+// Without this, express-rate-limit throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set('trust proxy', 1);
 // ── Middleware ────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3001,http://localhost:5173,http://127.0.0.1:5500')
     .split(',')
