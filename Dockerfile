@@ -22,4 +22,4 @@ COPY dist ./dist
 ENV NODE_ENV=production
 EXPOSE 3001
 
-CMD ["node", "dist/src/server.js"]
+CMD ["sh", "-c", "echo DATABASE_URL=$DATABASE_URL | head -c 30 && echo '...' && node dist/src/server.js"]
