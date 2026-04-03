@@ -266,6 +266,10 @@ model AmbassadorProfile {
   assignedSupervisorId  String?
   assignedSupervisor    InternalActor?  @relation("SupervisedBy", fields: [assignedSupervisorId], references: [id], onDelete: SetNull)
 
+  // Phyllo social content ingestion
+  phylloUserId    String?           // Phyllo user ID for this promoter
+  phylloAccountId String?           // Phyllo connected account ID
+
   // Tenant
   tenantId        String
   tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -280,6 +284,7 @@ model AmbassadorProfile {
   @@index([handle])
   @@index([status])
   @@index([primaryPlatform])
+  @@index([phylloAccountId])
   @@index([assignedSupervisorId])
   @@map("ambassador_profiles")
 }
