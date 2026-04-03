@@ -11,12 +11,14 @@ RUN apt-get update && apt-get install -y openssl libssl1.1 && rm -rf /var/lib/ap
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 
+# Install all deps and generate Prisma client for Linux
 RUN npm ci --maxsockets 1 \
     && npx prisma generate --schema=./prisma/schema.prisma
 
+# Copy pre-built dist
 COPY dist ./dist
 
 ENV NODE_ENV=production
 EXPOSE 3001
 
-CMD node dist/src/server.js
+CMD ["node", "dist/src/server.js"]
