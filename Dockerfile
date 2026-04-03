@@ -3,14 +3,16 @@
 # Dockerfile — lightweight production build
 # ============================================================
 
-FROM node:20-alpine
+FROM node:20-bullseye-slim
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y openssl libssl1.1 && rm -rf /var/lib/apt/lists/*
 
 # Copy package.json, lock file, and prisma schema
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 
-# Install all deps (need prisma CLI), generate client for Linux, then prune
+# Install all deps, generate Prisma client for Linux, then prune
 RUN npm ci --maxsockets 1 \
     && npx prisma generate --schema=./prisma/schema.prisma \
     && npm prune --omit=dev
