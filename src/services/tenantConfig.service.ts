@@ -2,16 +2,13 @@
 // FUNDUREX — INFLUWATCH PHASE 1
 // Service — TenantConfig
 //
-// getConfig()    — returns TC-001, creates with defaults if absent
-// updateConfig() — updates TC-001 with provided fields
+// getConfig(tenantId)          — returns config, creates with defaults if absent
+// updateConfig(tenantId, input) — updates config with provided fields
 // ============================================================
 
-import prisma from '../utils/prisma';
-
-const TENANT_ID = 'TC-001';
+import { withTenantContext } from '../utils/tenantContext';
 
 const DEFAULT_CONFIG = {
-  firmName:                'Meridian Capital Partners',
   pollIntervalMinutes:     60,
   historicalBackfillDays:  30,
   authErrorAlertThreshold: 3,
@@ -30,15 +27,17 @@ const DEFAULT_CONFIG = {
 // ─────────────────────────────────────────
 
 /**
- * Return the single tenant config row (TC-001).
+ * Return the tenant config row for the given tenantId.
  * If it doesn't exist, creates it with defaults so the
  * app always has a valid config to read.
  */
-export async function getConfig() {
-  return prisma.tenantConfig.upsert({
-    where:  { id: TENANT_ID },
-    create: { id: TENANT_ID, ...DEFAULT_CONFIG },
-    update: {},
+export async function getConfig(tenantId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.tenantConfig.upsert({
+      where:  { tenantId },
+      create: { tenantId, ...DEFAULT_CONFIG },
+      update: {},
+    });
   });
 }
 
@@ -47,10 +46,6 @@ export async function getConfig() {
 // ─────────────────────────────────────────
 
 export interface UpdateConfigInput {
-  firmName?:                string;
-  crdNumber?:               string | null;
-  secRegistration?:         string | null;
-  primaryContact?:          string | null;
   pollIntervalMinutes?:     number;
   historicalBackfillDays?:  number;
   authErrorAlertThreshold?: number;
@@ -65,13 +60,15 @@ export interface UpdateConfigInput {
 }
 
 /**
- * Update TC-001 with the provided fields.
+ * Update the tenant config with the provided fields.
  * Only supplied fields are changed — all others are preserved.
  * Returns the full updated config record.
  */
-export async function updateConfig(input: UpdateConfigInput) {
-  return prisma.tenantConfig.update({
-    where: { id: TENANT_ID },
-    data:  input,
+export async function updateConfig(tenantId: string, input: UpdateConfigInput) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.tenantConfig.update({
+      where: { tenantId },
+      data:  input,
+    });
   });
 }

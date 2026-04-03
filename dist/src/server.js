@@ -30,7 +30,9 @@ const ingest_routes_1 = __importDefault(require("./routes/ingest.routes"));
 const compensationStructure_routes_1 = __importDefault(require("./routes/compensationStructure.routes"));
 const affiliateLinks_routes_1 = __importDefault(require("./routes/affiliateLinks.routes"));
 const authenticate_1 = require("./middleware/authenticate");
+const tenantGuard_1 = require("./middleware/tenantGuard");
 const errorHandler_1 = require("./middleware/errorHandler");
+const rlsCheck_1 = require("./utils/rlsCheck");
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
 // ── Middleware ────────────────────────────
@@ -60,27 +62,38 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', module: 'influwatch',
 // ── Auth (open — no token required) ──────
 app.use('/api/influwatch/auth', rateLimiter_1.loginLimiter, auth_router_1.default);
 // ── Protected Routes ──────────────────────
-// All routes below require a valid JWT bearer token.
-app.use('/api/influwatch/content-records', authenticate_1.authenticate, index_1.default);
-app.use('/api/influwatch/ambassadors', authenticate_1.authenticate, ambassador_router_1.default);
-app.use('/api/influwatch/internal-actors', authenticate_1.authenticate, internalActor_router_1.default);
-app.use('/api/influwatch/certifications', authenticate_1.authenticate, rateLimiter_1.writeLimiter, attestation_routes_1.default);
-app.use('/api/influwatch/config', authenticate_1.authenticate, tenantConfig_routes_1.default);
-app.use('/api/influwatch/contracts', authenticate_1.authenticate, rateLimiter_1.writeLimiter, contract_routes_1.default);
-app.use('/api/influwatch/legal-holds', authenticate_1.authenticate, rateLimiter_1.writeLimiter, legalHold_routes_1.default);
-app.use('/api/influwatch/program-certifications', authenticate_1.authenticate, rateLimiter_1.writeLimiter, programCert_routes_1.default);
-app.use('/api/influwatch/exports', authenticate_1.authenticate, rateLimiter_1.writeLimiter, evidenceExport_routes_1.default);
-app.use('/api/influwatch/tail-periods', authenticate_1.authenticate, tailPeriod_routes_1.default);
-app.use('/api/influwatch/pre-approvals', authenticate_1.authenticate, rateLimiter_1.writeLimiter, preApproval_routes_1.default);
-app.use('/api/influwatch/ingest', authenticate_1.authenticate, ingest_routes_1.default);
-app.use('/api/influwatch/compensation-structures', authenticate_1.authenticate, rateLimiter_1.writeLimiter, compensationStructure_routes_1.default);
-app.use('/api/influwatch/affiliate-links', authenticate_1.authenticate, rateLimiter_1.writeLimiter, affiliateLinks_routes_1.default);
+// All routes below require a valid JWT bearer token + tenant context.
+// tenantGuard sets app.tenant_id in PostgreSQL for RLS enforcement.
+app.use('/api/influwatch/content-records', authenticate_1.authenticate, tenantGuard_1.tenantGuard, index_1.default);
+app.use('/api/influwatch/ambassadors', authenticate_1.authenticate, tenantGuard_1.tenantGuard, ambassador_router_1.default);
+app.use('/api/influwatch/internal-actors', authenticate_1.authenticate, tenantGuard_1.tenantGuard, internalActor_router_1.default);
+app.use('/api/influwatch/certifications', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, attestation_routes_1.default);
+app.use('/api/influwatch/config', authenticate_1.authenticate, tenantGuard_1.tenantGuard, tenantConfig_routes_1.default);
+app.use('/api/influwatch/contracts', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, contract_routes_1.default);
+app.use('/api/influwatch/legal-holds', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, legalHold_routes_1.default);
+app.use('/api/influwatch/program-certifications', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, programCert_routes_1.default);
+app.use('/api/influwatch/exports', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, evidenceExport_routes_1.default);
+app.use('/api/influwatch/tail-periods', authenticate_1.authenticate, tenantGuard_1.tenantGuard, tailPeriod_routes_1.default);
+app.use('/api/influwatch/pre-approvals', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, preApproval_routes_1.default);
+app.use('/api/influwatch/ingest', authenticate_1.authenticate, tenantGuard_1.tenantGuard, ingest_routes_1.default);
+app.use('/api/influwatch/compensation-structures', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, compensationStructure_routes_1.default);
+app.use('/api/influwatch/affiliate-links', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, affiliateLinks_routes_1.default);
 // ── Error handler (must be last) ──────────
 app.use(errorHandler_1.errorHandler);
 if (process.env.NODE_ENV !== 'test') {
-    app.listen(PORT, () => {
-        logger_1.default.info(`FNDR InfluWatch Phase 1 — Listening on http://localhost:${PORT}`);
-        logger_1.default.info(`Health: http://localhost:${PORT}/health`);
+    (async () => {
+        // Verify RLS is enabled on all tenant-scoped tables before accepting traffic.
+        // Fails fast with a fatal error if any table is missing RLS.
+        if (process.env.SKIP_RLS_CHECK !== 'true') {
+            await (0, rlsCheck_1.verifyRls)();
+        }
+        app.listen(PORT, () => {
+            logger_1.default.info(`FNDR InfluWatch Phase 1 — Listening on http://localhost:${PORT}`);
+            logger_1.default.info(`Health: http://localhost:${PORT}/health`);
+        });
+    })().catch((err) => {
+        logger_1.default.fatal(err, 'Failed to start server');
+        process.exit(1);
     });
 }
 exports.default = app;

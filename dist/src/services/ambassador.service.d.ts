@@ -1,5 +1,5 @@
 import { AmbassadorStatus } from '@prisma/client';
-export declare function getAmbassadorById(id: string): Promise<({
+export declare function getAmbassadorById(tenantId: string, id: string): Promise<({
     assignedSupervisor: {
         id: string;
         displayName: string;
@@ -9,6 +9,7 @@ export declare function getAmbassadorById(id: string): Promise<({
         seriesLicense: string | null;
     } | null;
 } & {
+    tenantId: string;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -19,7 +20,7 @@ export declare function getAmbassadorById(id: string): Promise<({
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
 }) | null>;
-export declare function listAmbassadors(status?: AmbassadorStatus): Promise<({
+export declare function listAmbassadors(tenantId: string, status?: AmbassadorStatus): Promise<({
     assignedSupervisor: {
         id: string;
         displayName: string;
@@ -29,6 +30,7 @@ export declare function listAmbassadors(status?: AmbassadorStatus): Promise<({
         seriesLicense: string | null;
     } | null;
 } & {
+    tenantId: string;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -43,7 +45,7 @@ export declare function listAmbassadors(status?: AmbassadorStatus): Promise<({
  * Full ambassador detail view — profile + all content records + derived counts.
  * Used by the Promoter Detail screen (Phase 1).
  */
-export declare function getAmbassadorDetail(id: string): Promise<{
+export declare function getAmbassadorDetail(tenantId: string, id: string): Promise<{
     ambassador: {
         assignedSupervisor: {
             id: string;
@@ -54,6 +56,7 @@ export declare function getAmbassadorDetail(id: string): Promise<{
             seriesLicense: string | null;
         } | null;
     } & {
+        tenantId: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -84,7 +87,7 @@ export declare function getAmbassadorDetail(id: string): Promise<{
     highestSeverity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | null;
     openCount: number;
 } | null>;
-export declare function createAmbassador(input: {
+export declare function createAmbassador(tenantId: string, input: {
     displayName: string;
     handle: string;
     primaryPlatform: string;
@@ -100,6 +103,7 @@ export declare function createAmbassador(input: {
         seriesLicense: string | null;
     } | null;
 } & {
+    tenantId: string;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -110,7 +114,7 @@ export declare function createAmbassador(input: {
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
 }>;
-export declare function assignSupervisor(id: string, supervisorId: string | null): Promise<{
+export declare function assignSupervisor(tenantId: string, id: string, supervisorId: string | null): Promise<{
     assignedSupervisor: {
         id: string;
         displayName: string;
@@ -120,6 +124,7 @@ export declare function assignSupervisor(id: string, supervisorId: string | null
         seriesLicense: string | null;
     } | null;
 } & {
+    tenantId: string;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -130,7 +135,8 @@ export declare function assignSupervisor(id: string, supervisorId: string | null
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
 }>;
-export declare function getCampaignById(id: string): Promise<{
+export declare function getCampaignById(tenantId: string, id: string): Promise<{
+    tenantId: string;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -138,7 +144,8 @@ export declare function getCampaignById(id: string): Promise<{
     campaignName: string;
     campaignType: import(".prisma/client").$Enums.CampaignType;
 } | null>;
-export declare function listCampaigns(): Promise<{
+export declare function listCampaigns(tenantId: string): Promise<{
+    tenantId: string;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -158,7 +165,7 @@ export declare function listCampaigns(): Promise<{
  *
  * Summary totals included at the root level for the summary bar.
  */
-export declare function getMonitorSummary(): Promise<{
+export declare function getMonitorSummary(tenantId: string): Promise<{
     summary: {
         total: number;
         active: number;

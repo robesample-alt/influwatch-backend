@@ -20,7 +20,8 @@ export async function listAmbassadors(
   next: NextFunction
 ) {
   try {
-    const ambassadors = await AmbassadorService.listAmbassadors();
+    const tenantId = req.user!.tenantId;
+    const ambassadors = await AmbassadorService.listAmbassadors(tenantId);
     return res.status(200).json(ambassadors);
   } catch (err) {
     next(err);
@@ -39,6 +40,7 @@ export async function createAmbassador(
   next: NextFunction
 ) {
   try {
+    const tenantId = req.user!.tenantId;
     const { displayName, handle, primaryPlatform, riskTier, assignedSupervisorId } = req.body;
 
     if (!displayName || !handle || !primaryPlatform) {
@@ -47,7 +49,7 @@ export async function createAmbassador(
       });
     }
 
-    const ambassador = await AmbassadorService.createAmbassador({
+    const ambassador = await AmbassadorService.createAmbassador(tenantId, {
       displayName,
       handle,
       primaryPlatform,
@@ -74,6 +76,7 @@ export async function updateAssignment(
   next: NextFunction
 ) {
   try {
+    const tenantId = req.user!.tenantId;
     const { id }                 = req.params;
     const { assignedSupervisorId } = req.body;
 
@@ -83,7 +86,7 @@ export async function updateAssignment(
       });
     }
 
-    const ambassador = await AmbassadorService.assignSupervisor(id, assignedSupervisorId);
+    const ambassador = await AmbassadorService.assignSupervisor(tenantId, id, assignedSupervisorId);
     return res.status(200).json(ambassador);
   } catch (err) {
     next(err);
@@ -103,7 +106,8 @@ export async function getMonitorSummary(
   next: NextFunction
 ) {
   try {
-    const data = await AmbassadorService.getMonitorSummary();
+    const tenantId = req.user!.tenantId;
+    const data = await AmbassadorService.getMonitorSummary(tenantId);
     return res.status(200).json(data);
   } catch (err) {
     next(err);
@@ -122,7 +126,8 @@ export async function getAmbassadorDetail(
   next: NextFunction
 ) {
   try {
-    const detail = await AmbassadorService.getAmbassadorDetail(req.params.id);
+    const tenantId = req.user!.tenantId;
+    const detail = await AmbassadorService.getAmbassadorDetail(tenantId, req.params.id);
     if (!detail) {
       return res.status(404).json({ error: 'Ambassador not found', id: req.params.id });
     }

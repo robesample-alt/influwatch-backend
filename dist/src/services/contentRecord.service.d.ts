@@ -5,27 +5,28 @@ import type { CreateContentRecordInput, ContentRecordFilters, UpdateArchiveStatu
  * Scans bodyText for risky promotional phrases — sets PENDING_REVIEW if found.
  * Appends RECORD_CREATED event automatically.
  */
-export declare function createContentRecord(input: CreateContentRecordInput): Promise<ContentRecordResponse>;
+export declare function createContentRecord(tenantId: string, input: CreateContentRecordInput): Promise<ContentRecordResponse>;
 /**
  * List archived content records with optional filters.
  * Supports: ambassadorId, campaignId, sourcePlatform, archiveStatus.
  * Returns paginated result set.
  */
-export declare function listContentRecords(filters: ContentRecordFilters): Promise<PaginatedResponse<ContentRecordResponse>>;
+export declare function listContentRecords(tenantId: string, filters: ContentRecordFilters): Promise<PaginatedResponse<ContentRecordResponse>>;
 /**
  * Retrieve a single content record by ID.
  * Returns null if not found.
  */
-export declare function getContentRecordById(id: string): Promise<ContentRecordResponse | null>;
+export declare function getContentRecordById(tenantId: string, id: string): Promise<ContentRecordResponse | null>;
 /**
  * Transition a record to a new archive status.
  * Automatically appends a STATUS_CHANGED event to the audit log.
  */
-export declare function updateArchiveStatus(id: string, input: UpdateArchiveStatusInput): Promise<ContentRecordResponse>;
+export declare function updateArchiveStatus(tenantId: string, id: string, input: UpdateArchiveStatusInput): Promise<ContentRecordResponse>;
 /**
  * Get all media assets attached to a content record.
  */
-export declare function getMediaAssets(contentRecordId: string): Promise<{
+export declare function getMediaAssets(tenantId: string, contentRecordId: string): Promise<{
+    tenantId: string;
     id: string;
     createdAt: Date;
     contentRecordId: string;
@@ -38,12 +39,13 @@ export declare function getMediaAssets(contentRecordId: string): Promise<{
  * Attach a media asset to a content record.
  * Appends MEDIA_ATTACHED event to the audit log.
  */
-export declare function attachMediaAsset(contentRecordId: string, input: {
+export declare function attachMediaAsset(tenantId: string, contentRecordId: string, input: {
     assetType: string;
     assetUrl: string;
     mimeType?: string;
     durationSeconds?: number;
 }): Promise<{
+    tenantId: string;
     id: string;
     createdAt: Date;
     contentRecordId: string;
@@ -57,38 +59,32 @@ export declare function attachMediaAsset(contentRecordId: string, input: {
  * This is the ONLY write path for ArchiveEventLog.
  * Never update or delete event log rows.
  */
-export declare function appendEvent(input: AppendEventInput): Promise<{
-    id: string;
-    createdAt: Date;
-    eventType: import(".prisma/client").$Enums.ArchiveEventType;
-    eventNote: string | null;
-    actorId: string | null;
-    contentRecordId: string;
-}>;
+export declare function appendEvent(tenantId: string, input: AppendEventInput): Promise<any>;
 /**
  * Get the full audit event log for a content record.
  * Always ordered chronologically ascending.
  */
-export declare function getEventLog(contentRecordId: string): Promise<{
+export declare function getEventLog(tenantId: string, contentRecordId: string): Promise<{
+    tenantId: string;
     id: string;
     createdAt: Date;
+    contentRecordId: string;
     eventType: import(".prisma/client").$Enums.ArchiveEventType;
     eventNote: string | null;
     actorId: string | null;
-    contentRecordId: string;
 }[]>;
 /**
  * Record a compliance decision against a content record.
  * Updates archiveStatus and appends an immutable audit event in one operation.
  */
-export declare function recordComplianceAction(contentRecordId: string, input: RecordComplianceActionInput): Promise<ContentRecordResponse>;
+export declare function recordComplianceAction(tenantId: string, contentRecordId: string, input: RecordComplianceActionInput): Promise<ContentRecordResponse>;
 /**
  * Return content records that have had a REQUEST_EDIT or WARN_PROMOTER
  * compliance action recorded against them.
  * Each result is enriched with the most recent remediation event details.
  * Source of truth: ArchiveEventLog — no new table required.
  */
-export declare function getRemediationRecords(): Promise<{
+export declare function getRemediationRecords(tenantId: string): Promise<{
     latestAction: import(".prisma/client").$Enums.ArchiveEventType | null;
     latestActionNote: string | null;
     latestActionAt: Date | null;
@@ -105,11 +101,9 @@ export declare function getRemediationRecords(): Promise<{
         primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
         status: import(".prisma/client").$Enums.AmbassadorStatus;
     };
+    tenantId: string;
     hasAffiliateLink: boolean;
     id: string;
-    campaignId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
     sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
     contentType: import(".prisma/client").$Enums.ContentType;
     sourceUrl: string;
@@ -123,7 +117,10 @@ export declare function getRemediationRecords(): Promise<{
     severity: import(".prisma/client").$Enums.Severity | null;
     checksum: string | null;
     compensationPosture: string | null;
+    createdAt: Date;
+    updatedAt: Date;
     ambassadorId: string;
+    campaignId: string | null;
 }[]>;
 /**
  * Return content records that have received a formal supervisory sign-off
@@ -135,49 +132,13 @@ export declare function getRemediationRecords(): Promise<{
  * Records with archiveStatus = CLOSED but no COMPLIANCE_CERTIFIED event
  * (i.e. routine APPROVE closures) are excluded. No new table required.
  */
-export declare function getCertifiedRecords(): Promise<{
-    certifiedAt: Date;
-    certifiedNote: string;
-    certifiedBy: string | null;
-    campaign: {
-        id: string;
-        status: import(".prisma/client").$Enums.CampaignStatus;
-        campaignName: string;
-        campaignType: import(".prisma/client").$Enums.CampaignType;
-    } | null;
-    ambassador: {
-        id: string;
-        displayName: string;
-        handle: string;
-        primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
-    };
-    hasAffiliateLink: boolean;
-    id: string;
-    campaignId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
-    contentType: import(".prisma/client").$Enums.ContentType;
-    sourceUrl: string;
-    externalContentId: string | null;
-    title: string | null;
-    bodyText: string;
-    transcriptText: string | null;
-    postedAt: Date | null;
-    capturedAt: Date;
-    archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
-    severity: import(".prisma/client").$Enums.Severity | null;
-    checksum: string | null;
-    compensationPosture: string | null;
-    ambassadorId: string;
-}[]>;
+export declare function getCertifiedRecords(tenantId: string): Promise<any[]>;
 /**
  * Return a paginated, newest-first list of all ArchiveEventLog rows
  * across every content record. Powers the global Audit Log screen.
  * Optionally filtered by category (capture / decision / escalation / config).
  */
-export declare function listAuditEvents(options: {
+export declare function listAuditEvents(tenantId: string, options: {
     page?: number;
     pageSize?: number;
     category?: string;
@@ -191,12 +152,13 @@ export declare function listAuditEvents(options: {
             };
         };
     } & {
+        tenantId: string;
         id: string;
         createdAt: Date;
+        contentRecordId: string;
         eventType: import(".prisma/client").$Enums.ArchiveEventType;
         eventNote: string | null;
         actorId: string | null;
-        contentRecordId: string;
     })[];
     total: number;
     page: number;
@@ -207,7 +169,7 @@ export declare function listAuditEvents(options: {
  * Return all active content records (PENDING_REVIEW or ESCALATED)
  * whose SLA deadline has passed, sorted most overdue first.
  */
-export declare function getSlaBreachedRecords(): Promise<{
+export declare function getSlaBreachedRecords(tenantId: string): Promise<{
     slaDeadline: Date;
     slaHoursRemaining: number | null;
     slaBreached: boolean;
@@ -225,20 +187,19 @@ export declare function getSlaBreachedRecords(): Promise<{
         status: import(".prisma/client").$Enums.AmbassadorStatus;
     };
     detectionRecords: {
+        tenantId: string;
         id: string;
-        createdAt: Date;
         severity: import(".prisma/client").$Enums.Severity;
+        createdAt: Date;
         contentRecordId: string;
         ruleCode: string;
         ruleName: string;
         matchedPhrase: string | null;
         detectionMethod: import(".prisma/client").$Enums.DetectionMethod;
     }[];
+    tenantId: string;
     hasAffiliateLink: boolean;
     id: string;
-    campaignId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
     sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
     contentType: import(".prisma/client").$Enums.ContentType;
     sourceUrl: string;
@@ -252,7 +213,10 @@ export declare function getSlaBreachedRecords(): Promise<{
     severity: import(".prisma/client").$Enums.Severity | null;
     checksum: string | null;
     compensationPosture: string | null;
+    createdAt: Date;
+    updatedAt: Date;
     ambassadorId: string;
+    campaignId: string | null;
 }[]>;
 /**
  * Return all detection records whose ruleCode starts with 'DISC-'.
@@ -264,28 +228,28 @@ export declare function getSlaBreachedRecords(): Promise<{
  *   archiveStatus — filter by content record archive status
  *   ambassadorId  — filter to a single promoter's records
  */
-export declare function listDisclosureFlags(options: {
+export declare function listDisclosureFlags(tenantId: string, options: {
     archiveStatus?: string;
     ambassadorId?: string;
 }): Promise<{
-    detectionRecordId: string;
-    ruleCode: string;
-    ruleName: string;
-    matchedPhrase: string | null;
-    severity: import(".prisma/client").$Enums.Severity;
-    detectionMethod: import(".prisma/client").$Enums.DetectionMethod;
-    createdAt: Date;
+    detectionRecordId: any;
+    ruleCode: any;
+    ruleName: any;
+    matchedPhrase: any;
+    severity: any;
+    detectionMethod: any;
+    createdAt: any;
     contentRecord: {
-        id: string;
-        ambassadorId: string;
-        sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
-        capturedAt: Date;
-        archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
-        bodyTextPreview: string;
+        id: any;
+        ambassadorId: any;
+        sourcePlatform: any;
+        capturedAt: any;
+        archiveStatus: any;
+        bodyTextPreview: any;
     };
     ambassador: {
-        displayName: string;
-        handle: string;
+        displayName: any;
+        handle: any;
     };
 }[]>;
 /**
@@ -301,38 +265,30 @@ export declare function listDisclosureFlags(options: {
  *   ambassadorId — filter to a single promoter
  *   outcome      — 'SATISFIED' | 'NOT_SATISFIED'
  */
-export declare function listDisclosureLog(options: {
+export declare function listDisclosureLog(tenantId: string, options: {
     ambassadorId?: string;
     outcome?: string;
 }): Promise<{
-    id: string;
-    ambassadorId: string;
+    id: any;
+    ambassadorId: any;
     ambassador: {
-        displayName: string;
-        handle: string;
+        displayName: any;
+        handle: any;
     };
-    sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
-    capturedAt: Date;
-    archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
-    bodyTextPreview: string;
-    checksum: string | null;
+    sourcePlatform: any;
+    capturedAt: any;
+    archiveStatus: any;
+    bodyTextPreview: any;
+    checksum: any;
     disclosureOutcome: "SATISFIED" | "NOT_SATISFIED";
-    disclosureHits: {
-        id: string;
-        createdAt: Date;
-        severity: import(".prisma/client").$Enums.Severity;
-        ruleCode: string;
-        ruleName: string;
-        matchedPhrase: string | null;
-        detectionMethod: import(".prisma/client").$Enums.DetectionMethod;
-    }[];
+    disclosureHits: any;
 }[]>;
 /**
  * Check whether a content record with this checksum
  * already exists in the archive.
  * Used at ingestion to prevent duplicate captures.
  */
-export declare function findByChecksum(checksum: string): Promise<{
+export declare function findByChecksum(tenantId: string, checksum: string): Promise<{
     id: string;
     capturedAt: Date;
     ambassadorId: string;

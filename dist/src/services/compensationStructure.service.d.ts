@@ -17,42 +17,24 @@ export type CreateCompensationStructureInput = {
  * If the computed supervisionPosture differs from the promoter's most
  * recent existing structure, a CompensationEvent is written to the audit log.
  */
-export declare function createCompensationStructure(input: CreateCompensationStructureInput): Promise<{
-    ambassador: {
-        id: string;
-        displayName: string;
-        handle: string;
-        primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
-    } | null;
+export declare function createCompensationStructure(tenantId: string, input: CreateCompensationStructureInput): Promise<{
+    ambassador: any;
     promoterId: string;
 }>;
 /**
  * Return the most recent CompensationStructure for a promoter.
  * Returns null if none exists.
  */
-export declare function getCompensationStructure(promoterId: string): Promise<{
-    ambassador: {
-        id: string;
-        displayName: string;
-        handle: string;
-        primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
-    } | null;
+export declare function getCompensationStructure(tenantId: string, promoterId: string): Promise<{
+    ambassador: any;
     promoterId: string;
 } | null>;
 /**
  * Return all CompensationStructures, newest first.
  * Includes ambassador profile for each record.
  */
-export declare function listCompensationStructures(): Promise<{
-    ambassador: {
-        id: string;
-        displayName: string;
-        handle: string;
-        primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
-    } | null;
+export declare function listCompensationStructures(tenantId: string): Promise<{
+    ambassador: any;
     promoterId: string;
 }[]>;
 //# sourceMappingURL=compensationStructure.service.d.ts.map

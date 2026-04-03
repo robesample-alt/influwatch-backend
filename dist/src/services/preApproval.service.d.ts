@@ -7,7 +7,7 @@ export { VALID_STATUSES };
  * List all pre-approval requests, newest first.
  * Optionally filter by status.
  */
-export declare function listRequests(status?: string): Promise<({
+export declare function listRequests(tenantId: string, status?: string): Promise<({
     ambassador: {
         id: string;
         displayName: string;
@@ -22,10 +22,11 @@ export declare function listRequests(status?: string): Promise<({
         role: import(".prisma/client").$Enums.InternalActorRole;
     } | null;
 } & {
+    tenantId: string;
     id: string;
+    contentType: string;
     createdAt: Date;
     updatedAt: Date;
-    contentType: string;
     ambassadorId: string;
     status: string;
     decision: string | null;
@@ -51,7 +52,7 @@ export interface CreateRequestInput {
 /**
  * Submit a new pre-approval request.
  */
-export declare function createRequest(input: CreateRequestInput): Promise<{
+export declare function createRequest(tenantId: string, input: CreateRequestInput): Promise<{
     ambassador: {
         id: string;
         displayName: string;
@@ -66,10 +67,11 @@ export declare function createRequest(input: CreateRequestInput): Promise<{
         role: import(".prisma/client").$Enums.InternalActorRole;
     } | null;
 } & {
+    tenantId: string;
     id: string;
+    contentType: string;
     createdAt: Date;
     updatedAt: Date;
-    contentType: string;
     ambassadorId: string;
     status: string;
     decision: string | null;
@@ -86,7 +88,7 @@ export declare function createRequest(input: CreateRequestInput): Promise<{
  * Record a decision on a pre-approval request.
  * Returns null if the request is not found.
  */
-export declare function decideRequest(id: string, decision: string, decidedBy: string, status: DecisionStatus): Promise<({
+export declare function decideRequest(tenantId: string, id: string, decision: string, decidedBy: string, status: DecisionStatus): Promise<({
     ambassador: {
         id: string;
         displayName: string;
@@ -101,10 +103,11 @@ export declare function decideRequest(id: string, decision: string, decidedBy: s
         role: import(".prisma/client").$Enums.InternalActorRole;
     } | null;
 } & {
+    tenantId: string;
     id: string;
+    contentType: string;
     createdAt: Date;
     updatedAt: Date;
-    contentType: string;
     ambassadorId: string;
     status: string;
     decision: string | null;

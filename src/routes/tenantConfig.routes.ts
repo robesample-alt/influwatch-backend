@@ -16,13 +16,14 @@ const router = Router();
 // ─────────────────────────────────────────
 // GET /config
 //
-// Returns the single tenant config record (TC-001).
+// Returns the tenant config record for the current tenant.
 // Creates it with defaults if it doesn't exist.
 // ─────────────────────────────────────────
 
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const config = await TenantConfigService.getConfig();
+    const tenantId = req.user!.tenantId;
+    const config = await TenantConfigService.getConfig(tenantId);
     return res.status(200).json(config);
   } catch (err) {
     next(err);
@@ -56,6 +57,8 @@ router.patch('/', requireRole(InternalActorRole.TENANT_ADMIN), async (req: Reque
       retentionYears,
       objectLockMode,
     } = req.body;
+
+    const tenantId = req.user!.tenantId;
 
     // Reject empty PATCH
     if (Object.keys(req.body).length === 0) {
@@ -100,7 +103,7 @@ router.patch('/', requireRole(InternalActorRole.TENANT_ADMIN), async (req: Reque
       ...(objectLockMode          !== undefined ? { objectLockMode }          : {}),
     };
 
-    const updated = await TenantConfigService.updateConfig(input);
+    const updated = await TenantConfigService.updateConfig(tenantId, input);
     return res.status(200).json(updated);
   } catch (err) {
     next(err);

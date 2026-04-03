@@ -2,7 +2,8 @@
  * List all legal holds, newest first.
  * Optionally filtered by status (e.g. 'ACTIVE', 'RELEASED').
  */
-export declare function listHolds(status?: string): Promise<{
+export declare function listHolds(tenantId: string, status?: string): Promise<{
+    tenantId: string;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -33,7 +34,8 @@ export interface CreateHoldInput {
 /**
  * Create a new legal hold record.
  */
-export declare function createHold(input: CreateHoldInput): Promise<{
+export declare function createHold(tenantId: string, input: CreateHoldInput): Promise<{
+    tenantId: string;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -55,7 +57,8 @@ export declare function createHold(input: CreateHoldInput): Promise<{
  * and recording who released it and why.
  * Returns null if the hold does not exist.
  */
-export declare function releaseHold(id: string, releasedBy: string, releaseReason: string): Promise<{
+export declare function releaseHold(tenantId: string, id: string, releasedBy: string, releaseReason: string): Promise<{
+    tenantId: string;
     id: string;
     createdAt: Date;
     updatedAt: Date;

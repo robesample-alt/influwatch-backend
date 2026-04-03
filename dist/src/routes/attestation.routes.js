@@ -54,6 +54,7 @@ const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
 router.post('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.REGISTERED_PRINCIPAL, client_1.InternalActorRole.DESIGNATED_SUPERVISOR, client_1.InternalActorRole.TENANT_ADMIN), async (req, res, next) => {
     try {
+        const tenantId = req.user.tenantId;
         const { periodLabel, periodStart, periodEnd, promotersInScope, supervisoryNote } = req.body;
         const principalId = req.user.id;
         if (!periodLabel)
@@ -64,7 +65,7 @@ router.post('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.REGIS
             return res.status(400).json({ error: 'periodEnd is required' });
         if (promotersInScope == null)
             return res.status(400).json({ error: 'promotersInScope is required' });
-        const attestation = await AttestationService.createAttestation({
+        const attestation = await AttestationService.createAttestation(tenantId, {
             principalId,
             periodLabel,
             periodStart: new Date(periodStart),
@@ -86,8 +87,9 @@ router.post('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.REGIS
 // ─────────────────────────────────────────
 router.get('/', async (req, res, next) => {
     try {
+        const tenantId = req.user.tenantId;
         const period = req.query.period;
-        const attestations = await AttestationService.listAttestations(period);
+        const attestations = await AttestationService.listAttestations(tenantId, period);
         return res.status(200).json({ count: attestations.length, attestations });
     }
     catch (err) {

@@ -95,6 +95,7 @@ router.post(
 
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const tenantId = req.user!.tenantId;
       const { ambassadorId, platform } = req.body;
       const actorId = (req as any).user?.id ?? 'SYSTEM';
 
@@ -132,7 +133,7 @@ router.post(
       }
 
       // ── Create content record (runs full detection pipeline) ──
-      const record = await ContentService.createContentRecord({
+      const record = await ContentService.createContentRecord(tenantId, {
         ambassadorId,
         sourcePlatform:  platform as any,
         contentType:     'VIDEO',
@@ -143,7 +144,7 @@ router.post(
 
       // ── Evidence chain: transcript generated ───────────
       const wordCount = transcript.split(/\s+/).filter(Boolean).length;
-      await ContentService.appendEvent({
+      await ContentService.appendEvent(tenantId, {
         contentRecordId: record.id,
         eventType:       ArchiveEventType.NOTE_ADDED,
         eventNote:
@@ -154,7 +155,7 @@ router.post(
       });
 
       // ── Attach video as media asset ─────────────────────
-      await ContentService.attachMediaAsset(record.id, {
+      await ContentService.attachMediaAsset(tenantId, record.id, {
         assetType: 'VIDEO_FILE',
         assetUrl:  servedUrl,
         mimeType:  req.file.mimetype,

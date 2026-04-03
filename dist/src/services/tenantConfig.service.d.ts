@@ -1,15 +1,12 @@
 /**
- * Return the single tenant config row (TC-001).
+ * Return the tenant config row for the given tenantId.
  * If it doesn't exist, creates it with defaults so the
  * app always has a valid config to read.
  */
-export declare function getConfig(): Promise<{
+export declare function getConfig(tenantId: string): Promise<{
+    tenantId: string;
     id: string;
     updatedAt: Date;
-    firmName: string;
-    crdNumber: string | null;
-    secRegistration: string | null;
-    primaryContact: string | null;
     pollIntervalMinutes: number;
     historicalBackfillDays: number;
     authErrorAlertThreshold: number;
@@ -23,10 +20,6 @@ export declare function getConfig(): Promise<{
     objectLockMode: string;
 }>;
 export interface UpdateConfigInput {
-    firmName?: string;
-    crdNumber?: string | null;
-    secRegistration?: string | null;
-    primaryContact?: string | null;
     pollIntervalMinutes?: number;
     historicalBackfillDays?: number;
     authErrorAlertThreshold?: number;
@@ -40,17 +33,14 @@ export interface UpdateConfigInput {
     objectLockMode?: string;
 }
 /**
- * Update TC-001 with the provided fields.
+ * Update the tenant config with the provided fields.
  * Only supplied fields are changed — all others are preserved.
  * Returns the full updated config record.
  */
-export declare function updateConfig(input: UpdateConfigInput): Promise<{
+export declare function updateConfig(tenantId: string, input: UpdateConfigInput): Promise<{
+    tenantId: string;
     id: string;
     updatedAt: Date;
-    firmName: string;
-    crdNumber: string | null;
-    secRegistration: string | null;
-    primaryContact: string | null;
     pollIntervalMinutes: number;
     historicalBackfillDays: number;
     authErrorAlertThreshold: number;

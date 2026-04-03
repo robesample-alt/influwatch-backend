@@ -3,10 +3,11 @@ export type ExportType = typeof VALID_EXPORT_TYPES[number];
 /**
  * List all evidence exports, newest first.
  */
-export declare function listExports(): Promise<{
+export declare function listExports(tenantId: string): Promise<{
+    tenantId: string;
     id: string;
-    notes: string | null;
     ambassadorId: string | null;
+    notes: string | null;
     status: string;
     exportType: string;
     generatedBy: string;
@@ -31,10 +32,11 @@ export interface GenerateExportInput {
  * (type + generatedBy + timestamp + scope) so the record is
  * tamper-evident without requiring the actual file payload.
  */
-export declare function generateExport(input: GenerateExportInput): Promise<{
+export declare function generateExport(tenantId: string, input: GenerateExportInput): Promise<{
+    tenantId: string;
     id: string;
-    notes: string | null;
     ambassadorId: string | null;
+    notes: string | null;
     status: string;
     exportType: string;
     generatedBy: string;

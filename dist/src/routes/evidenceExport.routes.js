@@ -52,7 +52,8 @@ const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
 router.get('/', async (req, res, next) => {
     try {
-        const exports = await EvidenceExportService.listExports();
+        const tenantId = req.user.tenantId;
+        const exports = await EvidenceExportService.listExports(tenantId);
         return res.status(200).json({ count: exports.length, exports });
     }
     catch (err) {
@@ -70,6 +71,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.COMPLIANCE_OFFICER, client_1.InternalActorRole.REGISTERED_PRINCIPAL, client_1.InternalActorRole.TENANT_ADMIN), async (req, res, next) => {
     try {
         const { exportType, dateRangeStart, dateRangeEnd, ambassadorId, recordCount, notes, } = req.body;
+        const tenantId = req.user.tenantId;
         const generatedBy = req.user.id;
         if (!exportType)
             return res.status(400).json({ error: 'exportType is required' });
@@ -79,7 +81,7 @@ router.post('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.COMPL
                 validValues: [...EvidenceExportService.VALID_EXPORT_TYPES],
             });
         }
-        const record = await EvidenceExportService.generateExport({
+        const record = await EvidenceExportService.generateExport(tenantId, {
             exportType,
             generatedBy,
             dateRangeStart: dateRangeStart ? new Date(dateRangeStart) : null,

@@ -7,7 +7,7 @@
 // to their respective modules in later phases.
 // ============================================================
 
-import prisma from '../utils/prisma';
+import { withTenantContext } from '../utils/tenantContext';
 import { AmbassadorStatus, SourcePlatform, PromoterRiskTier } from '@prisma/client';
 import { validateCreateAmbassador } from '../utils/validation';
 
@@ -26,18 +26,22 @@ const SUPERVISOR_INCLUDE = {
 // AMBASSADOR
 // ─────────────────────────────────────────
 
-export async function getAmbassadorById(id: string) {
-  return prisma.ambassadorProfile.findUnique({
-    where:   { id },
-    include: { assignedSupervisor: SUPERVISOR_INCLUDE },
+export async function getAmbassadorById(tenantId: string, id: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.ambassadorProfile.findFirst({
+      where:   { id, tenantId },
+      include: { assignedSupervisor: SUPERVISOR_INCLUDE },
+    });
   });
 }
 
-export async function listAmbassadors(status?: AmbassadorStatus) {
-  return prisma.ambassadorProfile.findMany({
-    where:   status ? { status } : {},
-    include: { assignedSupervisor: SUPERVISOR_INCLUDE },
-    orderBy: { displayName: 'asc' },
+export async function listAmbassadors(tenantId: string, status?: AmbassadorStatus) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.ambassadorProfile.findMany({
+      where:   { tenantId, ...(status ? { status } : {}) },
+      include: { assignedSupervisor: SUPERVISOR_INCLUDE },
+      orderBy: { displayName: 'asc' },
+    });
   });
 }
 
@@ -45,52 +49,54 @@ export async function listAmbassadors(status?: AmbassadorStatus) {
  * Full ambassador detail view — profile + all content records + derived counts.
  * Used by the Promoter Detail screen (Phase 1).
  */
-export async function getAmbassadorDetail(id: string) {
-  const [ambassador, records] = await Promise.all([
-    prisma.ambassadorProfile.findUnique({
-      where:   { id },
-      include: { assignedSupervisor: SUPERVISOR_INCLUDE },
-    }),
-    prisma.contentRecord.findMany({
-      where:    { ambassadorId: id },
-      orderBy:  { capturedAt: 'desc' },
-      select: {
-        id:            true,
-        archiveStatus: true,
-        severity:      true,
-        sourcePlatform: true,
-        capturedAt:    true,
-        checksum:      true,
-        sourceUrl:     true,
-      },
-    }),
-  ]);
+export async function getAmbassadorDetail(tenantId: string, id: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [ambassador, records] = await Promise.all([
+      tx.ambassadorProfile.findFirst({
+        where:   { id, tenantId },
+        include: { assignedSupervisor: SUPERVISOR_INCLUDE },
+      }),
+      tx.contentRecord.findMany({
+        where:    { ambassadorId: id, tenantId },
+        orderBy:  { capturedAt: 'desc' },
+        select: {
+          id:            true,
+          archiveStatus: true,
+          severity:      true,
+          sourcePlatform: true,
+          capturedAt:    true,
+          checksum:      true,
+          sourceUrl:     true,
+        },
+      }),
+    ]);
 
-  if (!ambassador) return null;
+    if (!ambassador) return null;
 
-  const statusCounts = { total: 0, captured: 0, pending: 0, reviewed: 0, escalated: 0, closed: 0 };
-  for (const r of records) {
-    statusCounts.total++;
-    if      (r.archiveStatus === 'CAPTURED')       statusCounts.captured++;
-    else if (r.archiveStatus === 'PENDING_REVIEW') statusCounts.pending++;
-    else if (r.archiveStatus === 'REVIEWED')       statusCounts.reviewed++;
-    else if (r.archiveStatus === 'ESCALATED')      statusCounts.escalated++;
-    else if (r.archiveStatus === 'CLOSED')         statusCounts.closed++;
-  }
+    const statusCounts = { total: 0, captured: 0, pending: 0, reviewed: 0, escalated: 0, closed: 0 };
+    for (const r of records) {
+      statusCounts.total++;
+      if      (r.archiveStatus === 'CAPTURED')       statusCounts.captured++;
+      else if (r.archiveStatus === 'PENDING_REVIEW') statusCounts.pending++;
+      else if (r.archiveStatus === 'REVIEWED')       statusCounts.reviewed++;
+      else if (r.archiveStatus === 'ESCALATED')      statusCounts.escalated++;
+      else if (r.archiveStatus === 'CLOSED')         statusCounts.closed++;
+    }
 
-  const SEVERITY_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
-  const activeSevs = records
-    .filter(r => r.archiveStatus !== 'CLOSED')
-    .map(r => r.severity)
-    .filter(Boolean) as string[];
-  const highestSeverity = SEVERITY_ORDER.find(s => activeSevs.includes(s)) ?? null;
+    const SEVERITY_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
+    const activeSevs = records
+      .filter(r => r.archiveStatus !== 'CLOSED')
+      .map(r => r.severity)
+      .filter(Boolean) as string[];
+    const highestSeverity = SEVERITY_ORDER.find(s => activeSevs.includes(s)) ?? null;
 
-  const openCount = statusCounts.pending + statusCounts.reviewed + statusCounts.escalated;
+    const openCount = statusCounts.pending + statusCounts.reviewed + statusCounts.escalated;
 
-  return { ambassador, records, statusCounts, highestSeverity, openCount };
+    return { ambassador, records, statusCounts, highestSeverity, openCount };
+  });
 }
 
-export async function createAmbassador(input: {
+export async function createAmbassador(tenantId: string, input: {
   displayName:           string;
   handle:                string;
   primaryPlatform:       string;
@@ -104,24 +110,35 @@ export async function createAmbassador(input: {
     throw err;
   }
 
-  return prisma.ambassadorProfile.create({
-    data: {
-      displayName:          input.displayName,
-      handle:               input.handle,
-      primaryPlatform:      input.primaryPlatform as SourcePlatform,
-      riskTier:             (input.riskTier as PromoterRiskTier) ?? null,
-      status:               AmbassadorStatus.ACTIVE,
-      assignedSupervisorId: input.assignedSupervisorId ?? null,
-    },
-    include: { assignedSupervisor: SUPERVISOR_INCLUDE },
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.ambassadorProfile.create({
+      data: {
+        tenantId,
+        displayName:          input.displayName,
+        handle:               input.handle,
+        primaryPlatform:      input.primaryPlatform as SourcePlatform,
+        riskTier:             (input.riskTier as PromoterRiskTier) ?? null,
+        status:               AmbassadorStatus.ACTIVE,
+        assignedSupervisorId: input.assignedSupervisorId ?? null,
+      },
+      include: { assignedSupervisor: SUPERVISOR_INCLUDE },
+    });
   });
 }
 
-export async function assignSupervisor(id: string, supervisorId: string | null) {
-  return prisma.ambassadorProfile.update({
-    where:   { id },
-    data:    { assignedSupervisorId: supervisorId },
-    include: { assignedSupervisor: SUPERVISOR_INCLUDE },
+export async function assignSupervisor(tenantId: string, id: string, supervisorId: string | null) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    // Validate ownership via findFirst before updating
+    const existing = await tx.ambassadorProfile.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) throw new Error('Ambassador not found');
+
+    return tx.ambassadorProfile.update({
+      where:   { id },
+      data:    { assignedSupervisorId: supervisorId },
+      include: { assignedSupervisor: SUPERVISOR_INCLUDE },
+    });
   });
 }
 
@@ -129,12 +146,19 @@ export async function assignSupervisor(id: string, supervisorId: string | null) 
 // CAMPAIGN
 // ─────────────────────────────────────────
 
-export async function getCampaignById(id: string) {
-  return prisma.campaign.findUnique({ where: { id } });
+export async function getCampaignById(tenantId: string, id: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.campaign.findFirst({ where: { id, tenantId } });
+  });
 }
 
-export async function listCampaigns() {
-  return prisma.campaign.findMany({ orderBy: { createdAt: 'desc' } });
+export async function listCampaigns(tenantId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.campaign.findMany({
+      where:   { tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
+  });
 }
 
 // ─────────────────────────────────────────
@@ -153,58 +177,62 @@ export async function listCampaigns() {
  *
  * Summary totals included at the root level for the summary bar.
  */
-export async function getMonitorSummary() {
-  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+export async function getMonitorSummary(tenantId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  const ambassadors = await prisma.ambassadorProfile.findMany({
-    orderBy: { displayName: 'asc' },
-    include: {
-      assignedSupervisor: SUPERVISOR_INCLUDE,
-      contentRecords: {
-        select: {
-          capturedAt:    true,
-          archiveStatus: true,
+    const ambassadors = await tx.ambassadorProfile.findMany({
+      where:   { tenantId },
+      orderBy: { displayName: 'asc' },
+      include: {
+        assignedSupervisor: SUPERVISOR_INCLUDE,
+        contentRecords: {
+          where: { tenantId },
+          select: {
+            capturedAt:    true,
+            archiveStatus: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  const promoters = ambassadors.map(a => {
-    const recs          = a.contentRecords;
-    const totalCaptures = recs.length;
-    const pendingCount   = recs.filter(r => r.archiveStatus === 'PENDING_REVIEW').length;
-    const escalatedCount = recs.filter(r => r.archiveStatus === 'ESCALATED').length;
-    const flagCount      = pendingCount + escalatedCount;
+    const promoters = ambassadors.map(a => {
+      const recs          = a.contentRecords;
+      const totalCaptures = recs.length;
+      const pendingCount   = recs.filter(r => r.archiveStatus === 'PENDING_REVIEW').length;
+      const escalatedCount = recs.filter(r => r.archiveStatus === 'ESCALATED').length;
+      const flagCount      = pendingCount + escalatedCount;
 
-    const lastCaptureAt  = recs.length > 0
-      ? recs.reduce((max, r) => r.capturedAt > max ? r.capturedAt : max, recs[0].capturedAt)
-      : null;
-    const captures24h = recs.filter(r => r.capturedAt >= since24h).length;
+      const lastCaptureAt  = recs.length > 0
+        ? recs.reduce((max, r) => r.capturedAt > max ? r.capturedAt : max, recs[0].capturedAt)
+        : null;
+      const captures24h = recs.filter(r => r.capturedAt >= since24h).length;
 
-    return {
-      id:                 a.id,
-      displayName:        a.displayName,
-      handle:             a.handle,
-      primaryPlatform:    a.primaryPlatform,
-      status:             a.status,
-      riskTier:           a.riskTier,
-      assignedSupervisor: a.assignedSupervisor,
-      totalCaptures,
-      pendingCount,
-      escalatedCount,
-      flagCount,
-      lastCaptureAt,
-      captures24h,
+      return {
+        id:                 a.id,
+        displayName:        a.displayName,
+        handle:             a.handle,
+        primaryPlatform:    a.primaryPlatform,
+        status:             a.status,
+        riskTier:           a.riskTier,
+        assignedSupervisor: a.assignedSupervisor,
+        totalCaptures,
+        pendingCount,
+        escalatedCount,
+        flagCount,
+        lastCaptureAt,
+        captures24h,
+      };
+    });
+
+    const summary = {
+      total:         promoters.length,
+      active:        promoters.filter(p => p.status === 'ACTIVE').length,
+      paused:        promoters.filter(p => p.status === 'SUSPENDED' || p.status === 'INACTIVE').length,
+      totalCaptures: promoters.reduce((sum, p) => sum + p.totalCaptures, 0),
+      captures24h:   promoters.reduce((sum, p) => sum + p.captures24h, 0),
     };
+
+    return { summary, promoters };
   });
-
-  const summary = {
-    total:         promoters.length,
-    active:        promoters.filter(p => p.status === 'ACTIVE').length,
-    paused:        promoters.filter(p => p.status === 'SUSPENDED' || p.status === 'INACTIVE').length,
-    totalCaptures: promoters.reduce((sum, p) => sum + p.totalCaptures, 0),
-    captures24h:   promoters.reduce((sum, p) => sum + p.captures24h, 0),
-  };
-
-  return { summary, promoters };
 }

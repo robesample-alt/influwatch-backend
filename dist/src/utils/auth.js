@@ -19,13 +19,13 @@ function signToken(actor) {
     const secret = process.env.JWT_SECRET;
     if (!secret)
         throw new Error('JWT_SECRET environment variable is not set');
-    return jsonwebtoken_1.default.sign({ id: actor.id, role: actor.role, email: actor.email }, secret, { expiresIn: '24h' });
+    return jsonwebtoken_1.default.sign({ id: actor.id, role: actor.role, email: actor.email, tenantId: actor.tenantId }, secret, { expiresIn: '24h' });
 }
 function verifyToken(token) {
     const secret = process.env.JWT_SECRET;
     if (!secret)
         throw new Error('JWT_SECRET environment variable is not set');
     const decoded = jsonwebtoken_1.default.verify(token, secret);
-    return { id: decoded.id, role: decoded.role, email: decoded.email };
+    return { id: decoded.id, role: decoded.role, email: decoded.email, tenantId: decoded.tenantId };
 }
 //# sourceMappingURL=auth.js.map

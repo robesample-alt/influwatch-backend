@@ -11,9 +11,10 @@
 import jwt from 'jsonwebtoken';
 
 export interface ActorTokenPayload {
-  id:    string;
-  role:  string;
-  email: string;
+  id:       string;
+  role:     string;
+  email:    string;
+  tenantId: string;
 }
 
 export function signToken(actor: ActorTokenPayload): string {
@@ -21,7 +22,7 @@ export function signToken(actor: ActorTokenPayload): string {
   if (!secret) throw new Error('JWT_SECRET environment variable is not set');
 
   return jwt.sign(
-    { id: actor.id, role: actor.role, email: actor.email },
+    { id: actor.id, role: actor.role, email: actor.email, tenantId: actor.tenantId },
     secret,
     { expiresIn: '24h' }
   );
@@ -32,5 +33,5 @@ export function verifyToken(token: string): ActorTokenPayload {
   if (!secret) throw new Error('JWT_SECRET environment variable is not set');
 
   const decoded = jwt.verify(token, secret) as ActorTokenPayload;
-  return { id: decoded.id, role: decoded.role, email: decoded.email };
+  return { id: decoded.id, role: decoded.role, email: decoded.email, tenantId: decoded.tenantId };
 }

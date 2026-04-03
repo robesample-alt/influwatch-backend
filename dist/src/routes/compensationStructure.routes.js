@@ -54,9 +54,10 @@ const router = (0, express_1.Router)();
 // List all compensation structures, newest first.
 // Each record includes ambassador profile details.
 // ─────────────────────────────────────────
-router.get('/', async (_req, res, next) => {
+router.get('/', async (req, res, next) => {
     try {
-        const structures = await CompensationService.listCompensationStructures();
+        const tenantId = req.user.tenantId;
+        const structures = await CompensationService.listCompensationStructures(tenantId);
         return res.status(200).json({ count: structures.length, structures });
     }
     catch (err) {
@@ -77,6 +78,7 @@ router.get('/', async (_req, res, next) => {
 router.post('/', async (req, res, next) => {
     try {
         const { promoterId, campaignId, compensationForm, compensationTrigger, productType, writtenAgreementRequired, agreementReference, notes, } = req.body;
+        const tenantId = req.user.tenantId;
         if (!promoterId)
             return res.status(400).json({ error: 'promoterId is required' });
         if (!compensationForm)
@@ -88,7 +90,7 @@ router.post('/', async (req, res, next) => {
         if (writtenAgreementRequired === undefined || writtenAgreementRequired === null) {
             return res.status(400).json({ error: 'writtenAgreementRequired is required' });
         }
-        const structure = await CompensationService.createCompensationStructure({
+        const structure = await CompensationService.createCompensationStructure(tenantId, {
             promoterId,
             campaignId: campaignId ?? null,
             compensationForm,
@@ -112,7 +114,8 @@ router.post('/', async (req, res, next) => {
 // ─────────────────────────────────────────
 router.get('/:promoterId', async (req, res, next) => {
     try {
-        const structure = await CompensationService.getCompensationStructure(req.params.promoterId);
+        const tenantId = req.user.tenantId;
+        const structure = await CompensationService.getCompensationStructure(tenantId, req.params.promoterId);
         if (!structure) {
             return res.status(404).json({
                 error: 'No compensation structure found for this promoter',

@@ -2,7 +2,7 @@
  * List all tail periods, newest first.
  * Optionally filter by status (ACTIVE | CLOSED | EXPIRED).
  */
-export declare function listTailPeriods(status?: string): Promise<({
+export declare function listTailPeriods(tenantId: string, status?: string): Promise<({
     ambassador: {
         id: string;
         displayName: string;
@@ -11,6 +11,8 @@ export declare function listTailPeriods(status?: string): Promise<({
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
+    tenantId: string;
+    reason: string | null;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -21,7 +23,6 @@ export declare function listTailPeriods(status?: string): Promise<({
     tailDays: number;
     tailStartDate: Date;
     tailEndDate: Date;
-    reason: string | null;
     tailType: string;
     postContractFlags: number;
     closedAt: Date | null;
@@ -41,7 +42,7 @@ export interface CreateTailPeriodInput {
 /**
  * Create a new tail period.
  */
-export declare function createTailPeriod(input: CreateTailPeriodInput): Promise<{
+export declare function createTailPeriod(tenantId: string, input: CreateTailPeriodInput): Promise<{
     ambassador: {
         id: string;
         displayName: string;
@@ -50,6 +51,8 @@ export declare function createTailPeriod(input: CreateTailPeriodInput): Promise<
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
+    tenantId: string;
+    reason: string | null;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -60,7 +63,6 @@ export declare function createTailPeriod(input: CreateTailPeriodInput): Promise<
     tailDays: number;
     tailStartDate: Date;
     tailEndDate: Date;
-    reason: string | null;
     tailType: string;
     postContractFlags: number;
     closedAt: Date | null;
@@ -71,7 +73,7 @@ export declare function createTailPeriod(input: CreateTailPeriodInput): Promise<
  * Close a tail period.
  * Returns null if the tail period is not found.
  */
-export declare function closeTailPeriod(id: string, closedBy: string, closedReason: string): Promise<({
+export declare function closeTailPeriod(tenantId: string, id: string, closedBy: string, closedReason: string): Promise<({
     ambassador: {
         id: string;
         displayName: string;
@@ -80,6 +82,8 @@ export declare function closeTailPeriod(id: string, closedBy: string, closedReas
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
+    tenantId: string;
+    reason: string | null;
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -90,7 +94,6 @@ export declare function closeTailPeriod(id: string, closedBy: string, closedReas
     tailDays: number;
     tailStartDate: Date;
     tailEndDate: Date;
-    reason: string | null;
     tailType: string;
     postContractFlags: number;
     closedAt: Date | null;

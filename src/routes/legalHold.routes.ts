@@ -22,8 +22,9 @@ const router = Router();
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.user!.tenantId;
     const status = req.query.status as string | undefined;
-    const holds  = await LegalHoldService.listHolds(status);
+    const holds  = await LegalHoldService.listHolds(tenantId, status);
     return res.status(200).json({ count: holds.length, holds });
   } catch (err) {
     next(err);
@@ -50,6 +51,7 @@ router.post('/', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalAct
       status,
     } = req.body;
 
+    const tenantId = req.user!.tenantId;
     const placedBy = req.user!.id;
 
     if (!holdName)       return res.status(400).json({ error: 'holdName is required' });
@@ -58,7 +60,7 @@ router.post('/', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalAct
     if (!legalAuthority) return res.status(400).json({ error: 'legalAuthority is required' });
     if (!basis)          return res.status(400).json({ error: 'basis is required' });
 
-    const hold = await LegalHoldService.createHold({
+    const hold = await LegalHoldService.createHold(tenantId, {
       holdName,
       holdType,
       scope,
@@ -85,12 +87,13 @@ router.post('/', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalAct
 
 router.patch('/:id/release', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalActorRole.COMPLIANCE_OFFICER, InternalActorRole.TENANT_ADMIN), async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.user!.tenantId;
     const { releaseReason } = req.body;
     const releasedBy = req.user!.id;
 
     if (!releaseReason) return res.status(400).json({ error: 'releaseReason is required' });
 
-    const hold = await LegalHoldService.releaseHold(req.params.id, releasedBy, releaseReason);
+    const hold = await LegalHoldService.releaseHold(tenantId, req.params.id, releasedBy, releaseReason);
     if (!hold) {
       return res.status(404).json({ error: 'Legal hold not found', id: req.params.id });
     }

@@ -2,12 +2,12 @@
 // FUNDUREX — INFLUWATCH PHASE 1
 // Service — LegalHold
 //
-// listHolds(status?)           — all holds, optional status filter
-// createHold(input)            — create a new legal hold
-// releaseHold(id, by, reason)  — set status RELEASED
+// listHolds(tenantId, status?)           — all holds, optional status filter
+// createHold(tenantId, input)            — create a new legal hold
+// releaseHold(tenantId, id, by, reason)  — set status RELEASED
 // ============================================================
 
-import prisma from '../utils/prisma';
+import { withTenantContext } from '../utils/tenantContext';
 
 // ─────────────────────────────────────────
 // LIST
@@ -17,10 +17,12 @@ import prisma from '../utils/prisma';
  * List all legal holds, newest first.
  * Optionally filtered by status (e.g. 'ACTIVE', 'RELEASED').
  */
-export async function listHolds(status?: string) {
-  return prisma.legalHold.findMany({
-    where:   status ? { status } : undefined,
-    orderBy: { datePlaced: 'desc' },
+export async function listHolds(tenantId: string, status?: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.legalHold.findMany({
+      where:   { tenantId, ...(status ? { status } : {}) },
+      orderBy: { datePlaced: 'desc' },
+    });
   });
 }
 
@@ -43,19 +45,22 @@ export interface CreateHoldInput {
 /**
  * Create a new legal hold record.
  */
-export async function createHold(input: CreateHoldInput) {
-  return prisma.legalHold.create({
-    data: {
-      holdName:      input.holdName,
-      holdType:      input.holdType,
-      scope:         input.scope,
-      recordsFrozen: input.recordsFrozen ?? 0,
-      placedBy:      input.placedBy,
-      legalAuthority:input.legalAuthority,
-      datePlaced:    input.datePlaced    ?? new Date(),
-      basis:         input.basis,
-      status:        input.status        ?? 'ACTIVE',
-    },
+export async function createHold(tenantId: string, input: CreateHoldInput) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.legalHold.create({
+      data: {
+        tenantId,
+        holdName:      input.holdName,
+        holdType:      input.holdType,
+        scope:         input.scope,
+        recordsFrozen: input.recordsFrozen ?? 0,
+        placedBy:      input.placedBy,
+        legalAuthority:input.legalAuthority,
+        datePlaced:    input.datePlaced    ?? new Date(),
+        basis:         input.basis,
+        status:        input.status        ?? 'ACTIVE',
+      },
+    });
   });
 }
 
@@ -69,20 +74,23 @@ export async function createHold(input: CreateHoldInput) {
  * Returns null if the hold does not exist.
  */
 export async function releaseHold(
+  tenantId:      string,
   id:            string,
   releasedBy:    string,
   releaseReason: string,
 ) {
-  const existing = await prisma.legalHold.findUnique({ where: { id } });
-  if (!existing) return null;
+  return withTenantContext({ tenantId }, async (tx) => {
+    const existing = await tx.legalHold.findFirst({ where: { id, tenantId } });
+    if (!existing) return null;
 
-  return prisma.legalHold.update({
-    where: { id },
-    data: {
-      status:        'RELEASED',
-      releasedBy,
-      releasedAt:    new Date(),
-      releaseReason,
-    },
+    return tx.legalHold.update({
+      where: { id },
+      data: {
+        status:        'RELEASED',
+        releasedBy,
+        releasedAt:    new Date(),
+        releaseReason,
+      },
+    });
   });
 }

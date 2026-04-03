@@ -23,6 +23,7 @@ const router = Router();
 
 router.post('/', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalActorRole.DESIGNATED_SUPERVISOR, InternalActorRole.TENANT_ADMIN), async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.user!.tenantId;
     const { periodLabel, periodStart, periodEnd, promotersInScope, supervisoryNote } = req.body;
 
     const principalId = req.user!.id;
@@ -31,7 +32,7 @@ router.post('/', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalAct
     if (!periodEnd)        return res.status(400).json({ error: 'periodEnd is required' });
     if (promotersInScope == null) return res.status(400).json({ error: 'promotersInScope is required' });
 
-    const attestation = await AttestationService.createAttestation({
+    const attestation = await AttestationService.createAttestation(tenantId, {
       principalId,
       periodLabel,
       periodStart:      new Date(periodStart),
@@ -55,8 +56,9 @@ router.post('/', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalAct
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.user!.tenantId;
     const period       = req.query.period as string | undefined;
-    const attestations = await AttestationService.listAttestations(period);
+    const attestations = await AttestationService.listAttestations(tenantId, period);
 
     return res.status(200).json({ count: attestations.length, attestations });
   } catch (err) {

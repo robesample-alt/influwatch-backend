@@ -11,7 +11,7 @@ export interface CreateAttestationInput {
  * Returns the created record with principal details included.
  * Logs creation to console for Phase 1 audit trail.
  */
-export declare function createAttestation(input: CreateAttestationInput): Promise<{
+export declare function createAttestation(tenantId: string, input: CreateAttestationInput): Promise<{
     principal: {
         id: string;
         displayName: string;
@@ -19,6 +19,7 @@ export declare function createAttestation(input: CreateAttestationInput): Promis
         role: import(".prisma/client").$Enums.InternalActorRole;
     };
 } & {
+    tenantId: string;
     id: string;
     periodLabel: string;
     periodStart: Date;
@@ -33,7 +34,7 @@ export declare function createAttestation(input: CreateAttestationInput): Promis
  * Optionally filtered by periodLabel (exact match).
  * Includes principal displayName, email, and role.
  */
-export declare function listAttestations(periodLabel?: string): Promise<({
+export declare function listAttestations(tenantId: string, periodLabel?: string): Promise<({
     principal: {
         id: string;
         displayName: string;
@@ -41,6 +42,7 @@ export declare function listAttestations(periodLabel?: string): Promise<({
         role: import(".prisma/client").$Enums.InternalActorRole;
     };
 } & {
+    tenantId: string;
     id: string;
     periodLabel: string;
     periodStart: Date;

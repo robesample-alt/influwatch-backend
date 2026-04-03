@@ -20,6 +20,7 @@ const router = Router();
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.user!.tenantId;
     const status = req.query.status as string | undefined;
 
     if (status && !PreApprovalService.VALID_STATUSES.includes(status as any)) {
@@ -29,7 +30,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    const requests = await PreApprovalService.listRequests(status);
+    const requests = await PreApprovalService.listRequests(tenantId, status);
     return res.status(200).json({ count: requests.length, requests });
   } catch (err) {
     next(err);
@@ -53,13 +54,15 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       slaHours,
     } = req.body;
 
+    const tenantId = req.user!.tenantId;
+
     if (!ambassadorId)   return res.status(400).json({ error: 'ambassadorId is required' });
     if (!submittedBy)    return res.status(400).json({ error: 'submittedBy is required' });
     if (!contentType)    return res.status(400).json({ error: 'contentType is required' });
     if (!platform)       return res.status(400).json({ error: 'platform is required' });
     if (!contentPreview) return res.status(400).json({ error: 'contentPreview is required' });
 
-    const record = await PreApprovalService.createRequest({
+    const record = await PreApprovalService.createRequest(tenantId, {
       ambassadorId,
       submittedBy,
       contentType,
@@ -88,6 +91,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.patch('/:id/decision', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalActorRole.DESIGNATED_SUPERVISOR, InternalActorRole.COMPLIANCE_OFFICER, InternalActorRole.TENANT_ADMIN), async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.user!.tenantId;
     const { id }              = req.params;
     const { decision, status } = req.body;
     const decidedBy           = req.user!.id;
@@ -103,6 +107,7 @@ router.patch('/:id/decision', requireRole(InternalActorRole.REGISTERED_PRINCIPAL
     }
 
     const record = await PreApprovalService.decideRequest(
+      tenantId,
       id,
       decision,
       decidedBy,

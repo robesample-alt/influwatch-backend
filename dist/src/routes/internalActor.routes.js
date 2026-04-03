@@ -51,9 +51,10 @@ const InternalActorService = __importStar(require("../services/internalActor.ser
 // ─────────────────────────────────────────
 async function listInternalActors(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const role = req.query.role;
         const status = req.query.status;
-        const actors = await InternalActorService.listInternalActors({ role, status });
+        const actors = await InternalActorService.listInternalActors(tenantId, { role, status });
         return res.status(200).json(actors);
     }
     catch (err) {
@@ -68,7 +69,8 @@ async function listInternalActors(req, res, next) {
 // ─────────────────────────────────────────
 async function listSupervisors(req, res, next) {
     try {
-        const supervisors = await InternalActorService.listSupervisors();
+        const tenantId = req.user.tenantId;
+        const supervisors = await InternalActorService.listSupervisors(tenantId);
         return res.status(200).json(supervisors);
     }
     catch (err) {

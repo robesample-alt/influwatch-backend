@@ -51,6 +51,7 @@ const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
 router.get('/', async (req, res, next) => {
     try {
+        const tenantId = req.user.tenantId;
         const status = req.query.status;
         if (status && !PreApprovalService.VALID_STATUSES.includes(status)) {
             return res.status(400).json({
@@ -58,7 +59,7 @@ router.get('/', async (req, res, next) => {
                 validValues: [...PreApprovalService.VALID_STATUSES],
             });
         }
-        const requests = await PreApprovalService.listRequests(status);
+        const requests = await PreApprovalService.listRequests(tenantId, status);
         return res.status(200).json({ count: requests.length, requests });
     }
     catch (err) {
@@ -71,6 +72,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
     try {
         const { ambassadorId, submittedBy, contentType, platform, contentPreview, requiredBy, assignedPrincipalId, slaHours, } = req.body;
+        const tenantId = req.user.tenantId;
         if (!ambassadorId)
             return res.status(400).json({ error: 'ambassadorId is required' });
         if (!submittedBy)
@@ -81,7 +83,7 @@ router.post('/', async (req, res, next) => {
             return res.status(400).json({ error: 'platform is required' });
         if (!contentPreview)
             return res.status(400).json({ error: 'contentPreview is required' });
-        const record = await PreApprovalService.createRequest({
+        const record = await PreApprovalService.createRequest(tenantId, {
             ambassadorId,
             submittedBy,
             contentType,
@@ -108,6 +110,7 @@ router.post('/', async (req, res, next) => {
 // ─────────────────────────────────────────
 router.patch('/:id/decision', (0, requireRole_1.requireRole)(client_1.InternalActorRole.REGISTERED_PRINCIPAL, client_1.InternalActorRole.DESIGNATED_SUPERVISOR, client_1.InternalActorRole.COMPLIANCE_OFFICER, client_1.InternalActorRole.TENANT_ADMIN), async (req, res, next) => {
     try {
+        const tenantId = req.user.tenantId;
         const { id } = req.params;
         const { decision, status } = req.body;
         const decidedBy = req.user.id;
@@ -121,7 +124,7 @@ router.patch('/:id/decision', (0, requireRole_1.requireRole)(client_1.InternalAc
                 validValues: [...PreApprovalService.VALID_DECISION_STATUSES],
             });
         }
-        const record = await PreApprovalService.decideRequest(id, decision, decidedBy, status);
+        const record = await PreApprovalService.decideRequest(tenantId, id, decision, decidedBy, status);
         if (!record)
             return res.status(404).json({ error: 'Pre-approval request not found', id });
         return res.status(200).json(record);

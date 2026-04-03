@@ -1,12 +1,11 @@
 // ============================================================
-// FUNDUREX — INFLUWATCH PHASE 1
+// FUNDUREX — INFLUWATCH PHASE 1 + MULTI-TENANT
 // Prisma Schema
 //
 // Purpose: Content archive foundation for promotional
 // content supervision, recordkeeping, and audit defensibility.
 //
-// Phase 1 scope: archive only.
-// AI scoring, risk signals, DSS integration — Phase 2+.
+// Multi-tenant: every table is scoped by tenantId.
 // ============================================================
 
 generator client {
@@ -21,6 +20,12 @@ datasource db {
 // ─────────────────────────────────────────
 // ENUMS
 // ─────────────────────────────────────────
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
 
 enum AmbassadorStatus {
   ACTIVE
@@ -156,12 +161,46 @@ enum InternalActorStatus {
 }
 
 // ─────────────────────────────────────────
-// AMBASSADOR PROFILE
+// TENANT
 //
-// Represents a creator or ambassador in the
-// Fundurex system. Used as the source identity
-// for all archived content records.
+// Root identity for each firm using InfluWatch.
+// Every other model in the system references a Tenant.
 // ─────────────────────────────────────────
+
+model Tenant {
+  id              String       @id @default(cuid())
+  firmName        String
+  slug            String       @unique  // URL-safe identifier, e.g. "meridian-capital"
+  crdNumber       String?               // FINRA CRD number
+  secRegistration String?               // SEC registration number
+  status          TenantStatus @default(ACTIVE)
+  plan            String?               // Subscription tier
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations — one Tenant owns all of the following
+  config                  TenantConfig?
+  internalActors          InternalActor[]
+  ambassadorProfiles      AmbassadorProfile[]
+  campaigns               Campaign[]
+  contentRecords          ContentRecord[]
+  contentMediaAssets      ContentMediaAsset[]
+  archiveEventLogs        ArchiveEventLog[]
+  supervisoryAttestations SupervisoryAttestation[]
+  programCertifications   ProgramCertification[]
+  promoterContracts       PromoterContract[]
+  legalHolds              LegalHold[]
+  evidenceExports         EvidenceExport[]
+  preApprovalRequests     PreApprovalRequest[]
+  tailPeriods             TailPeriod[]
+  detectionRecords        DetectionRecord[]
+  compensationStructures  CompensationStructure[]
+  affiliateLinks          AffiliateLink[]
+  compensationEvents      CompensationEvent[]
+
+  @@map("tenants")
+}
 
 // ─────────────────────────────────────────
 // INTERNAL ACTOR
@@ -175,7 +214,7 @@ enum InternalActorStatus {
 model InternalActor {
   id              String              @id @default(cuid())
   displayName     String
-  email           String              @unique
+  email           String
   role            InternalActorRole
   status          InternalActorStatus @default(ACTIVE)
   passwordHash    String?             // bcrypt hash — null until first seed or password set
@@ -186,16 +225,30 @@ model InternalActor {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
+  // Tenant
+  tenantId        String
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   // Relations
   supervisedPromoters    AmbassadorProfile[]      @relation("SupervisedBy")
   attestations           SupervisoryAttestation[]
   programCertifications  ProgramCertification[]
   assignedPreApprovals   PreApprovalRequest[]     @relation("AssignedPrincipal")
 
+  @@unique([tenantId, email])
+  @@index([tenantId])
   @@index([role])
   @@index([status])
   @@map("internal_actors")
 }
+
+// ─────────────────────────────────────────
+// AMBASSADOR PROFILE
+//
+// Represents a creator or ambassador in the
+// Fundurex system. Used as the source identity
+// for all archived content records.
+// ─────────────────────────────────────────
 
 model AmbassadorProfile {
   id              String            @id @default(cuid())
@@ -213,12 +266,17 @@ model AmbassadorProfile {
   assignedSupervisorId  String?
   assignedSupervisor    InternalActor?  @relation("SupervisedBy", fields: [assignedSupervisorId], references: [id], onDelete: SetNull)
 
+  // Tenant
+  tenantId        String
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   // Relations
   contentRecords      ContentRecord[]
   contracts           PromoterContract[]
   tailPeriods         TailPeriod[]
   preApprovalRequests PreApprovalRequest[]
 
+  @@index([tenantId])
   @@index([handle])
   @@index([status])
   @@index([primaryPlatform])
@@ -243,7 +301,7 @@ model PromoterContract {
 
   // Agreement identity
   agreementType          String           // e.g. "Promoter Agreement", "NDA", "Disclosure Acknowledgment"
-  contractId             String           @unique  // human-readable ref e.g. "AGR-2026-001"
+  contractId             String           // human-readable ref e.g. "AGR-2026-001"
 
   // Key dates
   signedDate             DateTime
@@ -267,9 +325,14 @@ model PromoterContract {
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
 
+  // Tenant
+  tenantId               String
+  tenant                 Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, contractId])
+  @@index([tenantId])
   @@index([ambassadorId])
   @@index([status])
-  @@index([contractId])
   @@map("promoter_contracts")
 }
 
@@ -289,9 +352,14 @@ model Campaign {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
+  // Tenant
+  tenantId       String
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   // Relations
   contentRecords ContentRecord[]
 
+  @@index([tenantId])
   @@index([status])
   @@index([campaignType])
   @@map("campaigns")
@@ -349,11 +417,16 @@ model ContentRecord {
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
+  // Tenant
+  tenantId           String
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   // Relations
   mediaAssets        ContentMediaAsset[]
   eventLog           ArchiveEventLog[]
   detectionRecords   DetectionRecord[]
 
+  @@index([tenantId])
   @@index([ambassadorId])
   @@index([campaignId])
   @@index([sourcePlatform])
@@ -384,6 +457,11 @@ model ContentMediaAsset {
 
   createdAt       DateTime      @default(now())
 
+  // Tenant
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([contentRecordId])
   @@index([assetType])
   @@map("content_media_assets")
@@ -408,6 +486,11 @@ model ArchiveEventLog {
 
   createdAt       DateTime         @default(now())
 
+  // Tenant
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([contentRecordId])
   @@index([eventType])
   @@index([createdAt])
@@ -421,10 +504,6 @@ model ArchiveEventLog {
 // Represents a principal's attestation that they have
 // reviewed and supervised promotional activity for a
 // defined period (FINRA Rule 3110 / 3130).
-//
-// Audit trail: creation is logged to console for Phase 1.
-// ArchiveEventLog is intentionally not used here — that
-// table is scoped to individual ContentRecords.
 // ─────────────────────────────────────────
 
 model SupervisoryAttestation {
@@ -446,6 +525,11 @@ model SupervisoryAttestation {
   certifiedAt       DateTime      @default(now())
   supervisoryNote   String?       // Optional attestation narrative
 
+  // Tenant
+  tenantId          String
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([principalId])
   @@index([certifiedAt])
   @@map("supervisory_attestations")
@@ -478,6 +562,11 @@ model ProgramCertification {
   findings                  String?                        // any findings or exceptions noted
   certificationNote         String?
 
+  // Tenant
+  tenantId                  String
+  tenant                    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([principalId])
   @@index([certificationYear])
   @@index([certifiedAt])
@@ -487,20 +576,18 @@ model ProgramCertification {
 // ─────────────────────────────────────────
 // TENANT CONFIG
 //
-// Single-row configuration table for the tenant's
-// firm identity, monitoring settings, SLA thresholds,
-// and data retention policy.
-// Always accessed via id = 'TC-001'.
+// Per-tenant operational settings: monitoring,
+// SLA thresholds, data retention policy.
+// Firm identity fields live on the Tenant model.
+// One TenantConfig per Tenant (1:1).
 // ─────────────────────────────────────────
 
 model TenantConfig {
   id                      String   @id @default(cuid())
 
-  // Firm identity
-  firmName                String
-  crdNumber               String?
-  secRegistration         String?
-  primaryContact          String?
+  // Tenant (1:1)
+  tenantId                String   @unique
+  tenant                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Monitoring settings
   pollIntervalMinutes     Int      @default(60)
@@ -554,6 +641,11 @@ model LegalHold {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // Tenant
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([status])
   @@index([datePlaced])
   @@map("legal_holds")
@@ -586,6 +678,11 @@ model EvidenceExport {
   status           String    @default("COMPLETE")
   notes            String?
 
+  // Tenant
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([generatedBy])
   @@index([exportType])
   @@index([generatedAt])
@@ -636,6 +733,11 @@ model PreApprovalRequest {
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
+  // Tenant
+  tenantId            String
+  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([ambassadorId])
   @@index([status])
   @@index([assignedPrincipalId])
@@ -682,6 +784,11 @@ model TailPeriod {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
+  // Tenant
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([ambassadorId])
   @@index([status])
   @@index([tailEndDate])
@@ -715,6 +822,11 @@ model DetectionRecord {
 
   createdAt       DateTime        @default(now())
 
+  // Tenant
+  tenantId        String
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([contentRecordId])
   @@index([ruleCode])
   @@map("detection_records")
@@ -753,6 +865,11 @@ model CompensationStructure {
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
+  // Tenant
+  tenantId                  String
+  tenant                    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([promoterId])
   @@index([supervisionPosture])
   @@map("compensation_structures")
@@ -785,6 +902,11 @@ model AffiliateLink {
 
   createdAt                 DateTime @default(now())
 
+  // Tenant
+  tenantId                  String
+  tenant                    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([promoterId])
   @@index([active])
   @@map("affiliate_links")
@@ -811,6 +933,11 @@ model CompensationEvent {
 
   createdAt         DateTime @default(now())
 
+  // Tenant
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([promoterId])
   @@index([createdAt])
   @@map("compensation_events")

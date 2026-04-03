@@ -2,12 +2,12 @@
 // FUNDUREX — INFLUWATCH PHASE 1
 // Service — PromoterContract
 //
-// listContracts(ambassadorId?) — all contracts, optional filter
-// getContract(id)              — single contract with ambassador
-// createContract(input)        — create new contract
+// listContracts(tenantId, ambassadorId?) — all contracts, optional filter
+// getContract(tenantId, id)              — single contract with ambassador
+// createContract(tenantId, input)        — create new contract
 // ============================================================
 
-import prisma from '../utils/prisma';
+import { withTenantContext } from '../utils/tenantContext';
 
 const ambassadorSelect = {
   id:              true,
@@ -26,11 +26,13 @@ const ambassadorSelect = {
  * List all promoter contracts, newest first.
  * Optionally filtered to a single ambassador.
  */
-export async function listContracts(ambassadorId?: string) {
-  return prisma.promoterContract.findMany({
-    where:   ambassadorId ? { ambassadorId } : undefined,
-    include: { ambassador: { select: ambassadorSelect } },
-    orderBy: { createdAt: 'desc' },
+export async function listContracts(tenantId: string, ambassadorId?: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.promoterContract.findMany({
+      where:   { tenantId, ...(ambassadorId ? { ambassadorId } : {}) },
+      include: { ambassador: { select: ambassadorSelect } },
+      orderBy: { createdAt: 'desc' },
+    });
   });
 }
 
@@ -42,10 +44,12 @@ export async function listContracts(ambassadorId?: string) {
  * Return a single contract by its cuid primary key.
  * Returns null if not found.
  */
-export async function getContract(id: string) {
-  return prisma.promoterContract.findUnique({
-    where:   { id },
-    include: { ambassador: { select: ambassadorSelect } },
+export async function getContract(tenantId: string, id: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.promoterContract.findFirst({
+      where:   { id, tenantId },
+      include: { ambassador: { select: ambassadorSelect } },
+    });
   });
 }
 
@@ -74,24 +78,27 @@ export interface CreateContractInput {
  * Create a new promoter contract.
  * Returns the created record with ambassador details.
  */
-export async function createContract(input: CreateContractInput) {
-  return prisma.promoterContract.create({
-    data: {
-      ambassadorId:           input.ambassadorId,
-      agreementType:          input.agreementType,
-      contractId:             input.contractId,
-      signedDate:             input.signedDate,
-      effectiveDate:          input.effectiveDate,
-      expiryDate:             input.expiryDate             ?? null,
-      monitoringConsent:      input.monitoringConsent      ?? false,
-      disclosureAck:          input.disclosureAck          ?? false,
-      disclosureRuleEnforced: input.disclosureRuleEnforced ?? true,
-      compensationCap:        input.compensationCap        ?? null,
-      compensationType:       input.compensationType       ?? null,
-      compensationRate:       input.compensationRate       ?? null,
-      status:                 input.status                 ?? 'ACTIVE',
-      notes:                  input.notes                  ?? null,
-    },
-    include: { ambassador: { select: ambassadorSelect } },
+export async function createContract(tenantId: string, input: CreateContractInput) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.promoterContract.create({
+      data: {
+        tenantId,
+        ambassadorId:           input.ambassadorId,
+        agreementType:          input.agreementType,
+        contractId:             input.contractId,
+        signedDate:             input.signedDate,
+        effectiveDate:          input.effectiveDate,
+        expiryDate:             input.expiryDate             ?? null,
+        monitoringConsent:      input.monitoringConsent      ?? false,
+        disclosureAck:          input.disclosureAck          ?? false,
+        disclosureRuleEnforced: input.disclosureRuleEnforced ?? true,
+        compensationCap:        input.compensationCap        ?? null,
+        compensationType:       input.compensationType       ?? null,
+        compensationRate:       input.compensationRate       ?? null,
+        status:                 input.status                 ?? 'ACTIVE',
+        notes:                  input.notes                  ?? null,
+      },
+      include: { ambassador: { select: ambassadorSelect } },
+    });
   });
 }

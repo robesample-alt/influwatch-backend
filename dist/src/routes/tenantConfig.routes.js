@@ -48,12 +48,13 @@ const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
 // GET /config
 //
-// Returns the single tenant config record (TC-001).
+// Returns the tenant config record for the current tenant.
 // Creates it with defaults if it doesn't exist.
 // ─────────────────────────────────────────
-router.get('/', async (_req, res, next) => {
+router.get('/', async (req, res, next) => {
     try {
-        const config = await TenantConfigService.getConfig();
+        const tenantId = req.user.tenantId;
+        const config = await TenantConfigService.getConfig(tenantId);
         return res.status(200).json(config);
     }
     catch (err) {
@@ -70,6 +71,7 @@ router.get('/', async (_req, res, next) => {
 router.patch('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.TENANT_ADMIN), async (req, res, next) => {
     try {
         const { firmName, crdNumber, secRegistration, primaryContact, pollIntervalMinutes, historicalBackfillDays, authErrorAlertThreshold, gapReportThreshold, postContractTailDays, slaThresholdCritical, slaThresholdHigh, slaThresholdMedium, slaThresholdLow, retentionYears, objectLockMode, } = req.body;
+        const tenantId = req.user.tenantId;
         // Reject empty PATCH
         if (Object.keys(req.body).length === 0) {
             return res.status(400).json({ error: 'Request body must contain at least one field to update' });
@@ -110,7 +112,7 @@ router.patch('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.TENA
             ...(retentionYears !== undefined ? { retentionYears } : {}),
             ...(objectLockMode !== undefined ? { objectLockMode } : {}),
         };
-        const updated = await TenantConfigService.updateConfig(input);
+        const updated = await TenantConfigService.updateConfig(tenantId, input);
         return res.status(200).json(updated);
     }
     catch (err) {

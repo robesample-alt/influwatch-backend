@@ -2,7 +2,7 @@
  * List all promoter contracts, newest first.
  * Optionally filtered to a single ambassador.
  */
-export declare function listContracts(ambassadorId?: string): Promise<({
+export declare function listContracts(tenantId: string, ambassadorId?: string): Promise<({
     ambassador: {
         id: string;
         displayName: string;
@@ -12,11 +12,12 @@ export declare function listContracts(ambassadorId?: string): Promise<({
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
+    tenantId: string;
     id: string;
-    notes: string | null;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
+    notes: string | null;
     status: string;
     agreementType: string;
     contractId: string;
@@ -34,7 +35,7 @@ export declare function listContracts(ambassadorId?: string): Promise<({
  * Return a single contract by its cuid primary key.
  * Returns null if not found.
  */
-export declare function getContract(id: string): Promise<({
+export declare function getContract(tenantId: string, id: string): Promise<({
     ambassador: {
         id: string;
         displayName: string;
@@ -44,11 +45,12 @@ export declare function getContract(id: string): Promise<({
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
+    tenantId: string;
     id: string;
-    notes: string | null;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
+    notes: string | null;
     status: string;
     agreementType: string;
     contractId: string;
@@ -82,7 +84,7 @@ export interface CreateContractInput {
  * Create a new promoter contract.
  * Returns the created record with ambassador details.
  */
-export declare function createContract(input: CreateContractInput): Promise<{
+export declare function createContract(tenantId: string, input: CreateContractInput): Promise<{
     ambassador: {
         id: string;
         displayName: string;
@@ -92,11 +94,12 @@ export declare function createContract(input: CreateContractInput): Promise<{
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
+    tenantId: string;
     id: string;
-    notes: string | null;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
+    notes: string | null;
     status: string;
     agreementType: string;
     contractId: string;

@@ -6,7 +6,7 @@
 // Route handlers call this layer only — no Prisma in routes.
 // ============================================================
 
-import prisma from '../utils/prisma';
+import { withTenantContext } from '../utils/tenantContext';
 import { computeChecksum } from '../utils/checksum';
 import { detectRuleHits, computeSeverityFromHits, RuleHit, CompensationContext } from '../lib/ruleRegistry';
 import { getSlaStatus } from '../utils/sla';
@@ -98,126 +98,131 @@ function computeEscalation(hits: RuleHit[]): EscalationResult {
  * Appends RECORD_CREATED event automatically.
  */
 export async function createContentRecord(
+  tenantId: string,
   input: CreateContentRecordInput
 ): Promise<ContentRecordResponse> {
-  const checksum = computeChecksum(input.sourceUrl, input.bodyText);
-  const bodyText = input.bodyText ?? '';
+  return withTenantContext({ tenantId }, async (tx) => {
+    const checksum = computeChecksum(input.sourceUrl, input.bodyText);
+    const bodyText = input.bodyText ?? '';
 
-  // ── Compensation context resolution ───────────────────────────────────────
-  // Fetch the promoter's most recent CompensationStructure. If found, build
-  // CompensationContext so COMP-001/002/003 rules are evaluated at ingestion.
-  // Promoters with no CompensationStructure skip COMP evaluation entirely.
-  const compensationStructure = await prisma.compensationStructure.findFirst({
-    where:   { promoterId: input.ambassadorId },
-    orderBy: { createdAt: 'desc' },
-  });
+    // ── Compensation context resolution ───────────────────────────────────────
+    // Fetch the promoter's most recent CompensationStructure. If found, build
+    // CompensationContext so COMP-001/002/003 rules are evaluated at ingestion.
+    // Promoters with no CompensationStructure skip COMP evaluation entirely.
+    const compensationStructure = await tx.compensationStructure.findFirst({
+      where:   { promoterId: input.ambassadorId, tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
 
-  let compensationCtx: CompensationContext | undefined;
-  let compensationPosture: string | null = null;
-  let hasAffiliateLink                   = false;
+    let compensationCtx: CompensationContext | undefined;
+    let compensationPosture: string | null = null;
+    let hasAffiliateLink                   = false;
 
-  if (compensationStructure) {
-    // Extract URLs from bodyText, normalize: lowercase, strip query params, strip trailing slash
-    const URL_REGEX     = /https?:\/\/[^\s"'<>)\]]+/gi;
-    const rawUrls       = bodyText.match(URL_REGEX) ?? [];
-    const normalize     = (url: string) =>
-      url.toLowerCase().replace(/\?.*$/, '').replace(/\/+$/, '');
-    const extractedUrls = rawUrls.map(normalize);
+    if (compensationStructure) {
+      // Extract URLs from bodyText, normalize: lowercase, strip query params, strip trailing slash
+      const URL_REGEX     = /https?:\/\/[^\s"'<>)\]]+/gi;
+      const rawUrls       = bodyText.match(URL_REGEX) ?? [];
+      const normalize     = (url: string) =>
+        url.toLowerCase().replace(/\?.*$/, '').replace(/\/+$/, '');
+      const extractedUrls = rawUrls.map(normalize);
 
-    // Match extracted URLs against active AffiliateLinks for this promoter
-    if (extractedUrls.length > 0) {
-      const affiliateLinks = await prisma.affiliateLink.findMany({
-        where:  { promoterId: input.ambassadorId, active: true },
-        select: { url: true },
-      });
-      const normalizedStored = affiliateLinks.map(l => normalize(l.url));
-      hasAffiliateLink = extractedUrls.some(u => normalizedStored.includes(u));
+      // Match extracted URLs against active AffiliateLinks for this promoter
+      if (extractedUrls.length > 0) {
+        const affiliateLinks = await tx.affiliateLink.findMany({
+          where:  { promoterId: input.ambassadorId, tenantId, active: true },
+          select: { url: true },
+        });
+        const normalizedStored = affiliateLinks.map(l => normalize(l.url));
+        hasAffiliateLink = extractedUrls.some(u => normalizedStored.includes(u));
+      }
+
+      compensationPosture = compensationStructure.supervisionPosture;
+
+      compensationCtx = {
+        isTransactionBased: compensationStructure.isTransactionBased,
+        isSecurityLinked:   compensationStructure.isSecurityLinked,
+        supervisionPosture: compensationStructure.supervisionPosture,
+        compensationForm:   compensationStructure.compensationForm,
+        hasAffiliateLink,
+      };
     }
 
-    compensationPosture = compensationStructure.supervisionPosture;
+    const hits       = detectRuleHits(bodyText, compensationCtx);
+    const severity   = computeSeverityFromHits(hits);
+    const escalation = computeEscalation(hits);
+    const archiveStatus =
+      escalation.level === 'HIGH'   ? ArchiveStatus.ESCALATED      :
+      escalation.level === 'MEDIUM' ? ArchiveStatus.PENDING_REVIEW  :
+                                      ArchiveStatus.CAPTURED;
 
-    compensationCtx = {
-      isTransactionBased: compensationStructure.isTransactionBased,
-      isSecurityLinked:   compensationStructure.isSecurityLinked,
-      supervisionPosture: compensationStructure.supervisionPosture,
-      compensationForm:   compensationStructure.compensationForm,
-      hasAffiliateLink,
-    };
-  }
-
-  const hits       = detectRuleHits(bodyText, compensationCtx);
-  const severity   = computeSeverityFromHits(hits);
-  const escalation = computeEscalation(hits);
-  const archiveStatus =
-    escalation.level === 'HIGH'   ? ArchiveStatus.ESCALATED      :
-    escalation.level === 'MEDIUM' ? ArchiveStatus.PENDING_REVIEW  :
-                                    ArchiveStatus.CAPTURED;
-
-  const record = await prisma.contentRecord.create({
-    data: {
-      ambassadorId:      input.ambassadorId,
-      campaignId:        input.campaignId ?? null,
-      sourcePlatform:    input.sourcePlatform,
-      contentType:       input.contentType,
-      sourceUrl:         input.sourceUrl,
-      externalContentId: input.externalContentId ?? null,
-      title:             input.title ?? null,
-      bodyText:          input.bodyText,
-      transcriptText:    input.transcriptText ?? null,
-      postedAt:          input.postedAt ? new Date(input.postedAt) : null,
-      archiveStatus,
-      severity,
-      checksum,
-      compensationPosture,
-      hasAffiliateLink,
-    },
-    include: {
-      ambassador:       { select: ambassadorSelect },
-      campaign:         { select: campaignSelect },
-      detectionRecords: true,
-    },
-  });
-
-  await appendEvent({
-    contentRecordId: record.id,
-    eventType:       ArchiveEventType.RECORD_CREATED,
-    eventNote:       `Content captured from ${input.sourcePlatform} — ${input.sourceUrl}`,
-  });
-
-  if (hits.length > 0) {
-    // Write one DetectionRecord per matched phrase
-    await prisma.detectionRecord.createMany({
-      data: hits.map(h => ({
-        contentRecordId: record.id,
-        ruleCode:        h.ruleCode,
-        ruleName:        h.ruleName,
-        matchedPhrase:   h.matchedPhrase,
-        severity:        h.severity,
-        detectionMethod: h.detectionMethod,
-      })),
+    const record = await tx.contentRecord.create({
+      data: {
+        tenantId,
+        ambassadorId:      input.ambassadorId,
+        campaignId:        input.campaignId ?? null,
+        sourcePlatform:    input.sourcePlatform,
+        contentType:       input.contentType,
+        sourceUrl:         input.sourceUrl,
+        externalContentId: input.externalContentId ?? null,
+        title:             input.title ?? null,
+        bodyText:          input.bodyText,
+        transcriptText:    input.transcriptText ?? null,
+        postedAt:          input.postedAt ? new Date(input.postedAt) : null,
+        archiveStatus,
+        severity,
+        checksum,
+        compensationPosture,
+        hasAffiliateLink,
+      },
+      include: {
+        ambassador:       { select: ambassadorSelect },
+        campaign:         { select: campaignSelect },
+        detectionRecords: true,
+      },
     });
 
-    // Narrative event log note — preserved alongside structured detection records
-    const phraseList = hits.map(h => `"${h.matchedPhrase}"`).join(', ');
-    await appendEvent({
+    await _appendEvent(tx, tenantId, {
       contentRecordId: record.id,
-      eventType:       ArchiveEventType.STATUS_CHANGED,
-      eventNote:       `Auto-flagged [${escalation.level}/${escalation.status}] — matched phrase${hits.length > 1 ? 's' : ''}: ${phraseList}`,
+      eventType:       ArchiveEventType.RECORD_CREATED,
+      eventNote:       `Content captured from ${input.sourcePlatform} — ${input.sourceUrl}`,
     });
-  }
 
-  // After record creation, send alert for HIGH escalations
-  if (escalation.level === 'HIGH') {
-    const ruleCodes = [...new Set(hits.map(h => h.ruleCode))];
-    sendEscalationAlert({
-      recordId:     record.id,
-      ambassadorId: record.ambassadorId,
-      ruleCodes,
-      level:        escalation.level,
-    }).catch(() => {}); // fire-and-forget, never block the response
-  }
+    if (hits.length > 0) {
+      // Write one DetectionRecord per matched phrase
+      await tx.detectionRecord.createMany({
+        data: hits.map(h => ({
+          tenantId,
+          contentRecordId: record.id,
+          ruleCode:        h.ruleCode,
+          ruleName:        h.ruleName,
+          matchedPhrase:   h.matchedPhrase,
+          severity:        h.severity,
+          detectionMethod: h.detectionMethod,
+        })),
+      });
 
-  return record;
+      // Narrative event log note — preserved alongside structured detection records
+      const phraseList = hits.map(h => `"${h.matchedPhrase}"`).join(', ');
+      await _appendEvent(tx, tenantId, {
+        contentRecordId: record.id,
+        eventType:       ArchiveEventType.STATUS_CHANGED,
+        eventNote:       `Auto-flagged [${escalation.level}/${escalation.status}] — matched phrase${hits.length > 1 ? 's' : ''}: ${phraseList}`,
+      });
+    }
+
+    // After record creation, send alert for HIGH escalations
+    if (escalation.level === 'HIGH') {
+      const ruleCodes = [...new Set(hits.map(h => h.ruleCode))];
+      sendEscalationAlert({
+        recordId:     record.id,
+        ambassadorId: record.ambassadorId,
+        ruleCodes,
+        level:        escalation.level,
+      }).catch(() => {}); // fire-and-forget, never block the response
+    }
+
+    return record;
+  });
 }
 
 // ─────────────────────────────────────────
@@ -230,45 +235,49 @@ export async function createContentRecord(
  * Returns paginated result set.
  */
 export async function listContentRecords(
+  tenantId: string,
   filters: ContentRecordFilters
 ): Promise<PaginatedResponse<ContentRecordResponse>> {
-  const {
-    ambassadorId,
-    campaignId,
-    sourcePlatform,
-    archiveStatus,
-    page     = 1,
-    pageSize = 25,
-  } = filters;
+  return withTenantContext({ tenantId }, async (tx) => {
+    const {
+      ambassadorId,
+      campaignId,
+      sourcePlatform,
+      archiveStatus,
+      page     = 1,
+      pageSize = 25,
+    } = filters;
 
-  const where = {
-    ...(ambassadorId   ? { ambassadorId }   : {}),
-    ...(campaignId     ? { campaignId }     : {}),
-    ...(sourcePlatform ? { sourcePlatform } : {}),
-    ...(archiveStatus  ? { archiveStatus }  : {}),
-  };
+    const where = {
+      tenantId,
+      ...(ambassadorId   ? { ambassadorId }   : {}),
+      ...(campaignId     ? { campaignId }     : {}),
+      ...(sourcePlatform ? { sourcePlatform } : {}),
+      ...(archiveStatus  ? { archiveStatus }  : {}),
+    };
 
-  const [total, records] = await Promise.all([
-    prisma.contentRecord.count({ where }),
-    prisma.contentRecord.findMany({
-      where,
-      include: {
-        ambassador: { select: ambassadorSelect },
-        campaign:   { select: campaignSelect },
-      },
-      orderBy: { capturedAt: 'desc' },
-      skip:  (page - 1) * pageSize,
-      take:  pageSize,
-    }),
-  ]);
+    const [total, records] = await Promise.all([
+      tx.contentRecord.count({ where }),
+      tx.contentRecord.findMany({
+        where,
+        include: {
+          ambassador: { select: ambassadorSelect },
+          campaign:   { select: campaignSelect },
+        },
+        orderBy: { capturedAt: 'desc' },
+        skip:  (page - 1) * pageSize,
+        take:  pageSize,
+      }),
+    ]);
 
-  return {
-    data:       records,
-    total,
-    page,
-    pageSize,
-    totalPages: Math.ceil(total / pageSize),
-  };
+    return {
+      data:       records,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  });
 }
 
 // ─────────────────────────────────────────
@@ -280,29 +289,32 @@ export async function listContentRecords(
  * Returns null if not found.
  */
 export async function getContentRecordById(
+  tenantId: string,
   id: string
 ): Promise<ContentRecordResponse | null> {
-  const record = await prisma.contentRecord.findUnique({
-    where: { id },
-    include: {
-      ambassador:       { select: ambassadorSelect },
-      campaign:         { select: campaignSelect },
-      detectionRecords: {
-        orderBy: { createdAt: 'asc' },
+  return withTenantContext({ tenantId }, async (tx) => {
+    const record = await tx.contentRecord.findFirst({
+      where: { id, tenantId },
+      include: {
+        ambassador:       { select: ambassadorSelect },
+        campaign:         { select: campaignSelect },
+        detectionRecords: {
+          orderBy: { createdAt: 'asc' },
+        },
       },
-    },
+    });
+
+    if (!record) return null;
+
+    const sla = getSlaStatus(record.capturedAt, record.severity, record.archiveStatus);
+
+    return {
+      ...record,
+      slaDeadline:       sla.slaDeadline,
+      slaHoursRemaining: sla.slaHoursRemaining,
+      slaBreached:       sla.slaBreached,
+    } as any;
   });
-
-  if (!record) return null;
-
-  const sla = getSlaStatus(record.capturedAt, record.severity, record.archiveStatus);
-
-  return {
-    ...record,
-    slaDeadline:       sla.slaDeadline,
-    slaHoursRemaining: sla.slaHoursRemaining,
-    slaBreached:       sla.slaBreached,
-  } as any;
 }
 
 // ─────────────────────────────────────────
@@ -314,32 +326,35 @@ export async function getContentRecordById(
  * Automatically appends a STATUS_CHANGED event to the audit log.
  */
 export async function updateArchiveStatus(
+  tenantId: string,
   id: string,
   input: UpdateArchiveStatusInput
 ): Promise<ContentRecordResponse> {
-  const existing = await prisma.contentRecord.findUniqueOrThrow({
-    where: { id },
-    select: { archiveStatus: true },
-  });
+  return withTenantContext({ tenantId }, async (tx) => {
+    const existing = await tx.contentRecord.findFirstOrThrow({
+      where: { id, tenantId },
+      select: { archiveStatus: true },
+    });
 
-  const updated = await prisma.contentRecord.update({
-    where: { id },
-    data:  { archiveStatus: input.archiveStatus },
-    include: {
-      ambassador: { select: ambassadorSelect },
-      campaign:   { select: campaignSelect },
-    },
-  });
+    const updated = await tx.contentRecord.update({
+      where: { id },
+      data:  { archiveStatus: input.archiveStatus },
+      include: {
+        ambassador: { select: ambassadorSelect },
+        campaign:   { select: campaignSelect },
+      },
+    });
 
-  await appendEvent({
-    contentRecordId: id,
-    eventType:       ArchiveEventType.STATUS_CHANGED,
-    eventNote:       input.note
-      ?? `Status changed: ${existing.archiveStatus} → ${input.archiveStatus}`,
-    actorId: input.actorId,
-  });
+    await _appendEvent(tx, tenantId, {
+      contentRecordId: id,
+      eventType:       ArchiveEventType.STATUS_CHANGED,
+      eventNote:       input.note
+        ?? `Status changed: ${existing.archiveStatus} → ${input.archiveStatus}`,
+      actorId: input.actorId,
+    });
 
-  return updated;
+    return updated;
+  });
 }
 
 // ─────────────────────────────────────────
@@ -349,10 +364,12 @@ export async function updateArchiveStatus(
 /**
  * Get all media assets attached to a content record.
  */
-export async function getMediaAssets(contentRecordId: string) {
-  return prisma.contentMediaAsset.findMany({
-    where:   { contentRecordId },
-    orderBy: { createdAt: 'asc' },
+export async function getMediaAssets(tenantId: string, contentRecordId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.contentMediaAsset.findMany({
+      where:   { contentRecordId, tenantId },
+      orderBy: { createdAt: 'asc' },
+    });
   });
 }
 
@@ -361,6 +378,7 @@ export async function getMediaAssets(contentRecordId: string) {
  * Appends MEDIA_ATTACHED event to the audit log.
  */
 export async function attachMediaAsset(
+  tenantId: string,
   contentRecordId: string,
   input: {
     assetType:        string;
@@ -369,23 +387,26 @@ export async function attachMediaAsset(
     durationSeconds?: number;
   }
 ) {
-  const asset = await prisma.contentMediaAsset.create({
-    data: {
+  return withTenantContext({ tenantId }, async (tx) => {
+    const asset = await tx.contentMediaAsset.create({
+      data: {
+        tenantId,
+        contentRecordId,
+        assetType:       input.assetType as any,
+        assetUrl:        input.assetUrl,
+        mimeType:        input.mimeType ?? null,
+        durationSeconds: input.durationSeconds ?? null,
+      },
+    });
+
+    await _appendEvent(tx, tenantId, {
       contentRecordId,
-      assetType:       input.assetType as any,
-      assetUrl:        input.assetUrl,
-      mimeType:        input.mimeType ?? null,
-      durationSeconds: input.durationSeconds ?? null,
-    },
-  });
+      eventType: ArchiveEventType.MEDIA_ATTACHED,
+      eventNote: `Asset attached: ${input.assetType} — ${input.assetUrl}`,
+    });
 
-  await appendEvent({
-    contentRecordId,
-    eventType: ArchiveEventType.MEDIA_ATTACHED,
-    eventNote: `Asset attached: ${input.assetType} — ${input.assetUrl}`,
+    return asset;
   });
-
-  return asset;
 }
 
 // ─────────────────────────────────────────
@@ -393,13 +414,13 @@ export async function attachMediaAsset(
 // ─────────────────────────────────────────
 
 /**
- * Append an event to the immutable audit log.
- * This is the ONLY write path for ArchiveEventLog.
- * Never update or delete event log rows.
+ * Internal helper — writes an event using the provided transaction client.
+ * Called from within withTenantContext wrappers to keep all writes in the same tx.
  */
-export async function appendEvent(input: AppendEventInput) {
-  return prisma.archiveEventLog.create({
+async function _appendEvent(tx: any, tenantId: string, input: AppendEventInput) {
+  return tx.archiveEventLog.create({
     data: {
+      tenantId,
       contentRecordId: input.contentRecordId,
       eventType:       input.eventType,
       eventNote:       input.eventNote ?? null,
@@ -409,13 +430,26 @@ export async function appendEvent(input: AppendEventInput) {
 }
 
 /**
+ * Append an event to the immutable audit log.
+ * This is the ONLY write path for ArchiveEventLog.
+ * Never update or delete event log rows.
+ */
+export async function appendEvent(tenantId: string, input: AppendEventInput) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return _appendEvent(tx, tenantId, input);
+  });
+}
+
+/**
  * Get the full audit event log for a content record.
  * Always ordered chronologically ascending.
  */
-export async function getEventLog(contentRecordId: string) {
-  return prisma.archiveEventLog.findMany({
-    where:   { contentRecordId },
-    orderBy: { createdAt: 'asc' },
+export async function getEventLog(tenantId: string, contentRecordId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.archiveEventLog.findMany({
+      where:   { contentRecordId, tenantId },
+      orderBy: { createdAt: 'asc' },
+    });
   });
 }
 
@@ -468,28 +502,37 @@ const ACTION_STATUS_MAP: Record<ComplianceActionType, ArchiveStatus> = {
  * Updates archiveStatus and appends an immutable audit event in one operation.
  */
 export async function recordComplianceAction(
+  tenantId: string,
   contentRecordId: string,
   input: RecordComplianceActionInput
 ): Promise<ContentRecordResponse> {
-  const newStatus = ACTION_STATUS_MAP[input.action];
+  return withTenantContext({ tenantId }, async (tx) => {
+    const newStatus = ACTION_STATUS_MAP[input.action];
 
-  const updated = await prisma.contentRecord.update({
-    where: { id: contentRecordId },
-    data:  { archiveStatus: newStatus },
-    include: {
-      ambassador: { select: ambassadorSelect },
-      campaign:   { select: campaignSelect },
-    },
+    // Validate tenant ownership before updating
+    await tx.contentRecord.findFirstOrThrow({
+      where: { id: contentRecordId, tenantId },
+      select: { id: true },
+    });
+
+    const updated = await tx.contentRecord.update({
+      where: { id: contentRecordId },
+      data:  { archiveStatus: newStatus },
+      include: {
+        ambassador: { select: ambassadorSelect },
+        campaign:   { select: campaignSelect },
+      },
+    });
+
+    await _appendEvent(tx, tenantId, {
+      contentRecordId,
+      eventType: ACTION_EVENT_MAP[input.action],
+      eventNote: input.note ?? `Compliance action recorded: ${input.action}`,
+      actorId:   input.actorId,
+    });
+
+    return updated;
   });
-
-  await appendEvent({
-    contentRecordId,
-    eventType: ACTION_EVENT_MAP[input.action],
-    eventNote: input.note ?? `Compliance action recorded: ${input.action}`,
-    actorId:   input.actorId,
-  });
-
-  return updated;
 }
 
 // ─────────────────────────────────────────
@@ -507,36 +550,38 @@ const REMEDIATION_EVENT_TYPES = [
  * Each result is enriched with the most recent remediation event details.
  * Source of truth: ArchiveEventLog — no new table required.
  */
-export async function getRemediationRecords() {
-  // Most recent remediation event per content record (distinct by contentRecordId)
-  const latestEvents = await prisma.archiveEventLog.findMany({
-    where:   { eventType: { in: [...REMEDIATION_EVENT_TYPES] } },
-    orderBy: { createdAt: 'desc' },
-    distinct: ['contentRecordId'],
+export async function getRemediationRecords(tenantId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    // Most recent remediation event per content record (distinct by contentRecordId)
+    const latestEvents = await tx.archiveEventLog.findMany({
+      where:   { tenantId, eventType: { in: [...REMEDIATION_EVENT_TYPES] } },
+      orderBy: { createdAt: 'desc' },
+      distinct: ['contentRecordId'],
+    });
+
+    if (!latestEvents.length) return [];
+
+    const recordIds = latestEvents.map(e => e.contentRecordId);
+
+    const records = await tx.contentRecord.findMany({
+      where: { id: { in: recordIds }, tenantId },
+      include: {
+        ambassador: { select: ambassadorSelect },
+        campaign:   { select: campaignSelect },
+      },
+      orderBy: { capturedAt: 'desc' },
+    });
+
+    // Merge latest remediation event data into each record response
+    const eventMap = new Map(latestEvents.map(e => [e.contentRecordId, e]));
+
+    return records.map(rec => ({
+      ...rec,
+      latestAction:     eventMap.get(rec.id)?.eventType  ?? null,
+      latestActionNote: eventMap.get(rec.id)?.eventNote  ?? null,
+      latestActionAt:   eventMap.get(rec.id)?.createdAt  ?? null,
+    }));
   });
-
-  if (!latestEvents.length) return [];
-
-  const recordIds = latestEvents.map(e => e.contentRecordId);
-
-  const records = await prisma.contentRecord.findMany({
-    where: { id: { in: recordIds } },
-    include: {
-      ambassador: { select: ambassadorSelect },
-      campaign:   { select: campaignSelect },
-    },
-    orderBy: { capturedAt: 'desc' },
-  });
-
-  // Merge latest remediation event data into each record response
-  const eventMap = new Map(latestEvents.map(e => [e.contentRecordId, e]));
-
-  return records.map(rec => ({
-    ...rec,
-    latestAction:     eventMap.get(rec.id)?.eventType  ?? null,
-    latestActionNote: eventMap.get(rec.id)?.eventNote  ?? null,
-    latestActionAt:   eventMap.get(rec.id)?.createdAt  ?? null,
-  }));
 }
 
 // ─────────────────────────────────────────
@@ -553,35 +598,36 @@ export async function getRemediationRecords() {
  * Records with archiveStatus = CLOSED but no COMPLIANCE_CERTIFIED event
  * (i.e. routine APPROVE closures) are excluded. No new table required.
  */
-export async function getCertifiedRecords() {
-  // Fetch COMPLIANCE_CERTIFIED events to get the sign-off timestamp and note
-  const certEvents = await prisma.archiveEventLog.findMany({
-    where:    { eventType: ArchiveEventType.COMPLIANCE_CERTIFIED },
-    orderBy:  { createdAt: 'desc' },
-    distinct: ['contentRecordId'],
+export async function getCertifiedRecords(tenantId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    const certEvents = await tx.archiveEventLog.findMany({
+      where:    { tenantId, eventType: ArchiveEventType.COMPLIANCE_CERTIFIED },
+      orderBy:  { createdAt: 'desc' },
+      distinct: ['contentRecordId'],
+    });
+
+    if (!certEvents.length) return [];
+
+    const recordIds = certEvents.map((e: any) => e.contentRecordId);
+
+    const records = await tx.contentRecord.findMany({
+      where: { id: { in: recordIds }, tenantId },
+      include: {
+        ambassador: { select: ambassadorSelect },
+        campaign:   { select: campaignSelect },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const eventMap = new Map(certEvents.map((e: any) => [e.contentRecordId, e]));
+
+    return records.map((rec: any) => ({
+      ...rec,
+      certifiedAt:   eventMap.get(rec.id)?.createdAt ?? rec.updatedAt,
+      certifiedNote: eventMap.get(rec.id)?.eventNote  ?? 'Supervisory sign-off recorded',
+      certifiedBy:   eventMap.get(rec.id)?.actorId    ?? null,
+    }));
   });
-
-  if (!certEvents.length) return [];
-
-  const recordIds = certEvents.map(e => e.contentRecordId);
-
-  const records = await prisma.contentRecord.findMany({
-    where: { id: { in: recordIds } },
-    include: {
-      ambassador: { select: ambassadorSelect },
-      campaign:   { select: campaignSelect },
-    },
-    orderBy: { updatedAt: 'desc' },
-  });
-
-  const eventMap = new Map(certEvents.map(e => [e.contentRecordId, e]));
-
-  return records.map(rec => ({
-    ...rec,
-    certifiedAt:   eventMap.get(rec.id)?.createdAt ?? rec.updatedAt,
-    certifiedNote: eventMap.get(rec.id)?.eventNote  ?? 'Supervisory sign-off recorded',
-    certifiedBy:   eventMap.get(rec.id)?.actorId    ?? null,
-  }));
 }
 
 // ─────────────────────────────────────────
@@ -614,7 +660,7 @@ const AUDIT_CATEGORY_MAP: Record<string, ArchiveEventType[]> = {
  * across every content record. Powers the global Audit Log screen.
  * Optionally filtered by category (capture / decision / escalation / config).
  */
-export async function listAuditEvents(options: {
+export async function listAuditEvents(tenantId: string, options: {
   page?:     number;
   pageSize?: number;
   category?: string;
@@ -622,33 +668,35 @@ export async function listAuditEvents(options: {
   const { page = 1, pageSize = 50, category } = options;
 
   const eventTypes = category ? AUDIT_CATEGORY_MAP[category.toLowerCase()] : undefined;
-  const where = eventTypes?.length ? { eventType: { in: eventTypes } } : {};
+  const where = { tenantId, ...(eventTypes?.length ? { eventType: { in: eventTypes } } : {}) };
 
-  const [total, events] = await Promise.all([
-    prisma.archiveEventLog.count({ where }),
-    prisma.archiveEventLog.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip:    (page - 1) * pageSize,
-      take:    pageSize,
-      include: {
-        contentRecord: {
-          select: {
-            id: true,
-            ambassador: { select: { handle: true, displayName: true } },
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [total, events] = await Promise.all([
+      tx.archiveEventLog.count({ where }),
+      tx.archiveEventLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip:    (page - 1) * pageSize,
+        take:    pageSize,
+        include: {
+          contentRecord: {
+            select: {
+              id: true,
+              ambassador: { select: { handle: true, displayName: true } },
+            },
           },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  return {
-    data:       events,
-    total,
-    page,
-    pageSize,
-    totalPages: Math.ceil(total / pageSize),
-  };
+    return {
+      data:       events,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  });
 }
 
 // ─────────────────────────────────────────
@@ -659,9 +707,11 @@ export async function listAuditEvents(options: {
  * Return all active content records (PENDING_REVIEW or ESCALATED)
  * whose SLA deadline has passed, sorted most overdue first.
  */
-export async function getSlaBreachedRecords() {
-  const active = await prisma.contentRecord.findMany({
+export async function getSlaBreachedRecords(tenantId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+  const active = await tx.contentRecord.findMany({
     where: {
+      tenantId,
       archiveStatus: { in: [ArchiveStatus.PENDING_REVIEW, ArchiveStatus.ESCALATED] },
     },
     include: {
@@ -681,6 +731,7 @@ export async function getSlaBreachedRecords() {
     .sort((a, b) => (a.slaHoursRemaining as number) - (b.slaHoursRemaining as number));
 
   return breached;
+  });
 }
 
 // ─────────────────────────────────────────
@@ -697,16 +748,19 @@ export async function getSlaBreachedRecords() {
  *   archiveStatus — filter by content record archive status
  *   ambassadorId  — filter to a single promoter's records
  */
-export async function listDisclosureFlags(options: {
+export async function listDisclosureFlags(tenantId: string, options: {
   archiveStatus?: string;
   ambassadorId?:  string;
 }) {
   const { archiveStatus, ambassadorId } = options;
 
-  const flags = await prisma.detectionRecord.findMany({
+  return withTenantContext({ tenantId }, async (tx) => {
+  const flags = await tx.detectionRecord.findMany({
     where: {
+      tenantId,
       ruleCode: { startsWith: 'DISC-' },
       contentRecord: {
+        tenantId,
         ...(archiveStatus ? { archiveStatus: archiveStatus as ArchiveStatus } : {}),
         ...(ambassadorId  ? { ambassadorId }                                  : {}),
       },
@@ -729,7 +783,7 @@ export async function listDisclosureFlags(options: {
     orderBy: { contentRecord: { capturedAt: 'desc' } },
   });
 
-  return flags.map(f => ({
+  return flags.map((f: any) => ({
     detectionRecordId: f.id,
     ruleCode:          f.ruleCode,
     ruleName:          f.ruleName,
@@ -750,6 +804,7 @@ export async function listDisclosureFlags(options: {
       handle:      f.contentRecord.ambassador.handle,
     },
   }));
+  });
 }
 
 // ─────────────────────────────────────────
@@ -769,7 +824,7 @@ export async function listDisclosureFlags(options: {
  *   ambassadorId — filter to a single promoter
  *   outcome      — 'SATISFIED' | 'NOT_SATISFIED'
  */
-export async function listDisclosureLog(options: {
+export async function listDisclosureLog(tenantId: string, options: {
   ambassadorId?: string;
   outcome?:      string;
 }) {
@@ -777,9 +832,11 @@ export async function listDisclosureLog(options: {
 
   const SATISFIED_STATUSES: ArchiveStatus[] = [ArchiveStatus.REVIEWED, ArchiveStatus.CLOSED];
 
+  return withTenantContext({ tenantId }, async (tx) => {
   // Fetch all content records that have at least one DISC- detection record
-  const records = await prisma.contentRecord.findMany({
+  const records = await tx.contentRecord.findMany({
     where: {
+      tenantId,
       ...(ambassadorId ? { ambassadorId } : {}),
       detectionRecords: {
         some: { ruleCode: { startsWith: 'DISC-' } },
@@ -804,7 +861,7 @@ export async function listDisclosureLog(options: {
     orderBy: { capturedAt: 'desc' },
   });
 
-  const mapped = records.map(rec => {
+  const mapped = records.map((rec: any) => {
     const disclosureOutcome: 'SATISFIED' | 'NOT_SATISFIED' =
       SATISFIED_STATUSES.includes(rec.archiveStatus as ArchiveStatus)
         ? 'SATISFIED'
@@ -829,10 +886,11 @@ export async function listDisclosureLog(options: {
 
   // Apply outcome filter in memory — outcome is derived, not a DB column
   const filtered = outcome
-    ? mapped.filter(r => r.disclosureOutcome === outcome.toUpperCase())
+    ? mapped.filter((r: any) => r.disclosureOutcome === outcome.toUpperCase())
     : mapped;
 
   return filtered;
+  });
 }
 
 // ─────────────────────────────────────────
@@ -844,9 +902,11 @@ export async function listDisclosureLog(options: {
  * already exists in the archive.
  * Used at ingestion to prevent duplicate captures.
  */
-export async function findByChecksum(checksum: string) {
-  return prisma.contentRecord.findFirst({
-    where: { checksum },
-    select: { id: true, capturedAt: true, ambassadorId: true },
+export async function findByChecksum(tenantId: string, checksum: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.contentRecord.findFirst({
+      where: { checksum, tenantId },
+      select: { id: true, capturedAt: true, ambassadorId: true },
+    });
   });
 }

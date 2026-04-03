@@ -7,7 +7,7 @@
 // CompensationEvent is written whenever supervisionPosture changes.
 // ============================================================
 
-import prisma from '../utils/prisma';
+import { withTenantContext } from '../utils/tenantContext';
 import { classifyCompensation } from '../lib/compensationClassifier';
 
 // ─────────────────────────────────────────
@@ -27,9 +27,9 @@ const ambassadorSelect = {
 // HELPERS
 // ─────────────────────────────────────────
 
-async function attachAmbassador(struct: { promoterId: string } & Record<string, unknown>) {
-  const ambassador = await prisma.ambassadorProfile.findUnique({
-    where:  { id: struct.promoterId },
+async function attachAmbassador(tx: any, tenantId: string, struct: { promoterId: string } & Record<string, unknown>) {
+  const ambassador = await tx.ambassadorProfile.findFirst({
+    where:  { id: struct.promoterId, tenantId },
     select: ambassadorSelect,
   });
   return { ...struct, ambassador: ambassador ?? null };
@@ -60,58 +60,63 @@ export type CreateCompensationStructureInput = {
  * recent existing structure, a CompensationEvent is written to the audit log.
  */
 export async function createCompensationStructure(
+  tenantId: string,
   input: CreateCompensationStructureInput
 ) {
-  const classification = classifyCompensation({
-    compensationForm:    input.compensationForm,
-    compensationTrigger: input.compensationTrigger,
-    productType:         input.productType,
-  });
+  return withTenantContext({ tenantId }, async (tx) => {
+    const classification = classifyCompensation({
+      compensationForm:    input.compensationForm,
+      compensationTrigger: input.compensationTrigger,
+      productType:         input.productType,
+    });
 
-  // Determine previousPosture for audit event
-  const existing = await prisma.compensationStructure.findFirst({
-    where:   { promoterId: input.promoterId },
-    orderBy: { createdAt: 'desc' },
-    select:  { supervisionPosture: true },
-  });
+    // Determine previousPosture for audit event
+    const existing = await tx.compensationStructure.findFirst({
+      where:   { promoterId: input.promoterId, tenantId },
+      orderBy: { createdAt: 'desc' },
+      select:  { supervisionPosture: true },
+    });
 
-  const previousPosture = existing?.supervisionPosture ?? 'NONE';
-  const newPosture      = classification.supervisionPosture;
+    const previousPosture = existing?.supervisionPosture ?? 'NONE';
+    const newPosture      = classification.supervisionPosture;
 
-  const struct = await prisma.compensationStructure.create({
-    data: {
-      promoterId:               input.promoterId,
-      campaignId:               input.campaignId               ?? null,
-      compensationForm:         input.compensationForm,
-      compensationTrigger:      input.compensationTrigger,
-      productType:              input.productType,
-      isTransactionBased:       classification.isTransactionBased,
-      isSecurityLinked:         classification.isSecurityLinked,
-      isCompensationVariable:   classification.isCompensationVariable,
-      requiresDisclosure:       classification.requiresDisclosure,
-      requiresPrincipalReview:  classification.requiresPrincipalReview,
-      supervisionPosture:       newPosture,
-      writtenAgreementRequired: input.writtenAgreementRequired,
-      agreementReference:       input.agreementReference        ?? null,
-      notes:                    input.notes                     ?? null,
-    },
-  });
-
-  // Write CompensationEvent whenever posture changes (or on first creation)
-  if (previousPosture !== newPosture) {
-    await prisma.compensationEvent.create({
+    const struct = await tx.compensationStructure.create({
       data: {
-        promoterId:       input.promoterId,
-        previousPosture,
-        newPosture,
-        reason:           existing
-          ? `Posture changed from ${previousPosture} to ${newPosture} on new structure creation`
-          : `Initial compensation structure established — posture ${newPosture}`,
+        tenantId,
+        promoterId:               input.promoterId,
+        campaignId:               input.campaignId               ?? null,
+        compensationForm:         input.compensationForm,
+        compensationTrigger:      input.compensationTrigger,
+        productType:              input.productType,
+        isTransactionBased:       classification.isTransactionBased,
+        isSecurityLinked:         classification.isSecurityLinked,
+        isCompensationVariable:   classification.isCompensationVariable,
+        requiresDisclosure:       classification.requiresDisclosure,
+        requiresPrincipalReview:  classification.requiresPrincipalReview,
+        supervisionPosture:       newPosture,
+        writtenAgreementRequired: input.writtenAgreementRequired,
+        agreementReference:       input.agreementReference        ?? null,
+        notes:                    input.notes                     ?? null,
       },
     });
-  }
 
-  return attachAmbassador(struct as Record<string, unknown> & { promoterId: string });
+    // Write CompensationEvent whenever posture changes (or on first creation)
+    if (previousPosture !== newPosture) {
+      await tx.compensationEvent.create({
+        data: {
+          tenantId,
+          promoterId:       input.promoterId,
+          previousPosture,
+          newPosture,
+          reason:           existing
+            ? `Posture changed from ${previousPosture} to ${newPosture} on new structure creation`
+            : `Initial compensation structure established — posture ${newPosture}`,
+        },
+      });
+    }
+
+    return attachAmbassador(tx, tenantId, struct as Record<string, unknown> & { promoterId: string });
+  });
 }
 
 // ─────────────────────────────────────────
@@ -122,13 +127,15 @@ export async function createCompensationStructure(
  * Return the most recent CompensationStructure for a promoter.
  * Returns null if none exists.
  */
-export async function getCompensationStructure(promoterId: string) {
-  const struct = await prisma.compensationStructure.findFirst({
-    where:   { promoterId },
-    orderBy: { createdAt: 'desc' },
+export async function getCompensationStructure(tenantId: string, promoterId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    const struct = await tx.compensationStructure.findFirst({
+      where:   { promoterId, tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!struct) return null;
+    return attachAmbassador(tx, tenantId, struct as Record<string, unknown> & { promoterId: string });
   });
-  if (!struct) return null;
-  return attachAmbassador(struct as Record<string, unknown> & { promoterId: string });
 }
 
 // ─────────────────────────────────────────
@@ -139,14 +146,17 @@ export async function getCompensationStructure(promoterId: string) {
  * Return all CompensationStructures, newest first.
  * Includes ambassador profile for each record.
  */
-export async function listCompensationStructures() {
-  const structs = await prisma.compensationStructure.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
+export async function listCompensationStructures(tenantId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    const structs = await tx.compensationStructure.findMany({
+      where:   { tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
 
-  return Promise.all(
-    structs.map(s =>
-      attachAmbassador(s as Record<string, unknown> & { promoterId: string })
-    )
-  );
+    return Promise.all(
+      structs.map(s =>
+        attachAmbassador(tx, tenantId, s as Record<string, unknown> & { promoterId: string })
+      )
+    );
+  });
 }

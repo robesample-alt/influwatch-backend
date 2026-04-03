@@ -2,12 +2,12 @@
 // FUNDUREX — INFLUWATCH PHASE 1
 // Service — EvidenceExport
 //
-// listExports()       — all exports, newest first
-// generateExport(input) — create export record with checksum
+// listExports(tenantId)         — all exports, newest first
+// generateExport(tenantId, input) — create export record with checksum
 // ============================================================
 
 import { createHash } from 'crypto';
-import prisma from '../utils/prisma';
+import { withTenantContext } from '../utils/tenantContext';
 
 const VALID_EXPORT_TYPES = [
   'FLAG_EVIDENCE',
@@ -25,9 +25,12 @@ export type ExportType = typeof VALID_EXPORT_TYPES[number];
 /**
  * List all evidence exports, newest first.
  */
-export async function listExports() {
-  return prisma.evidenceExport.findMany({
-    orderBy: { generatedAt: 'desc' },
+export async function listExports(tenantId: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.evidenceExport.findMany({
+      where:   { tenantId },
+      orderBy: { generatedAt: 'desc' },
+    });
   });
 }
 
@@ -51,37 +54,40 @@ export interface GenerateExportInput {
  * (type + generatedBy + timestamp + scope) so the record is
  * tamper-evident without requiring the actual file payload.
  */
-export async function generateExport(input: GenerateExportInput) {
-  const generatedAt = new Date();
+export async function generateExport(tenantId: string, input: GenerateExportInput) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    const generatedAt = new Date();
 
-  // Build a deterministic string from the export parameters
-  const checksumSource = [
-    input.exportType,
-    input.generatedBy,
-    generatedAt.toISOString(),
-    input.dateRangeStart?.toISOString() ?? 'null',
-    input.dateRangeEnd?.toISOString()   ?? 'null',
-    input.ambassadorId                  ?? 'null',
-    String(input.recordCount            ?? 0),
-  ].join('::');
+    // Build a deterministic string from the export parameters
+    const checksumSource = [
+      input.exportType,
+      input.generatedBy,
+      generatedAt.toISOString(),
+      input.dateRangeStart?.toISOString() ?? 'null',
+      input.dateRangeEnd?.toISOString()   ?? 'null',
+      input.ambassadorId                  ?? 'null',
+      String(input.recordCount            ?? 0),
+    ].join('::');
 
-  const packageChecksum = createHash('sha256')
-    .update(checksumSource, 'utf8')
-    .digest('hex');
+    const packageChecksum = createHash('sha256')
+      .update(checksumSource, 'utf8')
+      .digest('hex');
 
-  return prisma.evidenceExport.create({
-    data: {
-      exportType:     input.exportType,
-      generatedBy:    input.generatedBy,
-      generatedAt,
-      dateRangeStart: input.dateRangeStart ?? null,
-      dateRangeEnd:   input.dateRangeEnd   ?? null,
-      ambassadorId:   input.ambassadorId   ?? null,
-      recordCount:    input.recordCount    ?? 0,
-      packageChecksum,
-      status:         'COMPLETE',
-      notes:          input.notes          ?? null,
-    },
+    return tx.evidenceExport.create({
+      data: {
+        tenantId,
+        exportType:     input.exportType,
+        generatedBy:    input.generatedBy,
+        generatedAt,
+        dateRangeStart: input.dateRangeStart ?? null,
+        dateRangeEnd:   input.dateRangeEnd   ?? null,
+        ambassadorId:   input.ambassadorId   ?? null,
+        recordCount:    input.recordCount    ?? 0,
+        packageChecksum,
+        status:         'COMPLETE',
+        notes:          input.notes          ?? null,
+      },
+    });
   });
 }
 

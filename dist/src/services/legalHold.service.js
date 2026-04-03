@@ -3,18 +3,15 @@
 // FUNDUREX — INFLUWATCH PHASE 1
 // Service — LegalHold
 //
-// listHolds(status?)           — all holds, optional status filter
-// createHold(input)            — create a new legal hold
-// releaseHold(id, by, reason)  — set status RELEASED
+// listHolds(tenantId, status?)           — all holds, optional status filter
+// createHold(tenantId, input)            — create a new legal hold
+// releaseHold(tenantId, id, by, reason)  — set status RELEASED
 // ============================================================
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listHolds = listHolds;
 exports.createHold = createHold;
 exports.releaseHold = releaseHold;
-const prisma_1 = __importDefault(require("../utils/prisma"));
+const tenantContext_1 = require("../utils/tenantContext");
 // ─────────────────────────────────────────
 // LIST
 // ─────────────────────────────────────────
@@ -22,28 +19,33 @@ const prisma_1 = __importDefault(require("../utils/prisma"));
  * List all legal holds, newest first.
  * Optionally filtered by status (e.g. 'ACTIVE', 'RELEASED').
  */
-async function listHolds(status) {
-    return prisma_1.default.legalHold.findMany({
-        where: status ? { status } : undefined,
-        orderBy: { datePlaced: 'desc' },
+async function listHolds(tenantId, status) {
+    return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+        return tx.legalHold.findMany({
+            where: { tenantId, ...(status ? { status } : {}) },
+            orderBy: { datePlaced: 'desc' },
+        });
     });
 }
 /**
  * Create a new legal hold record.
  */
-async function createHold(input) {
-    return prisma_1.default.legalHold.create({
-        data: {
-            holdName: input.holdName,
-            holdType: input.holdType,
-            scope: input.scope,
-            recordsFrozen: input.recordsFrozen ?? 0,
-            placedBy: input.placedBy,
-            legalAuthority: input.legalAuthority,
-            datePlaced: input.datePlaced ?? new Date(),
-            basis: input.basis,
-            status: input.status ?? 'ACTIVE',
-        },
+async function createHold(tenantId, input) {
+    return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+        return tx.legalHold.create({
+            data: {
+                tenantId,
+                holdName: input.holdName,
+                holdType: input.holdType,
+                scope: input.scope,
+                recordsFrozen: input.recordsFrozen ?? 0,
+                placedBy: input.placedBy,
+                legalAuthority: input.legalAuthority,
+                datePlaced: input.datePlaced ?? new Date(),
+                basis: input.basis,
+                status: input.status ?? 'ACTIVE',
+            },
+        });
     });
 }
 // ─────────────────────────────────────────
@@ -54,18 +56,20 @@ async function createHold(input) {
  * and recording who released it and why.
  * Returns null if the hold does not exist.
  */
-async function releaseHold(id, releasedBy, releaseReason) {
-    const existing = await prisma_1.default.legalHold.findUnique({ where: { id } });
-    if (!existing)
-        return null;
-    return prisma_1.default.legalHold.update({
-        where: { id },
-        data: {
-            status: 'RELEASED',
-            releasedBy,
-            releasedAt: new Date(),
-            releaseReason,
-        },
+async function releaseHold(tenantId, id, releasedBy, releaseReason) {
+    return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+        const existing = await tx.legalHold.findFirst({ where: { id, tenantId } });
+        if (!existing)
+            return null;
+        return tx.legalHold.update({
+            where: { id },
+            data: {
+                status: 'RELEASED',
+                releasedBy,
+                releasedAt: new Date(),
+                releaseReason,
+            },
+        });
     });
 }
 //# sourceMappingURL=legalHold.service.js.map

@@ -21,7 +21,8 @@ const router = Router();
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const certs = await ProgramCertService.listProgramCerts();
+    const tenantId = req.user!.tenantId;
+    const certs = await ProgramCertService.listProgramCerts(tenantId);
     return res.status(200).json({ count: certs.length, certs });
   } catch (err) {
     next(err);
@@ -46,6 +47,7 @@ router.post('/', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalAct
       certificationNote,
     } = req.body;
 
+    const tenantId = req.user!.tenantId;
     const principalId = req.user!.id;
     if (!certificationYear)
       return res.status(400).json({ error: 'certificationYear is required' });
@@ -58,7 +60,7 @@ router.post('/', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalAct
     if (!Number.isInteger(year) || year < 2000 || year > 2100)
       return res.status(400).json({ error: 'certificationYear must be a valid 4-digit year' });
 
-    const cert = await ProgramCertService.createProgramCert({
+    const cert = await ProgramCertService.createProgramCert(tenantId, {
       principalId,
       certificationYear:         year,
       rulesCertified,

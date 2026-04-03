@@ -52,7 +52,8 @@ const AmbassadorService = __importStar(require("../services/ambassador.service")
 // ─────────────────────────────────────────
 async function listAmbassadors(req, res, next) {
     try {
-        const ambassadors = await AmbassadorService.listAmbassadors();
+        const tenantId = req.user.tenantId;
+        const ambassadors = await AmbassadorService.listAmbassadors(tenantId);
         return res.status(200).json(ambassadors);
     }
     catch (err) {
@@ -66,13 +67,14 @@ async function listAmbassadors(req, res, next) {
 // ─────────────────────────────────────────
 async function createAmbassador(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const { displayName, handle, primaryPlatform, riskTier, assignedSupervisorId } = req.body;
         if (!displayName || !handle || !primaryPlatform) {
             return res.status(400).json({
                 error: 'displayName, handle, and primaryPlatform are required',
             });
         }
-        const ambassador = await AmbassadorService.createAmbassador({
+        const ambassador = await AmbassadorService.createAmbassador(tenantId, {
             displayName,
             handle,
             primaryPlatform,
@@ -94,6 +96,7 @@ async function createAmbassador(req, res, next) {
 // ─────────────────────────────────────────
 async function updateAssignment(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const { id } = req.params;
         const { assignedSupervisorId } = req.body;
         if (assignedSupervisorId === undefined) {
@@ -101,7 +104,7 @@ async function updateAssignment(req, res, next) {
                 error: 'assignedSupervisorId is required (pass null to unassign)',
             });
         }
-        const ambassador = await AmbassadorService.assignSupervisor(id, assignedSupervisorId);
+        const ambassador = await AmbassadorService.assignSupervisor(tenantId, id, assignedSupervisorId);
         return res.status(200).json(ambassador);
     }
     catch (err) {
@@ -116,7 +119,8 @@ async function updateAssignment(req, res, next) {
 // ─────────────────────────────────────────
 async function getMonitorSummary(req, res, next) {
     try {
-        const data = await AmbassadorService.getMonitorSummary();
+        const tenantId = req.user.tenantId;
+        const data = await AmbassadorService.getMonitorSummary(tenantId);
         return res.status(200).json(data);
     }
     catch (err) {
@@ -130,7 +134,8 @@ async function getMonitorSummary(req, res, next) {
 // ─────────────────────────────────────────
 async function getAmbassadorDetail(req, res, next) {
     try {
-        const detail = await AmbassadorService.getAmbassadorDetail(req.params.id);
+        const tenantId = req.user.tenantId;
+        const detail = await AmbassadorService.getAmbassadorDetail(tenantId, req.params.id);
         if (!detail) {
             return res.status(404).json({ error: 'Ambassador not found', id: req.params.id });
         }

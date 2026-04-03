@@ -23,9 +23,10 @@ export async function listInternalActors(
   next: NextFunction
 ) {
   try {
+    const tenantId = req.user!.tenantId;
     const role   = req.query.role   as InternalActorRole   | undefined;
     const status = req.query.status as InternalActorStatus | undefined;
-    const actors = await InternalActorService.listInternalActors({ role, status });
+    const actors = await InternalActorService.listInternalActors(tenantId, { role, status });
     return res.status(200).json(actors);
   } catch (err) {
     next(err);
@@ -45,7 +46,8 @@ export async function listSupervisors(
   next: NextFunction
 ) {
   try {
-    const supervisors = await InternalActorService.listSupervisors();
+    const tenantId = req.user!.tenantId;
+    const supervisors = await InternalActorService.listSupervisors(tenantId);
     return res.status(200).json(supervisors);
   } catch (err) {
     next(err);

@@ -2,12 +2,12 @@
 // FUNDUREX — INFLUWATCH PHASE 1
 // Service — PreApprovalRequest
 //
-// listRequests(status?)         — list all, optional status filter
-// createRequest(input)          — submit a new pre-approval request
-// decideRequest(id, ...)        — record a decision on a request
+// listRequests(tenantId, status?)         — list all, optional status filter
+// createRequest(tenantId, input)          — submit a new pre-approval request
+// decideRequest(tenantId, id, ...)        — record a decision on a request
 // ============================================================
 
-import prisma from '../utils/prisma';
+import { withTenantContext } from '../utils/tenantContext';
 
 const ambassadorSelect = {
   id:          true,
@@ -39,14 +39,16 @@ export { VALID_STATUSES };
  * List all pre-approval requests, newest first.
  * Optionally filter by status.
  */
-export async function listRequests(status?: string) {
-  return prisma.preApprovalRequest.findMany({
-    where:   status ? { status } : undefined,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      ambassador:        { select: ambassadorSelect },
-      assignedPrincipal: { select: principalSelect },
-    },
+export async function listRequests(tenantId: string, status?: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.preApprovalRequest.findMany({
+      where:   { tenantId, ...(status ? { status } : {}) },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        ambassador:        { select: ambassadorSelect },
+        assignedPrincipal: { select: principalSelect },
+      },
+    });
   });
 }
 
@@ -68,23 +70,26 @@ export interface CreateRequestInput {
 /**
  * Submit a new pre-approval request.
  */
-export async function createRequest(input: CreateRequestInput) {
-  return prisma.preApprovalRequest.create({
-    data: {
-      ambassadorId:        input.ambassadorId,
-      submittedBy:         input.submittedBy,
-      contentType:         input.contentType,
-      platform:            input.platform,
-      contentPreview:      input.contentPreview,
-      requiredBy:          input.requiredBy          ?? null,
-      assignedPrincipalId: input.assignedPrincipalId ?? null,
-      slaHours:            input.slaHours            ?? 48,
-      status:              'PENDING',
-    },
-    include: {
-      ambassador:        { select: ambassadorSelect },
-      assignedPrincipal: { select: principalSelect },
-    },
+export async function createRequest(tenantId: string, input: CreateRequestInput) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.preApprovalRequest.create({
+      data: {
+        tenantId,
+        ambassadorId:        input.ambassadorId,
+        submittedBy:         input.submittedBy,
+        contentType:         input.contentType,
+        platform:            input.platform,
+        contentPreview:      input.contentPreview,
+        requiredBy:          input.requiredBy          ?? null,
+        assignedPrincipalId: input.assignedPrincipalId ?? null,
+        slaHours:            input.slaHours            ?? 48,
+        status:              'PENDING',
+      },
+      include: {
+        ambassador:        { select: ambassadorSelect },
+        assignedPrincipal: { select: principalSelect },
+      },
+    });
   });
 }
 
@@ -97,25 +102,28 @@ export async function createRequest(input: CreateRequestInput) {
  * Returns null if the request is not found.
  */
 export async function decideRequest(
+  tenantId:  string,
   id:        string,
   decision:  string,
   decidedBy: string,
   status:    DecisionStatus,
 ) {
-  const existing = await prisma.preApprovalRequest.findUnique({ where: { id } });
-  if (!existing) return null;
+  return withTenantContext({ tenantId }, async (tx) => {
+    const existing = await tx.preApprovalRequest.findFirst({ where: { id, tenantId } });
+    if (!existing) return null;
 
-  return prisma.preApprovalRequest.update({
-    where: { id },
-    data: {
-      status,
-      decision,
-      decidedBy,
-      decidedAt: new Date(),
-    },
-    include: {
-      ambassador:        { select: ambassadorSelect },
-      assignedPrincipal: { select: principalSelect },
-    },
+    return tx.preApprovalRequest.update({
+      where: { id },
+      data: {
+        status,
+        decision,
+        decidedBy,
+        decidedAt: new Date(),
+      },
+      include: {
+        ambassador:        { select: ambassadorSelect },
+        assignedPrincipal: { select: principalSelect },
+      },
+    });
   });
 }

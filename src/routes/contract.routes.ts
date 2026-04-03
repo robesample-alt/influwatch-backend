@@ -23,8 +23,9 @@ const router = Router();
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.user!.tenantId;
     const ambassadorId = req.query.ambassadorId as string | undefined;
-    const contracts    = await ContractService.listContracts(ambassadorId);
+    const contracts    = await ContractService.listContracts(tenantId, ambassadorId);
     return res.status(200).json({ count: contracts.length, contracts });
   } catch (err) {
     next(err);
@@ -39,7 +40,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const contract = await ContractService.getContract(req.params.id);
+    const tenantId = req.user!.tenantId;
+    const contract = await ContractService.getContract(tenantId, req.params.id);
     if (!contract) {
       return res.status(404).json({ error: 'Contract not found', id: req.params.id });
     }
@@ -76,13 +78,15 @@ router.post('/', requireRole(InternalActorRole.REGISTERED_PRINCIPAL, InternalAct
       notes,
     } = req.body;
 
+    const tenantId = req.user!.tenantId;
+
     if (!ambassadorId)  return res.status(400).json({ error: 'ambassadorId is required' });
     if (!agreementType) return res.status(400).json({ error: 'agreementType is required' });
     if (!contractId)    return res.status(400).json({ error: 'contractId is required' });
     if (!signedDate)    return res.status(400).json({ error: 'signedDate is required' });
     if (!effectiveDate) return res.status(400).json({ error: 'effectiveDate is required' });
 
-    const contract = await ContractService.createContract({
+    const contract = await ContractService.createContract(tenantId, {
       ambassadorId,
       agreementType,
       contractId,

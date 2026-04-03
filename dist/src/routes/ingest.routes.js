@@ -117,6 +117,7 @@ router.post('/video',
     });
 }, async (req, res, next) => {
     try {
+        const tenantId = req.user.tenantId;
         const { ambassadorId, platform } = req.body;
         const actorId = req.user?.id ?? 'SYSTEM';
         // ── Validation ─────────────────────────────────────
@@ -150,7 +151,7 @@ router.post('/video',
             });
         }
         // ── Create content record (runs full detection pipeline) ──
-        const record = await ContentService.createContentRecord({
+        const record = await ContentService.createContentRecord(tenantId, {
             ambassadorId,
             sourcePlatform: platform,
             contentType: 'VIDEO',
@@ -160,7 +161,7 @@ router.post('/video',
         });
         // ── Evidence chain: transcript generated ───────────
         const wordCount = transcript.split(/\s+/).filter(Boolean).length;
-        await ContentService.appendEvent({
+        await ContentService.appendEvent(tenantId, {
             contentRecordId: record.id,
             eventType: client_1.ArchiveEventType.NOTE_ADDED,
             eventNote: `Transcript generated via OpenAI Whisper (model: whisper-1) — ` +
@@ -169,7 +170,7 @@ router.post('/video',
             actorId,
         });
         // ── Attach video as media asset ─────────────────────
-        await ContentService.attachMediaAsset(record.id, {
+        await ContentService.attachMediaAsset(tenantId, record.id, {
             assetType: 'VIDEO_FILE',
             assetUrl: servedUrl,
             mimeType: req.file.mimetype,

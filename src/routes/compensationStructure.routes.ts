@@ -23,9 +23,10 @@ const router = Router();
 // Each record includes ambassador profile details.
 // ─────────────────────────────────────────
 
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const structures = await CompensationService.listCompensationStructures();
+    const tenantId = req.user!.tenantId;
+    const structures = await CompensationService.listCompensationStructures(tenantId);
     return res.status(200).json({ count: structures.length, structures });
   } catch (err) {
     next(err);
@@ -57,6 +58,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       notes,
     } = req.body;
 
+    const tenantId = req.user!.tenantId;
+
     if (!promoterId)            return res.status(400).json({ error: 'promoterId is required' });
     if (!compensationForm)      return res.status(400).json({ error: 'compensationForm is required' });
     if (!compensationTrigger)   return res.status(400).json({ error: 'compensationTrigger is required' });
@@ -65,7 +68,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ error: 'writtenAgreementRequired is required' });
     }
 
-    const structure = await CompensationService.createCompensationStructure({
+    const structure = await CompensationService.createCompensationStructure(tenantId, {
       promoterId,
       campaignId:               campaignId               ?? null,
       compensationForm,
@@ -91,7 +94,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.get('/:promoterId', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const structure = await CompensationService.getCompensationStructure(req.params.promoterId);
+    const tenantId = req.user!.tenantId;
+    const structure = await CompensationService.getCompensationStructure(tenantId, req.params.promoterId);
     if (!structure) {
       return res.status(404).json({
         error:      'No compensation structure found for this promoter',

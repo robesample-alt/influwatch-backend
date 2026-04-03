@@ -2,7 +2,7 @@
  * List all annual program certifications, newest first.
  * Includes signing principal details.
  */
-export declare function listProgramCerts(): Promise<({
+export declare function listProgramCerts(tenantId: string): Promise<({
     principal: {
         id: string;
         displayName: string;
@@ -11,6 +11,7 @@ export declare function listProgramCerts(): Promise<({
         seriesLicense: string | null;
     };
 } & {
+    tenantId: string;
     id: string;
     certifiedAt: Date;
     principalId: string;
@@ -32,7 +33,7 @@ export interface CreateProgramCertInput {
  * Create a new annual supervisory program certification.
  * Returns the created record with principal details.
  */
-export declare function createProgramCert(input: CreateProgramCertInput): Promise<{
+export declare function createProgramCert(tenantId: string, input: CreateProgramCertInput): Promise<{
     principal: {
         id: string;
         displayName: string;
@@ -41,6 +42,7 @@ export declare function createProgramCert(input: CreateProgramCertInput): Promis
         seriesLicense: string | null;
     };
 } & {
+    tenantId: string;
     id: string;
     certifiedAt: Date;
     principalId: string;

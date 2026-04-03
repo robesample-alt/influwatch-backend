@@ -27,7 +27,9 @@ import ingestRouter                  from './routes/ingest.routes';
 import compensationStructureRouter   from './routes/compensationStructure.routes';
 import affiliateLinksRouter          from './routes/affiliateLinks.routes';
 import { authenticate }    from './middleware/authenticate';
+import { tenantGuard }     from './middleware/tenantGuard';
 import { errorHandler }    from './middleware/errorHandler';
+import { verifyRls }       from './utils/rlsCheck';
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -64,29 +66,41 @@ app.get('/health', (_req, res) =>
 app.use('/api/influwatch/auth', loginLimiter, authRouter);
 
 // ── Protected Routes ──────────────────────
-// All routes below require a valid JWT bearer token.
-app.use('/api/influwatch/content-records', authenticate, influWatchRouter);
-app.use('/api/influwatch/ambassadors',     authenticate, ambassadorRouter);
-app.use('/api/influwatch/internal-actors', authenticate, internalActorRouter);
-app.use('/api/influwatch/certifications',          authenticate, writeLimiter, attestationRouter);
-app.use('/api/influwatch/config',                  authenticate, tenantConfigRouter);
-app.use('/api/influwatch/contracts',               authenticate, writeLimiter, contractRouter);
-app.use('/api/influwatch/legal-holds',             authenticate, writeLimiter, legalHoldRouter);
-app.use('/api/influwatch/program-certifications',  authenticate, writeLimiter, programCertRouter);
-app.use('/api/influwatch/exports',                 authenticate, writeLimiter, evidenceExportRouter);
-app.use('/api/influwatch/tail-periods',            authenticate, tailPeriodRouter);
-app.use('/api/influwatch/pre-approvals',           authenticate, writeLimiter, preApprovalRouter);
-app.use('/api/influwatch/ingest',                 authenticate, ingestRouter);
-app.use('/api/influwatch/compensation-structures', authenticate, writeLimiter, compensationStructureRouter);
-app.use('/api/influwatch/affiliate-links',         authenticate, writeLimiter, affiliateLinksRouter);
+// All routes below require a valid JWT bearer token + tenant context.
+// tenantGuard sets app.tenant_id in PostgreSQL for RLS enforcement.
+app.use('/api/influwatch/content-records', authenticate, tenantGuard, influWatchRouter);
+app.use('/api/influwatch/ambassadors',     authenticate, tenantGuard, ambassadorRouter);
+app.use('/api/influwatch/internal-actors', authenticate, tenantGuard, internalActorRouter);
+app.use('/api/influwatch/certifications',          authenticate, tenantGuard, writeLimiter, attestationRouter);
+app.use('/api/influwatch/config',                  authenticate, tenantGuard, tenantConfigRouter);
+app.use('/api/influwatch/contracts',               authenticate, tenantGuard, writeLimiter, contractRouter);
+app.use('/api/influwatch/legal-holds',             authenticate, tenantGuard, writeLimiter, legalHoldRouter);
+app.use('/api/influwatch/program-certifications',  authenticate, tenantGuard, writeLimiter, programCertRouter);
+app.use('/api/influwatch/exports',                 authenticate, tenantGuard, writeLimiter, evidenceExportRouter);
+app.use('/api/influwatch/tail-periods',            authenticate, tenantGuard, tailPeriodRouter);
+app.use('/api/influwatch/pre-approvals',           authenticate, tenantGuard, writeLimiter, preApprovalRouter);
+app.use('/api/influwatch/ingest',                 authenticate, tenantGuard, ingestRouter);
+app.use('/api/influwatch/compensation-structures', authenticate, tenantGuard, writeLimiter, compensationStructureRouter);
+app.use('/api/influwatch/affiliate-links',         authenticate, tenantGuard, writeLimiter, affiliateLinksRouter);
 
 // ── Error handler (must be last) ──────────
 app.use(errorHandler);
 
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    logger.info(`FNDR InfluWatch Phase 1 — Listening on http://localhost:${PORT}`);
-    logger.info(`Health: http://localhost:${PORT}/health`);
+  (async () => {
+    // Verify RLS is enabled on all tenant-scoped tables before accepting traffic.
+    // Fails fast with a fatal error if any table is missing RLS.
+    if (process.env.SKIP_RLS_CHECK !== 'true') {
+      await verifyRls();
+    }
+
+    app.listen(PORT, () => {
+      logger.info(`FNDR InfluWatch Phase 1 — Listening on http://localhost:${PORT}`);
+      logger.info(`Health: http://localhost:${PORT}/health`);
+    });
+  })().catch((err) => {
+    logger.fatal(err, 'Failed to start server');
+    process.exit(1);
   });
 }
 

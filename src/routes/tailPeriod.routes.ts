@@ -21,6 +21,7 @@ const VALID_STATUSES   = ['ACTIVE', 'CLOSED', 'EXPIRED'] as const;
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.user!.tenantId;
     const status = req.query.status as string | undefined;
 
     if (status && !VALID_STATUSES.includes(status as any)) {
@@ -30,7 +31,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    const tailPeriods = await TailPeriodService.listTailPeriods(status);
+    const tailPeriods = await TailPeriodService.listTailPeriods(tenantId, status);
     return res.status(200).json({ count: tailPeriods.length, tailPeriods });
   } catch (err) {
     next(err);
@@ -54,6 +55,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       tailType,
     } = req.body;
 
+    const tenantId = req.user!.tenantId;
+
     if (!ambassadorId)    return res.status(400).json({ error: 'ambassadorId is required' });
     if (!contractEndDate) return res.status(400).json({ error: 'contractEndDate is required' });
     if (tailDays == null) return res.status(400).json({ error: 'tailDays is required' });
@@ -72,7 +75,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    const record = await TailPeriodService.createTailPeriod({
+    const record = await TailPeriodService.createTailPeriod(tenantId, {
       ambassadorId,
       contractEndDate: new Date(contractEndDate),
       tailDays:        tailDaysNum,
@@ -99,13 +102,14 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.patch('/:id/close', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.user!.tenantId;
     const { id }           = req.params;
     const { closedBy, closedReason } = req.body;
 
     if (!closedBy)     return res.status(400).json({ error: 'closedBy is required' });
     if (!closedReason) return res.status(400).json({ error: 'closedReason is required' });
 
-    const record = await TailPeriodService.closeTailPeriod(id, closedBy, closedReason);
+    const record = await TailPeriodService.closeTailPeriod(tenantId, id, closedBy, closedReason);
     if (!record) return res.status(404).json({ error: 'Tail period not found', id });
 
     return res.status(200).json(record);

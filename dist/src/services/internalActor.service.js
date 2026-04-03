@@ -7,14 +7,11 @@
 // and compliance officers. Powers User Management screen
 // and Register Promoter supervisor dropdown.
 // ============================================================
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listInternalActors = listInternalActors;
 exports.listSupervisors = listSupervisors;
 exports.getInternalActorById = getInternalActorById;
-const prisma_1 = __importDefault(require("../utils/prisma"));
+const tenantContext_1 = require("../utils/tenantContext");
 const client_1 = require("@prisma/client");
 const SUPERVISOR_SELECT = {
     id: true,
@@ -31,42 +28,50 @@ const SUPERVISOR_SELECT = {
 /**
  * List all internal actors. Optionally filter by role or status.
  */
-async function listInternalActors(opts) {
-    return prisma_1.default.internalActor.findMany({
-        where: {
-            ...(opts?.role ? { role: opts.role } : {}),
-            ...(opts?.status ? { status: opts.status } : {}),
-        },
-        select: SUPERVISOR_SELECT,
-        orderBy: { displayName: 'asc' },
+async function listInternalActors(tenantId, opts) {
+    return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+        return tx.internalActor.findMany({
+            where: {
+                tenantId,
+                ...(opts?.role ? { role: opts.role } : {}),
+                ...(opts?.status ? { status: opts.status } : {}),
+            },
+            select: SUPERVISOR_SELECT,
+            orderBy: { displayName: 'asc' },
+        });
     });
 }
 /**
  * List only supervisory-capable actors (REGISTERED_PRINCIPAL + DESIGNATED_SUPERVISOR).
  * Used by the Register Promoter dropdown and assignment patch endpoint.
  */
-async function listSupervisors() {
-    return prisma_1.default.internalActor.findMany({
-        where: {
-            role: {
-                in: [
-                    client_1.InternalActorRole.REGISTERED_PRINCIPAL,
-                    client_1.InternalActorRole.DESIGNATED_SUPERVISOR,
-                ],
+async function listSupervisors(tenantId) {
+    return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+        return tx.internalActor.findMany({
+            where: {
+                tenantId,
+                role: {
+                    in: [
+                        client_1.InternalActorRole.REGISTERED_PRINCIPAL,
+                        client_1.InternalActorRole.DESIGNATED_SUPERVISOR,
+                    ],
+                },
+                status: client_1.InternalActorStatus.ACTIVE,
             },
-            status: client_1.InternalActorStatus.ACTIVE,
-        },
-        select: SUPERVISOR_SELECT,
-        orderBy: { displayName: 'asc' },
+            select: SUPERVISOR_SELECT,
+            orderBy: { displayName: 'asc' },
+        });
     });
 }
 /**
  * Fetch a single internal actor by id.
  */
-async function getInternalActorById(id) {
-    return prisma_1.default.internalActor.findUnique({
-        where: { id },
-        select: SUPERVISOR_SELECT,
+async function getInternalActorById(tenantId, id) {
+    return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+        return tx.internalActor.findFirst({
+            where: { id, tenantId },
+            select: SUPERVISOR_SELECT,
+        });
     });
 }
 //# sourceMappingURL=internalActor.service.js.map

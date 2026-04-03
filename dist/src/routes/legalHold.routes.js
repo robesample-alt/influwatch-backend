@@ -53,8 +53,9 @@ const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
 router.get('/', async (req, res, next) => {
     try {
+        const tenantId = req.user.tenantId;
         const status = req.query.status;
-        const holds = await LegalHoldService.listHolds(status);
+        const holds = await LegalHoldService.listHolds(tenantId, status);
         return res.status(200).json({ count: holds.length, holds });
     }
     catch (err) {
@@ -70,6 +71,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.REGISTERED_PRINCIPAL, client_1.InternalActorRole.DESIGNATED_SUPERVISOR, client_1.InternalActorRole.COMPLIANCE_OFFICER, client_1.InternalActorRole.TENANT_ADMIN), async (req, res, next) => {
     try {
         const { holdName, holdType, scope, recordsFrozen, legalAuthority, datePlaced, basis, status, } = req.body;
+        const tenantId = req.user.tenantId;
         const placedBy = req.user.id;
         if (!holdName)
             return res.status(400).json({ error: 'holdName is required' });
@@ -81,7 +83,7 @@ router.post('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.REGIS
             return res.status(400).json({ error: 'legalAuthority is required' });
         if (!basis)
             return res.status(400).json({ error: 'basis is required' });
-        const hold = await LegalHoldService.createHold({
+        const hold = await LegalHoldService.createHold(tenantId, {
             holdName,
             holdType,
             scope,
@@ -106,11 +108,12 @@ router.post('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.REGIS
 // ─────────────────────────────────────────
 router.patch('/:id/release', (0, requireRole_1.requireRole)(client_1.InternalActorRole.REGISTERED_PRINCIPAL, client_1.InternalActorRole.COMPLIANCE_OFFICER, client_1.InternalActorRole.TENANT_ADMIN), async (req, res, next) => {
     try {
+        const tenantId = req.user.tenantId;
         const { releaseReason } = req.body;
         const releasedBy = req.user.id;
         if (!releaseReason)
             return res.status(400).json({ error: 'releaseReason is required' });
-        const hold = await LegalHoldService.releaseHold(req.params.id, releasedBy, releaseReason);
+        const hold = await LegalHoldService.releaseHold(tenantId, req.params.id, releasedBy, releaseReason);
         if (!hold) {
             return res.status(404).json({ error: 'Legal hold not found', id: req.params.id });
         }

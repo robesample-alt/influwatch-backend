@@ -9,9 +9,10 @@
     "start": "node dist/server.js",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "ts-node --transpile-only seed/seed.ts",
+    "db:push": "cross-env DATABASE_URL=$DATABASE_URL_ADMIN prisma db push",
+    "db:migrate": "cross-env DATABASE_URL=$DATABASE_URL_ADMIN prisma migrate dev",
+    "db:migrate:deploy": "cross-env DATABASE_URL=$DATABASE_URL_ADMIN prisma migrate deploy",
+    "db:seed": "cross-env DATABASE_URL=$DATABASE_URL_ADMIN ts-node --transpile-only seed/seed.ts",
     "db:studio": "prisma studio",
     "typecheck": "tsc --noEmit",
     "test": "cross-env NODE_ENV=test jest --runInBand --forceExit"

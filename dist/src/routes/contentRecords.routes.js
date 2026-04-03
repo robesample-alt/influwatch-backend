@@ -73,15 +73,16 @@ async function createContentRecord(req, res, next) {
         if (!valid) {
             return res.status(400).json({ error: 'Validation failed', details: errors });
         }
+        const tenantId = req.user.tenantId;
         // Verify ambassador exists
-        const ambassador = await AmbassadorService.getAmbassadorById(req.body.ambassadorId);
+        const ambassador = await AmbassadorService.getAmbassadorById(tenantId, req.body.ambassadorId);
         if (!ambassador) {
             return res.status(404).json({ error: 'Ambassador not found', ambassadorId: req.body.ambassadorId });
         }
         // Dedup check
         const { computeChecksum } = await Promise.resolve().then(() => __importStar(require('../utils/checksum')));
         const checksum = computeChecksum(req.body.sourceUrl, req.body.bodyText);
-        const duplicate = await ContentRecordService.findByChecksum(checksum);
+        const duplicate = await ContentRecordService.findByChecksum(tenantId, checksum);
         if (duplicate) {
             return res.status(409).json({
                 error: 'Duplicate content detected',
@@ -89,7 +90,7 @@ async function createContentRecord(req, res, next) {
                 capturedAt: duplicate.capturedAt,
             });
         }
-        const record = await ContentRecordService.createContentRecord(req.body);
+        const record = await ContentRecordService.createContentRecord(tenantId, req.body);
         return res.status(201).json(record);
     }
     catch (err) {
@@ -108,8 +109,9 @@ async function createContentRecord(req, res, next) {
 // ─────────────────────────────────────────
 async function listContentRecords(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const filters = (0, validation_1.parseContentRecordFilters)(req.query);
-        const result = await ContentRecordService.listContentRecords(filters);
+        const result = await ContentRecordService.listContentRecords(tenantId, filters);
         return res.status(200).json(result);
     }
     catch (err) {
@@ -125,7 +127,8 @@ async function listContentRecords(req, res, next) {
 // ─────────────────────────────────────────
 async function listCertifiedRecords(req, res, next) {
     try {
-        const records = await ContentRecordService.getCertifiedRecords();
+        const tenantId = req.user.tenantId;
+        const records = await ContentRecordService.getCertifiedRecords(tenantId);
         return res.status(200).json(records);
     }
     catch (err) {
@@ -142,10 +145,11 @@ async function listCertifiedRecords(req, res, next) {
 // ─────────────────────────────────────────
 async function listAuditEvents(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const pageSize = Math.min(200, Math.max(1, parseInt(req.query.pageSize) || 50));
         const category = req.query.category;
-        const result = await ContentRecordService.listAuditEvents({ page, pageSize, category });
+        const result = await ContentRecordService.listAuditEvents(tenantId, { page, pageSize, category });
         return res.status(200).json(result);
     }
     catch (err) {
@@ -162,7 +166,8 @@ async function listAuditEvents(req, res, next) {
 // ─────────────────────────────────────────
 async function listRemediationRecords(req, res, next) {
     try {
-        const records = await ContentRecordService.getRemediationRecords();
+        const tenantId = req.user.tenantId;
+        const records = await ContentRecordService.getRemediationRecords(tenantId);
         return res.status(200).json(records);
     }
     catch (err) {
@@ -178,7 +183,8 @@ async function listRemediationRecords(req, res, next) {
 // ─────────────────────────────────────────
 async function listSlaBreachedRecords(req, res, next) {
     try {
-        const records = await ContentRecordService.getSlaBreachedRecords();
+        const tenantId = req.user.tenantId;
+        const records = await ContentRecordService.getSlaBreachedRecords(tenantId);
         return res.status(200).json({ count: records.length, records });
     }
     catch (err) {
@@ -202,9 +208,10 @@ async function listSlaBreachedRecords(req, res, next) {
 // ─────────────────────────────────────────
 async function listDisclosureLog(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const ambassadorId = req.query.ambassadorId;
         const outcome = req.query.outcome;
-        const records = await ContentRecordService.listDisclosureLog({ ambassadorId, outcome });
+        const records = await ContentRecordService.listDisclosureLog(tenantId, { ambassadorId, outcome });
         return res.status(200).json({ count: records.length, records });
     }
     catch (err) {
@@ -213,9 +220,10 @@ async function listDisclosureLog(req, res, next) {
 }
 async function listDisclosureFlags(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const archiveStatus = req.query.status;
         const ambassadorId = req.query.ambassadorId;
-        const flags = await ContentRecordService.listDisclosureFlags({ archiveStatus, ambassadorId });
+        const flags = await ContentRecordService.listDisclosureFlags(tenantId, { archiveStatus, ambassadorId });
         return res.status(200).json({ count: flags.length, flags });
     }
     catch (err) {
@@ -229,7 +237,8 @@ async function listDisclosureFlags(req, res, next) {
 // ─────────────────────────────────────────
 async function getContentRecord(req, res, next) {
     try {
-        const record = await ContentRecordService.getContentRecordById(req.params.id);
+        const tenantId = req.user.tenantId;
+        const record = await ContentRecordService.getContentRecordById(tenantId, req.params.id);
         if (!record) {
             return res.status(404).json({ error: 'Content record not found', id: req.params.id });
         }
@@ -247,7 +256,8 @@ async function getContentRecord(req, res, next) {
 // ─────────────────────────────────────────
 async function getContentRecordEvents(req, res, next) {
     try {
-        const events = await ContentRecordService.getEventLog(req.params.id);
+        const tenantId = req.user.tenantId;
+        const events = await ContentRecordService.getEventLog(tenantId, req.params.id);
         return res.status(200).json({ contentRecordId: req.params.id, events });
     }
     catch (err) {
@@ -262,7 +272,8 @@ async function getContentRecordEvents(req, res, next) {
 // ─────────────────────────────────────────
 async function getContentRecordAssets(req, res, next) {
     try {
-        const assets = await ContentRecordService.getMediaAssets(req.params.id);
+        const tenantId = req.user.tenantId;
+        const assets = await ContentRecordService.getMediaAssets(tenantId, req.params.id);
         return res.status(200).json({ contentRecordId: req.params.id, assets });
     }
     catch (err) {
@@ -276,11 +287,12 @@ async function getContentRecordAssets(req, res, next) {
 // ─────────────────────────────────────────
 async function attachAsset(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const { valid, errors } = (0, validation_1.validateCreateMediaAsset)(req.body);
         if (!valid) {
             return res.status(400).json({ error: 'Validation failed', details: errors });
         }
-        const asset = await ContentRecordService.attachMediaAsset(req.params.id, req.body);
+        const asset = await ContentRecordService.attachMediaAsset(tenantId, req.params.id, req.body);
         return res.status(201).json(asset);
     }
     catch (err) {
@@ -295,13 +307,14 @@ async function attachAsset(req, res, next) {
 // ─────────────────────────────────────────
 async function updateStatus(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const { archiveStatus, note } = req.body;
         if (!archiveStatus) {
             return res.status(400).json({ error: 'archiveStatus is required' });
         }
         // actorId would come from auth middleware in production
         const actorId = req.user?.id;
-        const updated = await ContentRecordService.updateArchiveStatus(req.params.id, {
+        const updated = await ContentRecordService.updateArchiveStatus(tenantId, req.params.id, {
             archiveStatus,
             note,
             actorId,
@@ -320,12 +333,13 @@ async function updateStatus(req, res, next) {
 // ─────────────────────────────────────────
 async function appendEvent(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const { eventType, eventNote } = req.body;
         if (!eventType) {
             return res.status(400).json({ error: 'eventType is required' });
         }
         const actorId = req.user?.id;
-        const event = await ContentRecordService.appendEvent({
+        const event = await ContentRecordService.appendEvent(tenantId, {
             contentRecordId: req.params.id,
             eventType: eventType,
             eventNote,
@@ -347,6 +361,7 @@ async function appendEvent(req, res, next) {
 // ─────────────────────────────────────────
 async function recordAction(req, res, next) {
     try {
+        const tenantId = req.user.tenantId;
         const { action, note } = req.body;
         if (!action) {
             return res.status(400).json({ error: 'action is required' });
@@ -358,7 +373,7 @@ async function recordAction(req, res, next) {
             });
         }
         const actorId = req.user?.id;
-        const record = await ContentRecordService.recordComplianceAction(req.params.id, { action, note, actorId });
+        const record = await ContentRecordService.recordComplianceAction(tenantId, req.params.id, { action, note, actorId });
         return res.status(200).json(record);
     }
     catch (err) {
