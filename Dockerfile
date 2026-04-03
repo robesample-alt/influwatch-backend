@@ -12,10 +12,9 @@ RUN apt-get update && apt-get install -y openssl libssl1.1 && rm -rf /var/lib/ap
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 
-# Install all deps, generate Prisma client for Linux, then prune
+# Install all deps and generate Prisma client for Linux
 RUN npm ci --maxsockets 1 \
-    && npx prisma generate --schema=./prisma/schema.prisma \
-    && npm prune --omit=dev
+    && npx prisma generate --schema=./prisma/schema.prisma
 
 # Copy pre-built dist
 COPY dist ./dist
