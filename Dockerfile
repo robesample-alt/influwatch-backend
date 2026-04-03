@@ -6,14 +6,13 @@
 FROM node:20-alpine
 WORKDIR /app
 
-# Copy package.json and prisma schema first
-COPY package.json ./
+# Copy package.json, lock file, and prisma schema
+COPY package.json package-lock.json ./
 COPY prisma ./prisma
 
-# Install production deps + prisma CLI, then generate client for Linux
-RUN npm install --omit=dev --ignore-scripts --maxsockets 1 \
-    && npm install prisma@5.10.0 --save-dev --maxsockets 1 \
-    && npx prisma generate \
+# Install all deps (need prisma CLI), generate client for Linux, then prune
+RUN npm ci --maxsockets 1 \
+    && npx prisma generate --schema=./prisma/schema.prisma \
     && npm prune --omit=dev
 
 # Copy pre-built dist
