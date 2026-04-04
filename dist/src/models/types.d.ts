@@ -34,6 +34,8 @@ export interface ContentRecordFilters {
     sourcePlatform?: SourcePlatform;
     archiveStatus?: ArchiveStatus;
     severity?: Severity;
+    capturedFrom?: string;
+    capturedTo?: string;
     page?: number;
     pageSize?: number;
 }
