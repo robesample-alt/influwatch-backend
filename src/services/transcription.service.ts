@@ -9,6 +9,8 @@
 
 import OpenAI from 'openai';
 import fs     from 'fs';
+import path   from 'path';
+import os     from 'os';
 
 let _client: OpenAI | null = null;
 
@@ -36,4 +38,32 @@ export async function transcribeFile(filePath: string): Promise<string> {
   });
 
   return response.text.trim();
+}
+
+/**
+ * Download a video/audio URL to a temp file, transcribe it via Whisper,
+ * then clean up. Returns the transcript string.
+ * Returns null (does not throw) if the download or transcription fails.
+ */
+export async function transcribeUrl(url: string): Promise<string | null> {
+  const tmpDir  = os.tmpdir();
+  const tmpFile = path.join(tmpDir, `iw-transcribe-${Date.now()}.mp4`);
+
+  try {
+    // Download the media file
+    const res = await fetch(url);
+    if (!res.ok || !res.body) return null;
+
+    const buffer = Buffer.from(await res.arrayBuffer());
+    fs.writeFileSync(tmpFile, buffer);
+
+    // Transcribe
+    const transcript = await transcribeFile(tmpFile);
+    return transcript;
+  } catch {
+    return null;
+  } finally {
+    // Clean up temp file
+    try { fs.unlinkSync(tmpFile); } catch {}
+  }
 }

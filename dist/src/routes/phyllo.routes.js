@@ -49,6 +49,8 @@ const express_1 = require("express");
 const PhylloService = __importStar(require("../services/phyllo.service"));
 const phylloMapper_1 = require("../lib/phylloMapper");
 const contentRecord_service_1 = require("../services/contentRecord.service");
+const transcription_service_1 = require("../services/transcription.service");
+const tenantContext_1 = require("../utils/tenantContext");
 const logger_1 = __importDefault(require("../utils/logger"));
 const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
@@ -140,11 +142,36 @@ async function phylloWebhookHandler(req, res) {
                 for (const asset of assets) {
                     await (0, contentRecord_service_1.attachMediaAsset)(ambassador.tenantId, created.id, asset);
                 }
+                // Auto-transcribe video content
+                const isVideo = ['VIDEO', 'SHORT_FORM_VIDEO', 'REEL', 'LIVE_STREAM'].includes(record.contentType);
+                const mediaUrl = phylloItem.media_url;
+                if (isVideo && mediaUrl) {
+                    try {
+                        const transcript = await (0, transcription_service_1.transcribeUrl)(mediaUrl);
+                        if (transcript) {
+                            await (0, tenantContext_1.withTenantContext)({ tenantId: ambassador.tenantId }, async (tx) => {
+                                await tx.contentRecord.update({
+                                    where: { id: created.id },
+                                    data: { transcriptText: transcript },
+                                });
+                            });
+                            await (0, contentRecord_service_1.attachMediaAsset)(ambassador.tenantId, created.id, {
+                                assetType: 'TRANSCRIPT_FILE',
+                                assetUrl: `transcript://${created.id}`,
+                                mimeType: 'text/plain',
+                            });
+                            logger_1.default.info({ recordId: created.id }, 'Video auto-transcribed via Whisper');
+                        }
+                    }
+                    catch (transcribeErr) {
+                        logger_1.default.warn({ recordId: created.id, err: transcribeErr }, 'Video transcription failed — record saved without transcript');
+                    }
+                }
                 // Log ingestion event
                 await (0, contentRecord_service_1.appendEvent)(ambassador.tenantId, {
                     contentRecordId: created.id,
                     eventType: 'RECORD_CREATED',
-                    eventNote: `Auto-ingested via Phyllo from ${record.sourcePlatform} — ${record.sourceUrl}`,
+                    eventNote: `Auto-ingested via Phyllo from ${record.sourcePlatform} — ${record.sourceUrl}${isVideo && mediaUrl ? ' (video transcription attempted)' : ''}`,
                     actorId: 'PHYLLO',
                 });
                 ingested++;
