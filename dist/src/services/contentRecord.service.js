@@ -198,13 +198,14 @@ async function createContentRecord(tenantId, input) {
  */
 async function listContentRecords(tenantId, filters) {
     return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
-        const { ambassadorId, campaignId, sourcePlatform, archiveStatus, page = 1, pageSize = 25, } = filters;
+        const { ambassadorId, campaignId, sourcePlatform, archiveStatus, severity, page = 1, pageSize = 25, } = filters;
         const where = {
             tenantId,
             ...(ambassadorId ? { ambassadorId } : {}),
             ...(campaignId ? { campaignId } : {}),
             ...(sourcePlatform ? { sourcePlatform } : {}),
             ...(archiveStatus ? { archiveStatus } : {}),
+            ...(severity ? { severity } : {}),
         };
         const [total, records] = await Promise.all([
             tx.contentRecord.count({ where }),

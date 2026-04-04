@@ -33,6 +33,7 @@ export interface ContentRecordFilters {
     campaignId?: string;
     sourcePlatform?: SourcePlatform;
     archiveStatus?: ArchiveStatus;
+    severity?: Severity;
     page?: number;
     pageSize?: number;
 }

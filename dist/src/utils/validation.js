@@ -78,6 +78,8 @@ function parseContentRecordFilters(query) {
         filters.sourcePlatform = query.sourcePlatform;
     if (isEnumValue(client_1.ArchiveStatus, query.archiveStatus))
         filters.archiveStatus = query.archiveStatus;
+    if (isEnumValue(client_1.Severity, query.severity))
+        filters.severity = query.severity;
     const page = parseInt(String(query.page), 10);
     const pageSize = parseInt(String(query.pageSize), 10);
     filters.page = !isNaN(page) && page > 0 ? page : 1;
