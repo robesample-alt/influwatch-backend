@@ -55,15 +55,94 @@ const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const child_process_1 = require("child_process");
+const util_1 = require("util");
 const client_1 = require("@prisma/client");
 const transcription_service_1 = require("../services/transcription.service");
 const ContentService = __importStar(require("../services/contentRecord.service"));
+const logger_1 = __importDefault(require("../utils/logger"));
+const execFileAsync = (0, util_1.promisify)(child_process_1.execFile);
 // ─────────────────────────────────────────
 // Config
 // ─────────────────────────────────────────
 const UPLOAD_DIR = process.env.UPLOAD_DIR ?? './uploads';
-const MAX_SIZE_MB = Number(process.env.MAX_UPLOAD_SIZE_MB ?? 25);
+// Whisper API hard-caps uploads at 25 MB. Clamp MAX_UPLOAD_SIZE_MB so a
+// misconfigured env var can never let multer accept a file Whisper will
+// reject — that used to produce a confusing 422 late in the pipeline.
+const WHISPER_MAX_MB = 25;
+const _envMaxMb = Number(process.env.MAX_UPLOAD_SIZE_MB ?? WHISPER_MAX_MB);
+const MAX_SIZE_MB = Math.min(Number.isFinite(_envMaxMb) && _envMaxMb > 0 ? _envMaxMb : WHISPER_MAX_MB, WHISPER_MAX_MB);
 const MAX_SIZE_B = MAX_SIZE_MB * 1024 * 1024;
+if (_envMaxMb > WHISPER_MAX_MB) {
+    logger_1.default.warn({ envValue: _envMaxMb, effective: MAX_SIZE_MB }, 'MAX_UPLOAD_SIZE_MB exceeds Whisper API hard limit — clamped');
+}
+// ─────────────────────────────────────────
+// File-integrity helpers
+// ─────────────────────────────────────────
+/**
+ * Reject files whose first bytes don't look like a recognized video
+ * container. Catches zero-byte, truncated-at-the-header, or totally
+ * corrupt uploads before we waste a Whisper call on them.
+ *
+ * Recognized magic bytes:
+ *   MP4 / MOV / M4V — offset 4: "ftyp"
+ *   WebM / MKV      — offset 0: 0x1A 0x45 0xDF 0xA3
+ *   AVI             — offset 0: "RIFF" + offset 8: "AVI "
+ *   FLV             — offset 0: "FLV"
+ */
+function assertLooksLikeVideo(filePath) {
+    const fd = fs_1.default.openSync(filePath, 'r');
+    const buf = Buffer.alloc(16);
+    try {
+        const n = fs_1.default.readSync(fd, buf, 0, 16, 0);
+        if (n < 12)
+            throw new Error('File is too small to be a valid video');
+        const isMp4 = buf.subarray(4, 8).toString('ascii') === 'ftyp';
+        const isMkv = buf[0] === 0x1A && buf[1] === 0x45 && buf[2] === 0xDF && buf[3] === 0xA3;
+        const isAvi = buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'AVI ';
+        const isFlv = buf.subarray(0, 3).toString('ascii') === 'FLV';
+        if (!isMp4 && !isMkv && !isAvi && !isFlv) {
+            throw new Error('Uploaded file does not have a recognized video signature — the upload may have been truncated or the format is unsupported');
+        }
+    }
+    finally {
+        fs_1.default.closeSync(fd);
+    }
+}
+/**
+ * Best-effort duration probe via ffprobe. Returns null if ffprobe is not
+ * installed on the host (Render's default Nixpacks image doesn't ship it)
+ * or if the probe fails for any reason. Logged for diagnostics, never
+ * throws — purely informational so future truncation incidents are
+ * visible in structured logs alongside the transcript length.
+ */
+async function probeDurationSeconds(filePath) {
+    try {
+        const { stdout } = await execFileAsync('ffprobe', [
+            '-v', 'error',
+            '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            filePath,
+        ], { timeout: 10000 });
+        const secs = parseFloat(stdout.trim());
+        return Number.isFinite(secs) ? secs : null;
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Best-effort file cleanup — swallows ENOENT and other unlink errors
+ * so the caller's error handling isn't derailed by cleanup noise.
+ */
+function safeUnlink(filePath) {
+    if (!filePath)
+        return;
+    try {
+        fs_1.default.unlinkSync(filePath);
+    }
+    catch { /* already gone */ }
+}
 // Ensure the upload directory exists at startup
 if (!fs_1.default.existsSync(UPLOAD_DIR)) {
     fs_1.default.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -135,17 +214,37 @@ router.post('/video',
         }
         const filePath = req.file.path;
         const servedUrl = `/uploads/${req.file.filename}`;
+        // ── Magic-byte sanity check ─────────────────────────
+        // Reject obviously-corrupt or truncated-at-header uploads BEFORE
+        // we pay for a Whisper call and end up with a partial transcript.
+        try {
+            assertLooksLikeVideo(filePath);
+        }
+        catch (sigErr) {
+            safeUnlink(filePath);
+            return res.status(400).json({ error: sigErr.message });
+        }
+        // ── Best-effort duration probe ─────────────────────
+        // Purely diagnostic — ffprobe is not guaranteed to exist on the
+        // host (Render Nixpacks default image doesn't ship it). If it
+        // runs, we log duration alongside file size so future truncation
+        // incidents are visible in structured logs.
+        const durationSecs = await probeDurationSeconds(filePath);
+        logger_1.default.info({ recordFile: req.file.filename, sizeBytes: req.file.size, durationSecs }, 'Manual video ingest — file accepted, transcribing');
         // ── Transcribe ─────────────────────────────────────
         let transcript;
         try {
             transcript = await (0, transcription_service_1.transcribeFile)(filePath);
         }
         catch (transcriptErr) {
+            logger_1.default.warn({ file: req.file.filename, sizeBytes: req.file.size, durationSecs, err: transcriptErr?.message }, 'Whisper transcription failed');
+            safeUnlink(filePath);
             return res.status(422).json({
                 error: `Transcription failed: ${transcriptErr.message}`,
             });
         }
         if (!transcript || transcript.length === 0) {
+            safeUnlink(filePath);
             return res.status(422).json({
                 error: 'Transcription produced no output — no speech detected in video',
             });
@@ -178,6 +277,9 @@ router.post('/video',
         return res.status(201).json(record);
     }
     catch (err) {
+        // Any failure after the file is on disk leaves an orphan in
+        // UPLOAD_DIR — clean it up so we don't accumulate cruft.
+        safeUnlink(req.file?.path);
         if (err?.code === 'P2003') {
             return res.status(404).json({
                 error: 'Ambassador not found',
