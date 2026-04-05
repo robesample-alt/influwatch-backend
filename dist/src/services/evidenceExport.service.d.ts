@@ -47,4 +47,6 @@ export declare function generateExport(tenantId: string, input: GenerateExportIn
     packageChecksum: string | null;
 }>;
 export { VALID_EXPORT_TYPES };
+import type { EvidencePackageInput } from '../lib/pdfGenerator';
+export declare function buildPromoterEvidencePackage(tenantId: string, ambassadorId: string, dateFrom: Date, dateTo: Date): Promise<EvidencePackageInput>;
 //# sourceMappingURL=evidenceExport.service.d.ts.map

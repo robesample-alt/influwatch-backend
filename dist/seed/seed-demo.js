@@ -46,6 +46,21 @@ async function main() {
     console.log(`✓ ${promoters.length} demo promoters seeded`);
     // ─── Content Records ──────────────────────────────────────
     // Designed to trigger specific detection rules with realistic captions.
+    // Per-promoter posture lookup — mirrors compStructures below.
+    // Every ContentRecord gets its promoter's posture stamped on it so
+    // the severity floor rule and PDF posture column work correctly.
+    const promoterPosture = {
+        'AMB-DEMO-01': 'CRITICAL',
+        'AMB-DEMO-02': 'CRITICAL',
+        'AMB-DEMO-03': 'MEDIUM',
+        'AMB-DEMO-04': 'LOW',
+        'AMB-DEMO-05': 'HIGH',
+        'AMB-DEMO-06': 'LOW',
+        'AMB-DEMO-07': 'HIGH',
+        'AMB-001': 'HIGH',
+        'AMB-002': 'HIGH',
+        'AMB-003': 'MEDIUM',
+    };
     const records = [
         // ── Marcus Venn (per-conversion, CRITICAL risk) — YouTube ──
         { id: 'CR-DEMO-01', amb: 'AMB-DEMO-01', camp: 'CAMP-AGI', plat: 'YOUTUBE', type: 'VIDEO', status: 'ESCALATED',
@@ -148,20 +163,36 @@ async function main() {
     ];
     let recordCount = 0;
     let detectionCount = 0;
+    // Inline posture floor — mirrors applySeverityFloor(). Kept inline so the
+    // seed script has no import-time dependency on src/lib/severityEngine.
+    const SEV_RANK = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
+    const maxSev = (a, b) => (SEV_RANK[a] >= SEV_RANK[b] ? a : b);
+    const postureFloorSeverity = (posture) => {
+        // CRITICAL posture → MEDIUM floor (even with no detections, these records
+        // demand supervisor attention because the compensation structure itself
+        // is high-risk). HIGH posture → LOW floor (no lift). Others → LOW floor.
+        if (posture === 'CRITICAL')
+            return 'MEDIUM';
+        return 'LOW';
+    };
     for (const rec of records) {
         const checksum = (0, checksum_1.computeChecksum)(rec.url, rec.body);
         const hits = (0, ruleRegistry_1.detectRuleHits)(rec.body);
-        const highestSev = hits.length > 0
-            ? (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].find(s => hits.some(h => h.severity === s)) || null)
-            : null;
+        const detectionSev = hits.length > 0
+            ? (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].find(s => hits.some(h => h.severity === s)) || 'LOW')
+            : 'LOW';
+        const posture = promoterPosture[rec.amb] || 'LOW';
+        const floorSev = postureFloorSeverity(posture);
+        const finalSev = maxSev(detectionSev, floorSev);
         await prisma.contentRecord.upsert({
             where: { id: rec.id },
-            update: { archiveStatus: rec.status },
+            update: { archiveStatus: rec.status, severity: finalSev, compensationPosture: posture },
             create: {
                 id: rec.id, tenantId: T, ambassadorId: rec.amb,
                 campaignId: rec.camp, sourcePlatform: rec.plat, contentType: rec.type,
                 sourceUrl: rec.url, externalContentId: rec.extId,
-                bodyText: rec.body, archiveStatus: rec.status, severity: highestSev,
+                bodyText: rec.body, archiveStatus: rec.status, severity: finalSev,
+                compensationPosture: posture,
                 postedAt: new Date(rec.posted), checksum,
             },
         });
@@ -290,7 +321,7 @@ async function main() {
     console.log('✓ 1 tail period seeded (Leah Foster)');
     // ─── Compensation Structures ──────────────────────────────
     const compStructures = [
-        { id: 'CS-DEMO-01', promoterId: 'AMB-DEMO-01', form: 'PER_CONTENT', trigger: 'SIGNUP', product: 'REG_D', txn: true, sec: true, variable: true, disc: true, principal: true, posture: 'CRITICAL' },
+        { id: 'CS-DEMO-01', promoterId: 'AMB-DEMO-01', form: 'PER_CONVERSION', trigger: 'CONVERSION', product: 'REG_D', txn: true, sec: true, variable: true, disc: true, principal: true, posture: 'CRITICAL' },
         { id: 'CS-DEMO-02', promoterId: 'AMB-DEMO-02', form: 'PER_CONTENT', trigger: 'FUNDED_ACCOUNT', product: 'FINTECH', txn: true, sec: false, variable: true, disc: true, principal: true, posture: 'CRITICAL' },
         { id: 'CS-DEMO-03', promoterId: 'AMB-DEMO-03', form: 'FLAT_FEE', trigger: 'LEAD', product: 'REG_D', txn: false, sec: false, variable: false, disc: true, principal: false, posture: 'MEDIUM' },
         { id: 'CS-DEMO-04', promoterId: 'AMB-DEMO-04', form: 'FLAT_FEE', trigger: 'LEAD', product: 'REG_D', txn: false, sec: false, variable: false, disc: true, principal: false, posture: 'LOW' },

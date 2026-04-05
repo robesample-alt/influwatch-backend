@@ -10,6 +10,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.VALID_EXPORT_TYPES = void 0;
 exports.listExports = listExports;
 exports.generateExport = generateExport;
+exports.buildPromoterEvidencePackage = buildPromoterEvidencePackage;
 const crypto_1 = require("crypto");
 const tenantContext_1 = require("../utils/tenantContext");
 const VALID_EXPORT_TYPES = [
@@ -70,6 +71,100 @@ async function generateExport(tenantId, input) {
                 notes: input.notes ?? null,
             },
         });
+    });
+}
+async function buildPromoterEvidencePackage(tenantId, ambassadorId, dateFrom, dateTo) {
+    return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+        const tenant = await tx.tenant.findFirst({
+            where: { id: tenantId },
+            select: { firmName: true, crdNumber: true, secRegistration: true },
+        });
+        const promoter = await tx.ambassadorProfile.findFirst({
+            where: { id: ambassadorId, tenantId },
+            select: { id: true, displayName: true, handle: true, primaryPlatform: true, riskTier: true },
+        });
+        if (!tenant)
+            throw new Error('Tenant not found');
+        if (!promoter)
+            throw new Error('Promoter not found');
+        const compensation = await tx.compensationStructure.findFirst({
+            where: { promoterId: ambassadorId, tenantId },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                compensationForm: true,
+                compensationTrigger: true,
+                productType: true,
+                supervisionPosture: true,
+                requiresDisclosure: true,
+            },
+        });
+        const records = await tx.contentRecord.findMany({
+            where: {
+                tenantId,
+                ambassadorId,
+                capturedAt: { gte: dateFrom, lte: dateTo },
+            },
+            include: {
+                detectionRecords: {
+                    select: { ruleCode: true, ruleName: true, matchedPhrase: true, severity: true },
+                },
+                eventLog: {
+                    orderBy: { createdAt: 'asc' },
+                    select: { eventType: true, eventNote: true, actorId: true, createdAt: true },
+                },
+            },
+            orderBy: { capturedAt: 'desc' },
+        });
+        const attestations = await tx.supervisoryAttestation.findMany({
+            where: {
+                tenantId,
+                certifiedAt: { gte: dateFrom, lte: dateTo },
+            },
+            include: {
+                principal: { select: { displayName: true, role: true } },
+            },
+            orderBy: { certifiedAt: 'desc' },
+        });
+        return {
+            tenant: {
+                firmName: tenant.firmName,
+                crdNumber: tenant.crdNumber,
+                secRegistration: tenant.secRegistration,
+            },
+            promoter: {
+                id: promoter.id,
+                displayName: promoter.displayName,
+                handle: promoter.handle,
+                primaryPlatform: promoter.primaryPlatform,
+                riskTier: promoter.riskTier,
+            },
+            compensation: compensation || null,
+            dateRange: { from: dateFrom, to: dateTo },
+            records: records.map((r) => ({
+                id: r.id,
+                sourcePlatform: r.sourcePlatform,
+                contentType: r.contentType,
+                sourceUrl: r.sourceUrl,
+                bodyText: r.bodyText,
+                transcriptText: r.transcriptText,
+                postedAt: r.postedAt,
+                capturedAt: r.capturedAt,
+                archiveStatus: r.archiveStatus,
+                severity: r.severity,
+                compensationPosture: r.compensationPosture,
+                checksum: r.checksum,
+                detections: r.detectionRecords || [],
+                events: r.eventLog || [],
+            })),
+            attestations: attestations.map((a) => ({
+                principalName: a.principal.displayName,
+                principalRole: a.principal.role,
+                periodLabel: a.periodLabel,
+                certifiedAt: a.certifiedAt,
+                supervisoryNote: a.supervisoryNote,
+            })),
+            generatedAt: new Date(),
+        };
     });
 }
 //# sourceMappingURL=evidenceExport.service.js.map

@@ -44,6 +44,7 @@ const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const EvidenceExportService = __importStar(require("../services/evidenceExport.service"));
 const requireRole_1 = require("../middleware/requireRole");
+const pdfGenerator_1 = require("../lib/pdfGenerator");
 const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
 // GET /exports
@@ -91,6 +92,43 @@ router.post('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.COMPL
             notes: notes ?? null,
         });
         return res.status(201).json(record);
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// ─────────────────────────────────────────
+// POST /exports/generate
+//
+// Build a promoter evidence PDF package and stream it as the response.
+// Also records an EvidenceExport row for audit.
+//
+// Body: { ambassadorId, dateFrom?, dateTo? }
+// ─────────────────────────────────────────
+router.post('/generate', async (req, res, next) => {
+    try {
+        const tenantId = req.user.tenantId;
+        const generatedBy = req.user.id;
+        const { ambassadorId, dateFrom, dateTo } = req.body;
+        if (!ambassadorId)
+            return res.status(400).json({ error: 'ambassadorId is required' });
+        const fromDate = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+        const toDate = dateTo ? new Date(dateTo) : new Date();
+        const pkg = await EvidenceExportService.buildPromoterEvidencePackage(tenantId, ambassadorId, fromDate, toDate);
+        // Record the export
+        await EvidenceExportService.generateExport(tenantId, {
+            exportType: 'PROMOTER_HISTORY',
+            generatedBy,
+            dateRangeStart: fromDate,
+            dateRangeEnd: toDate,
+            ambassadorId,
+            recordCount: pkg.records.length,
+            notes: 'PDF evidence package for ' + pkg.promoter.displayName,
+        });
+        const filename = `InfluWatch_Evidence_${pkg.promoter.id}_${fromDate.toISOString().slice(0, 10)}_to_${toDate.toISOString().slice(0, 10)}.pdf`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        await (0, pdfGenerator_1.generateEvidencePdf)(pkg, res);
     }
     catch (err) {
         next(err);
