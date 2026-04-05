@@ -10,6 +10,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { InternalActorRole } from '@prisma/client';
 import * as EvidenceExportService from '../services/evidenceExport.service';
 import { requireRole } from '../middleware/requireRole';
+import { generateEvidencePdf } from '../lib/pdfGenerator';
 
 const router = Router();
 
@@ -72,6 +73,54 @@ router.post('/', requireRole(InternalActorRole.COMPLIANCE_OFFICER, InternalActor
     });
 
     return res.status(201).json(record);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─────────────────────────────────────────
+// POST /exports/generate
+//
+// Build a promoter evidence PDF package and stream it as the response.
+// Also records an EvidenceExport row for audit.
+//
+// Body: { ambassadorId, dateFrom?, dateTo? }
+// ─────────────────────────────────────────
+
+router.post('/generate', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId    = req.user!.tenantId;
+    const generatedBy = req.user!.id;
+    const { ambassadorId, dateFrom, dateTo } = req.body;
+
+    if (!ambassadorId) return res.status(400).json({ error: 'ambassadorId is required' });
+
+    const fromDate = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const toDate   = dateTo   ? new Date(dateTo)   : new Date();
+
+    const pkg = await EvidenceExportService.buildPromoterEvidencePackage(
+      tenantId,
+      ambassadorId,
+      fromDate,
+      toDate,
+    );
+
+    // Record the export
+    await EvidenceExportService.generateExport(tenantId, {
+      exportType:     'PROMOTER_HISTORY',
+      generatedBy,
+      dateRangeStart: fromDate,
+      dateRangeEnd:   toDate,
+      ambassadorId,
+      recordCount:    pkg.records.length,
+      notes:          'PDF evidence package for ' + pkg.promoter.displayName,
+    });
+
+    const filename = `InfluWatch_Evidence_${pkg.promoter.id}_${fromDate.toISOString().slice(0, 10)}_to_${toDate.toISOString().slice(0, 10)}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    await generateEvidencePdf(pkg, res);
   } catch (err) {
     next(err);
   }

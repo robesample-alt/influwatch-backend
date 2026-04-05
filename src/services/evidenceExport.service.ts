@@ -92,3 +92,117 @@ export async function generateExport(tenantId: string, input: GenerateExportInpu
 }
 
 export { VALID_EXPORT_TYPES };
+
+// ─────────────────────────────────────────
+// BUILD PROMOTER EVIDENCE PACKAGE
+//
+// Assembles all data needed to render a PDF evidence package
+// for a single promoter over a date range. Returns the shape
+// expected by the pdfGenerator.
+// ─────────────────────────────────────────
+
+import type { EvidencePackageInput } from '../lib/pdfGenerator';
+
+export async function buildPromoterEvidencePackage(
+  tenantId: string,
+  ambassadorId: string,
+  dateFrom: Date,
+  dateTo: Date,
+): Promise<EvidencePackageInput> {
+  return withTenantContext({ tenantId }, async (tx) => {
+    const tenant = await tx.tenant.findFirst({
+      where: { id: tenantId },
+      select: { firmName: true, crdNumber: true, secRegistration: true },
+    });
+
+    const promoter = await tx.ambassadorProfile.findFirst({
+      where: { id: ambassadorId, tenantId },
+      select: { id: true, displayName: true, handle: true, primaryPlatform: true, riskTier: true },
+    });
+
+    if (!tenant) throw new Error('Tenant not found');
+    if (!promoter) throw new Error('Promoter not found');
+
+    const compensation = await tx.compensationStructure.findFirst({
+      where: { promoterId: ambassadorId, tenantId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        compensationForm:    true,
+        compensationTrigger: true,
+        productType:         true,
+        supervisionPosture:  true,
+        requiresDisclosure:  true,
+      },
+    });
+
+    const records = await tx.contentRecord.findMany({
+      where: {
+        tenantId,
+        ambassadorId,
+        capturedAt: { gte: dateFrom, lte: dateTo },
+      },
+      include: {
+        detectionRecords: {
+          select: { ruleCode: true, ruleName: true, matchedPhrase: true, severity: true },
+        },
+        eventLog: {
+          orderBy: { createdAt: 'asc' },
+          select: { eventType: true, eventNote: true, actorId: true, createdAt: true },
+        },
+      },
+      orderBy: { capturedAt: 'desc' },
+    });
+
+    const attestations = await tx.supervisoryAttestation.findMany({
+      where: {
+        tenantId,
+        certifiedAt: { gte: dateFrom, lte: dateTo },
+      },
+      include: {
+        principal: { select: { displayName: true, role: true } },
+      },
+      orderBy: { certifiedAt: 'desc' },
+    });
+
+    return {
+      tenant: {
+        firmName:        tenant.firmName,
+        crdNumber:       tenant.crdNumber,
+        secRegistration: tenant.secRegistration,
+      },
+      promoter: {
+        id:              promoter.id,
+        displayName:     promoter.displayName,
+        handle:          promoter.handle,
+        primaryPlatform: promoter.primaryPlatform,
+        riskTier:        promoter.riskTier,
+      },
+      compensation: compensation || null,
+      dateRange: { from: dateFrom, to: dateTo },
+      records: records.map((r: any) => ({
+        id:                  r.id,
+        sourcePlatform:      r.sourcePlatform,
+        contentType:         r.contentType,
+        sourceUrl:           r.sourceUrl,
+        bodyText:            r.bodyText,
+        transcriptText:      r.transcriptText,
+        postedAt:            r.postedAt,
+        capturedAt:          r.capturedAt,
+        archiveStatus:       r.archiveStatus,
+        severity:            r.severity,
+        compensationPosture: r.compensationPosture,
+        checksum:            r.checksum,
+        detections:          r.detectionRecords || [],
+        events:              r.eventLog || [],
+      })),
+      attestations: attestations.map((a: any) => ({
+        principalName:   a.principal.displayName,
+        principalRole:   a.principal.role,
+        periodLabel:     a.periodLabel,
+        certifiedAt:     a.certifiedAt,
+        supervisoryNote: a.supervisoryNote,
+      })),
+      generatedAt: new Date(),
+    };
+  });
+}
