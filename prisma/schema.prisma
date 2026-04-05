@@ -109,6 +109,7 @@ enum DetectionMethod {
   PHRASE_MATCH
   DISCLOSURE_CHECK
   PATTERN_MATCH
+  LLM_ANALYSIS
 }
 
 enum AssetType {
