@@ -26,6 +26,7 @@ exports.findByChecksum = findByChecksum;
 const tenantContext_1 = require("../utils/tenantContext");
 const checksum_1 = require("../utils/checksum");
 const ruleRegistry_1 = require("../lib/ruleRegistry");
+const severityEngine_1 = require("../lib/severityEngine");
 const sla_1 = require("../utils/sla");
 const client_1 = require("@prisma/client");
 const mailer_1 = require("../utils/mailer");
@@ -119,11 +120,24 @@ async function createContentRecord(tenantId, input) {
             };
         }
         const hits = (0, ruleRegistry_1.detectRuleHits)(bodyText, compensationCtx);
-        const severity = (0, ruleRegistry_1.computeSeverityFromHits)(hits);
+        const rawSeverity = (0, ruleRegistry_1.computeSeverityFromHits)(hits);
+        // SEVERITY FLOOR RULE — enforced at every write site, not just in
+        // the seed/rerun scripts. Raises severity to the higher of:
+        //   (a) max(detection severities)
+        //   (b) posture floor (CRITICAL posture → MEDIUM floor)
+        const severity = (0, severityEngine_1.applySeverityFloor)(rawSeverity, hits.map(h => h.severity), compensationPosture);
         const escalation = computeEscalation(hits);
-        const archiveStatus = escalation.level === 'HIGH' ? client_1.ArchiveStatus.ESCALATED :
+        let archiveStatus = escalation.level === 'HIGH' ? client_1.ArchiveStatus.ESCALATED :
             escalation.level === 'MEDIUM' ? client_1.ArchiveStatus.PENDING_REVIEW :
                 client_1.ArchiveStatus.CAPTURED;
+        // If the posture floor raised severity above LOW but hit-based
+        // escalation is still LOW, promote routing to PENDING_REVIEW so
+        // supervisors actually see these records. Otherwise a CRITICAL
+        // posture promoter could ingest clean content that never reaches
+        // anyone's queue.
+        if (severity !== 'LOW' && archiveStatus === client_1.ArchiveStatus.CAPTURED) {
+            archiveStatus = client_1.ArchiveStatus.PENDING_REVIEW;
+        }
         const record = await tx.contentRecord.create({
             data: {
                 tenantId,

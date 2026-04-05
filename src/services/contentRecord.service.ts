@@ -9,6 +9,7 @@
 import { withTenantContext } from '../utils/tenantContext';
 import { computeChecksum } from '../utils/checksum';
 import { detectRuleHits, computeSeverityFromHits, RuleHit, CompensationContext } from '../lib/ruleRegistry';
+import { applySeverityFloor } from '../lib/severityEngine';
 import { getSlaStatus } from '../utils/sla';
 import { ArchiveEventType, ArchiveStatus } from '@prisma/client';
 import { sendEscalationAlert } from '../utils/mailer';
@@ -147,13 +148,33 @@ export async function createContentRecord(
       };
     }
 
-    const hits       = detectRuleHits(bodyText, compensationCtx);
-    const severity   = computeSeverityFromHits(hits);
+    const hits         = detectRuleHits(bodyText, compensationCtx);
+    const rawSeverity  = computeSeverityFromHits(hits);
+
+    // SEVERITY FLOOR RULE — enforced at every write site, not just in
+    // the seed/rerun scripts. Raises severity to the higher of:
+    //   (a) max(detection severities)
+    //   (b) posture floor (CRITICAL posture → MEDIUM floor)
+    const severity = applySeverityFloor(
+      rawSeverity,
+      hits.map(h => h.severity),
+      compensationPosture,
+    );
+
     const escalation = computeEscalation(hits);
-    const archiveStatus =
+    let archiveStatus =
       escalation.level === 'HIGH'   ? ArchiveStatus.ESCALATED      :
       escalation.level === 'MEDIUM' ? ArchiveStatus.PENDING_REVIEW  :
                                       ArchiveStatus.CAPTURED;
+
+    // If the posture floor raised severity above LOW but hit-based
+    // escalation is still LOW, promote routing to PENDING_REVIEW so
+    // supervisors actually see these records. Otherwise a CRITICAL
+    // posture promoter could ingest clean content that never reaches
+    // anyone's queue.
+    if (severity !== 'LOW' && archiveStatus === ArchiveStatus.CAPTURED) {
+      archiveStatus = ArchiveStatus.PENDING_REVIEW;
+    }
 
     const record = await tx.contentRecord.create({
       data: {
@@ -244,9 +265,16 @@ export async function listContentRecords(
       campaignId,
       sourcePlatform,
       archiveStatus,
+      severity,
+      capturedFrom,
+      capturedTo,
       page     = 1,
       pageSize = 25,
     } = filters;
+
+    const capturedAt: Record<string, Date> = {};
+    if (capturedFrom) capturedAt.gte = new Date(capturedFrom);
+    if (capturedTo)   capturedAt.lte = new Date(capturedTo);
 
     const where = {
       tenantId,
@@ -254,6 +282,8 @@ export async function listContentRecords(
       ...(campaignId     ? { campaignId }     : {}),
       ...(sourcePlatform ? { sourcePlatform } : {}),
       ...(archiveStatus  ? { archiveStatus }  : {}),
+      ...(severity       ? { severity }       : {}),
+      ...(Object.keys(capturedAt).length ? { capturedAt } : {}),
     };
 
     const [total, records] = await Promise.all([
