@@ -10,25 +10,25 @@ export { VALID_STATUSES };
 export declare function listRequests(tenantId: string, status?: string): Promise<({
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
     assignedPrincipal: {
         id: string;
+        role: import(".prisma/client").$Enums.InternalActorRole;
         displayName: string;
         email: string;
-        role: import(".prisma/client").$Enums.InternalActorRole;
     } | null;
 } & {
     tenantId: string;
     id: string;
+    status: string;
     contentType: string;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
-    status: string;
     decision: string | null;
     submittedBy: string;
     platform: string;
@@ -55,25 +55,25 @@ export interface CreateRequestInput {
 export declare function createRequest(tenantId: string, input: CreateRequestInput): Promise<{
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
     assignedPrincipal: {
         id: string;
+        role: import(".prisma/client").$Enums.InternalActorRole;
         displayName: string;
         email: string;
-        role: import(".prisma/client").$Enums.InternalActorRole;
     } | null;
 } & {
     tenantId: string;
     id: string;
+    status: string;
     contentType: string;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
-    status: string;
     decision: string | null;
     submittedBy: string;
     platform: string;
@@ -91,25 +91,25 @@ export declare function createRequest(tenantId: string, input: CreateRequestInpu
 export declare function decideRequest(tenantId: string, id: string, decision: string, decidedBy: string, status: DecisionStatus): Promise<({
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
     assignedPrincipal: {
         id: string;
+        role: import(".prisma/client").$Enums.InternalActorRole;
         displayName: string;
         email: string;
-        role: import(".prisma/client").$Enums.InternalActorRole;
     } | null;
 } & {
     tenantId: string;
     id: string;
+    status: string;
     contentType: string;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
-    status: string;
     decision: string | null;
     submittedBy: string;
     platform: string;

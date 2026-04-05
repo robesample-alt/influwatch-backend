@@ -14,9 +14,9 @@ export interface CreateAttestationInput {
 export declare function createAttestation(tenantId: string, input: CreateAttestationInput): Promise<{
     principal: {
         id: string;
+        role: import(".prisma/client").$Enums.InternalActorRole;
         displayName: string;
         email: string;
-        role: import(".prisma/client").$Enums.InternalActorRole;
     };
 } & {
     tenantId: string;
@@ -37,9 +37,9 @@ export declare function createAttestation(tenantId: string, input: CreateAttesta
 export declare function listAttestations(tenantId: string, periodLabel?: string): Promise<({
     principal: {
         id: string;
+        role: import(".prisma/client").$Enums.InternalActorRole;
         displayName: string;
         email: string;
-        role: import(".prisma/client").$Enums.InternalActorRole;
     };
 } & {
     tenantId: string;

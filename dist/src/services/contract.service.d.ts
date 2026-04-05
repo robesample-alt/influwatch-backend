@@ -5,20 +5,20 @@
 export declare function listContracts(tenantId: string, ambassadorId?: string): Promise<({
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
         primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
     tenantId: string;
     id: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
     notes: string | null;
-    status: string;
     agreementType: string;
     contractId: string;
     signedDate: Date;
@@ -38,20 +38,20 @@ export declare function listContracts(tenantId: string, ambassadorId?: string): 
 export declare function getContract(tenantId: string, id: string): Promise<({
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
         primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
     tenantId: string;
     id: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
     notes: string | null;
-    status: string;
     agreementType: string;
     contractId: string;
     signedDate: Date;
@@ -87,20 +87,20 @@ export interface CreateContractInput {
 export declare function createContract(tenantId: string, input: CreateContractInput): Promise<{
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
         primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
     tenantId: string;
     id: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
     notes: string | null;
-    status: string;
     agreementType: string;
     contractId: string;
     signedDate: Date;

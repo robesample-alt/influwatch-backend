@@ -5,9 +5,9 @@
 export declare function listHolds(tenantId: string, status?: string): Promise<{
     tenantId: string;
     id: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
-    status: string;
     holdName: string;
     holdType: string;
     scope: string;
@@ -37,9 +37,9 @@ export interface CreateHoldInput {
 export declare function createHold(tenantId: string, input: CreateHoldInput): Promise<{
     tenantId: string;
     id: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
-    status: string;
     holdName: string;
     holdType: string;
     scope: string;
@@ -60,9 +60,9 @@ export declare function createHold(tenantId: string, input: CreateHoldInput): Pr
 export declare function releaseHold(tenantId: string, id: string, releasedBy: string, releaseReason: string): Promise<{
     tenantId: string;
     id: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
-    status: string;
     holdName: string;
     holdType: string;
     scope: string;

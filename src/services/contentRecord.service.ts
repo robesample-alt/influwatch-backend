@@ -10,6 +10,8 @@ import { withTenantContext } from '../utils/tenantContext';
 import { computeChecksum } from '../utils/checksum';
 import { detectRuleHits, computeSeverityFromHits, RuleHit, CompensationContext } from '../lib/ruleRegistry';
 import { applySeverityFloor } from '../lib/severityEngine';
+import { runLlmDetection } from '../lib/llmDetection';
+import { DetectionMethod } from '@prisma/client';
 import { getSlaStatus } from '../utils/sla';
 import { ArchiveEventType, ArchiveStatus } from '@prisma/client';
 import { sendEscalationAlert } from '../utils/mailer';
@@ -148,12 +150,49 @@ export async function createContentRecord(
       };
     }
 
-    const hits         = detectRuleHits(bodyText, compensationCtx);
+    // ── Phrase-based detection (fast, deterministic) ─────────────────────────
+    const phraseHits = detectRuleHits(bodyText, compensationCtx);
+
+    // ── LLM contextual detection (semantic, fail-open) ───────────────────────
+    // Gated on HIGH/CRITICAL posture promoters — those are the only ones where
+    // the cost (latency + tokens) is justified. Flat-fee / uncompensated /
+    // medium-posture promoters skip the LLM call entirely.
+    //
+    // The service never throws; on key-missing / timeout / API error / parse
+    // error it returns an empty findings list and a non-null error. We proceed
+    // with phrase-only detection in every failure case.
+    const llmPosture    = (compensationPosture || '').toUpperCase();
+    const llmEligible   = llmPosture === 'CRITICAL' || llmPosture === 'HIGH';
+    let llmResult: Awaited<ReturnType<typeof runLlmDetection>> | null = null;
+    if (llmEligible && bodyText && bodyText.trim().length > 0 && compensationStructure) {
+      llmResult = await runLlmDetection({
+        bodyText,
+        transcriptText:     input.transcriptText ?? null,
+        supervisionPosture: compensationStructure.supervisionPosture,
+        compensationForm:   compensationStructure.compensationForm,
+        isTransactionBased: compensationStructure.isTransactionBased,
+        isSecurityLinked:   compensationStructure.isSecurityLinked,
+      });
+    }
+
+    // Merge LLM findings into the unified hits list so the downstream
+    // severity + escalation logic sees every detection regardless of source.
+    // LLM findings keep their own rule codes (LLM-001..LLM-005) and are
+    // tagged with DetectionMethod.LLM_ANALYSIS for audit distinguishability.
+    const llmHitsForMerge: RuleHit[] = (llmResult?.findings ?? []).map(f => ({
+      ruleCode:        f.ruleCode,
+      ruleName:        f.ruleName,
+      matchedPhrase:   f.matchedPhrase,
+      severity:        f.severity,
+      detectionMethod: DetectionMethod.LLM_ANALYSIS,
+    }));
+    const hits: RuleHit[] = [...phraseHits, ...llmHitsForMerge];
+
     const rawSeverity  = computeSeverityFromHits(hits);
 
     // SEVERITY FLOOR RULE — enforced at every write site, not just in
     // the seed/rerun scripts. Raises severity to the higher of:
-    //   (a) max(detection severities)
+    //   (a) max(detection severities, including LLM findings)
     //   (b) posture floor (CRITICAL posture → MEDIUM floor)
     const severity = applySeverityFloor(
       rawSeverity,
@@ -227,7 +266,24 @@ export async function createContentRecord(
       await _appendEvent(tx, tenantId, {
         contentRecordId: record.id,
         eventType:       ArchiveEventType.STATUS_CHANGED,
-        eventNote:       `Auto-flagged [${escalation.level}/${escalation.status}] — matched phrase${hits.length > 1 ? 's' : ''}: ${phraseList}`,
+        eventNote:       `Auto-flagged [${escalation.level}/${escalation.status}] — flagged language: ${phraseList}`,
+      });
+    }
+
+    // ── LLM audit trail ─────────────────────────────────────────────
+    // Record that the LLM service ran, what model answered, how long
+    // it took, and the raw response (capped). Stored as a NOTE_ADDED
+    // event so a regulator inspecting the audit log can see exactly
+    // what Claude returned, even if we later change the rule schema.
+    if (llmResult) {
+      const rawSnippet = (llmResult.rawResponse ?? '').slice(0, 8000);
+      const summary = llmResult.error
+        ? `LLM detection — degraded (${llmResult.error}), skipped. Phrase-only detection applied.`
+        : `LLM detection — ${llmResult.findings.length} finding${llmResult.findings.length === 1 ? '' : 's'} in ${llmResult.latencyMs}ms via ${llmResult.modelId}.`;
+      await _appendEvent(tx, tenantId, {
+        contentRecordId: record.id,
+        eventType:       ArchiveEventType.NOTE_ADDED,
+        eventNote:       `${summary}${rawSnippet ? '\n\nRaw response:\n' + rawSnippet : ''}`,
       });
     }
 

@@ -6,9 +6,9 @@ export type ExportType = typeof VALID_EXPORT_TYPES[number];
 export declare function listExports(tenantId: string): Promise<{
     tenantId: string;
     id: string;
+    status: string;
     ambassadorId: string | null;
     notes: string | null;
-    status: string;
     exportType: string;
     generatedBy: string;
     generatedAt: Date;
@@ -35,9 +35,9 @@ export interface GenerateExportInput {
 export declare function generateExport(tenantId: string, input: GenerateExportInput): Promise<{
     tenantId: string;
     id: string;
+    status: string;
     ambassadorId: string | null;
     notes: string | null;
-    status: string;
     exportType: string;
     generatedBy: string;
     generatedAt: Date;

@@ -1,10 +1,10 @@
-import { Severity } from '@prisma/client';
+import { Severity, DetectionMethod } from '@prisma/client';
 export interface RuleHit {
     ruleCode: string;
     ruleName: string;
     matchedPhrase: string;
     severity: Severity;
-    detectionMethod: 'PHRASE_MATCH' | 'DISCLOSURE_CHECK';
+    detectionMethod: DetectionMethod;
 }
 export type CompensationContext = {
     isTransactionBased: boolean;

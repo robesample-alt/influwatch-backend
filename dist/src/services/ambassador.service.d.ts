@@ -2,21 +2,21 @@ import { AmbassadorStatus } from '@prisma/client';
 export declare function getAmbassadorById(tenantId: string, id: string): Promise<({
     assignedSupervisor: {
         id: string;
-        displayName: string;
-        status: import(".prisma/client").$Enums.InternalActorStatus;
-        email: string;
         role: import(".prisma/client").$Enums.InternalActorRole;
+        status: import(".prisma/client").$Enums.InternalActorStatus;
+        displayName: string;
+        email: string;
         seriesLicense: string | null;
     } | null;
 } & {
     tenantId: string;
     id: string;
+    status: import(".prisma/client").$Enums.AmbassadorStatus;
     createdAt: Date;
     updatedAt: Date;
     displayName: string;
     handle: string;
     primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-    status: import(".prisma/client").$Enums.AmbassadorStatus;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
     phylloUserId: string | null;
@@ -25,21 +25,21 @@ export declare function getAmbassadorById(tenantId: string, id: string): Promise
 export declare function listAmbassadors(tenantId: string, status?: AmbassadorStatus): Promise<({
     assignedSupervisor: {
         id: string;
-        displayName: string;
-        status: import(".prisma/client").$Enums.InternalActorStatus;
-        email: string;
         role: import(".prisma/client").$Enums.InternalActorRole;
+        status: import(".prisma/client").$Enums.InternalActorStatus;
+        displayName: string;
+        email: string;
         seriesLicense: string | null;
     } | null;
 } & {
     tenantId: string;
     id: string;
+    status: import(".prisma/client").$Enums.AmbassadorStatus;
     createdAt: Date;
     updatedAt: Date;
     displayName: string;
     handle: string;
     primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-    status: import(".prisma/client").$Enums.AmbassadorStatus;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
     phylloUserId: string | null;
@@ -53,33 +53,33 @@ export declare function getAmbassadorDetail(tenantId: string, id: string): Promi
     ambassador: {
         assignedSupervisor: {
             id: string;
-            displayName: string;
-            status: import(".prisma/client").$Enums.InternalActorStatus;
-            email: string;
             role: import(".prisma/client").$Enums.InternalActorRole;
+            status: import(".prisma/client").$Enums.InternalActorStatus;
+            displayName: string;
+            email: string;
             seriesLicense: string | null;
         } | null;
     } & {
         tenantId: string;
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         createdAt: Date;
         updatedAt: Date;
         displayName: string;
         handle: string;
         primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
         assignedSupervisorId: string | null;
         phylloUserId: string | null;
         phylloAccountId: string | null;
     };
     records: {
+        severity: import(".prisma/client").$Enums.Severity | null;
         id: string;
         sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
         sourceUrl: string;
         capturedAt: Date;
         archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
-        severity: import(".prisma/client").$Enums.Severity | null;
         checksum: string | null;
     }[];
     statusCounts: {
@@ -102,21 +102,21 @@ export declare function createAmbassador(tenantId: string, input: {
 }): Promise<{
     assignedSupervisor: {
         id: string;
-        displayName: string;
-        status: import(".prisma/client").$Enums.InternalActorStatus;
-        email: string;
         role: import(".prisma/client").$Enums.InternalActorRole;
+        status: import(".prisma/client").$Enums.InternalActorStatus;
+        displayName: string;
+        email: string;
         seriesLicense: string | null;
     } | null;
 } & {
     tenantId: string;
     id: string;
+    status: import(".prisma/client").$Enums.AmbassadorStatus;
     createdAt: Date;
     updatedAt: Date;
     displayName: string;
     handle: string;
     primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-    status: import(".prisma/client").$Enums.AmbassadorStatus;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
     phylloUserId: string | null;
@@ -125,21 +125,21 @@ export declare function createAmbassador(tenantId: string, input: {
 export declare function assignSupervisor(tenantId: string, id: string, supervisorId: string | null): Promise<{
     assignedSupervisor: {
         id: string;
-        displayName: string;
-        status: import(".prisma/client").$Enums.InternalActorStatus;
-        email: string;
         role: import(".prisma/client").$Enums.InternalActorRole;
+        status: import(".prisma/client").$Enums.InternalActorStatus;
+        displayName: string;
+        email: string;
         seriesLicense: string | null;
     } | null;
 } & {
     tenantId: string;
     id: string;
+    status: import(".prisma/client").$Enums.AmbassadorStatus;
     createdAt: Date;
     updatedAt: Date;
     displayName: string;
     handle: string;
     primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-    status: import(".prisma/client").$Enums.AmbassadorStatus;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     assignedSupervisorId: string | null;
     phylloUserId: string | null;
@@ -148,18 +148,18 @@ export declare function assignSupervisor(tenantId: string, id: string, superviso
 export declare function getCampaignById(tenantId: string, id: string): Promise<{
     tenantId: string;
     id: string;
+    status: import(".prisma/client").$Enums.CampaignStatus;
     createdAt: Date;
     updatedAt: Date;
-    status: import(".prisma/client").$Enums.CampaignStatus;
     campaignName: string;
     campaignType: import(".prisma/client").$Enums.CampaignType;
 } | null>;
 export declare function listCampaigns(tenantId: string): Promise<{
     tenantId: string;
     id: string;
+    status: import(".prisma/client").$Enums.CampaignStatus;
     createdAt: Date;
     updatedAt: Date;
-    status: import(".prisma/client").$Enums.CampaignStatus;
     campaignName: string;
     campaignType: import(".prisma/client").$Enums.CampaignType;
 }[]>;
@@ -192,10 +192,10 @@ export declare function getMonitorSummary(tenantId: string): Promise<{
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
         assignedSupervisor: {
             id: string;
-            displayName: string;
-            status: import(".prisma/client").$Enums.InternalActorStatus;
-            email: string;
             role: import(".prisma/client").$Enums.InternalActorRole;
+            status: import(".prisma/client").$Enums.InternalActorStatus;
+            displayName: string;
+            email: string;
             seriesLicense: string | null;
         } | null;
         totalCaptures: number;

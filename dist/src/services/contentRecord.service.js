@@ -27,8 +27,10 @@ const tenantContext_1 = require("../utils/tenantContext");
 const checksum_1 = require("../utils/checksum");
 const ruleRegistry_1 = require("../lib/ruleRegistry");
 const severityEngine_1 = require("../lib/severityEngine");
-const sla_1 = require("../utils/sla");
+const llmDetection_1 = require("../lib/llmDetection");
 const client_1 = require("@prisma/client");
+const sla_1 = require("../utils/sla");
+const client_2 = require("@prisma/client");
 const mailer_1 = require("../utils/mailer");
 // ─────────────────────────────────────────
 // AMBASSADOR INCLUDE SHAPE
@@ -119,24 +121,58 @@ async function createContentRecord(tenantId, input) {
                 hasAffiliateLink,
             };
         }
-        const hits = (0, ruleRegistry_1.detectRuleHits)(bodyText, compensationCtx);
+        // ── Phrase-based detection (fast, deterministic) ─────────────────────────
+        const phraseHits = (0, ruleRegistry_1.detectRuleHits)(bodyText, compensationCtx);
+        // ── LLM contextual detection (semantic, fail-open) ───────────────────────
+        // Gated on HIGH/CRITICAL posture promoters — those are the only ones where
+        // the cost (latency + tokens) is justified. Flat-fee / uncompensated /
+        // medium-posture promoters skip the LLM call entirely.
+        //
+        // The service never throws; on key-missing / timeout / API error / parse
+        // error it returns an empty findings list and a non-null error. We proceed
+        // with phrase-only detection in every failure case.
+        const llmPosture = (compensationPosture || '').toUpperCase();
+        const llmEligible = llmPosture === 'CRITICAL' || llmPosture === 'HIGH';
+        let llmResult = null;
+        if (llmEligible && bodyText && bodyText.trim().length > 0 && compensationStructure) {
+            llmResult = await (0, llmDetection_1.runLlmDetection)({
+                bodyText,
+                transcriptText: input.transcriptText ?? null,
+                supervisionPosture: compensationStructure.supervisionPosture,
+                compensationForm: compensationStructure.compensationForm,
+                isTransactionBased: compensationStructure.isTransactionBased,
+                isSecurityLinked: compensationStructure.isSecurityLinked,
+            });
+        }
+        // Merge LLM findings into the unified hits list so the downstream
+        // severity + escalation logic sees every detection regardless of source.
+        // LLM findings keep their own rule codes (LLM-001..LLM-005) and are
+        // tagged with DetectionMethod.LLM_ANALYSIS for audit distinguishability.
+        const llmHitsForMerge = (llmResult?.findings ?? []).map(f => ({
+            ruleCode: f.ruleCode,
+            ruleName: f.ruleName,
+            matchedPhrase: f.matchedPhrase,
+            severity: f.severity,
+            detectionMethod: client_1.DetectionMethod.LLM_ANALYSIS,
+        }));
+        const hits = [...phraseHits, ...llmHitsForMerge];
         const rawSeverity = (0, ruleRegistry_1.computeSeverityFromHits)(hits);
         // SEVERITY FLOOR RULE — enforced at every write site, not just in
         // the seed/rerun scripts. Raises severity to the higher of:
-        //   (a) max(detection severities)
+        //   (a) max(detection severities, including LLM findings)
         //   (b) posture floor (CRITICAL posture → MEDIUM floor)
         const severity = (0, severityEngine_1.applySeverityFloor)(rawSeverity, hits.map(h => h.severity), compensationPosture);
         const escalation = computeEscalation(hits);
-        let archiveStatus = escalation.level === 'HIGH' ? client_1.ArchiveStatus.ESCALATED :
-            escalation.level === 'MEDIUM' ? client_1.ArchiveStatus.PENDING_REVIEW :
-                client_1.ArchiveStatus.CAPTURED;
+        let archiveStatus = escalation.level === 'HIGH' ? client_2.ArchiveStatus.ESCALATED :
+            escalation.level === 'MEDIUM' ? client_2.ArchiveStatus.PENDING_REVIEW :
+                client_2.ArchiveStatus.CAPTURED;
         // If the posture floor raised severity above LOW but hit-based
         // escalation is still LOW, promote routing to PENDING_REVIEW so
         // supervisors actually see these records. Otherwise a CRITICAL
         // posture promoter could ingest clean content that never reaches
         // anyone's queue.
-        if (severity !== 'LOW' && archiveStatus === client_1.ArchiveStatus.CAPTURED) {
-            archiveStatus = client_1.ArchiveStatus.PENDING_REVIEW;
+        if (severity !== 'LOW' && archiveStatus === client_2.ArchiveStatus.CAPTURED) {
+            archiveStatus = client_2.ArchiveStatus.PENDING_REVIEW;
         }
         const record = await tx.contentRecord.create({
             data: {
@@ -165,7 +201,7 @@ async function createContentRecord(tenantId, input) {
         });
         await _appendEvent(tx, tenantId, {
             contentRecordId: record.id,
-            eventType: client_1.ArchiveEventType.RECORD_CREATED,
+            eventType: client_2.ArchiveEventType.RECORD_CREATED,
             eventNote: `Content captured from ${input.sourcePlatform} — ${input.sourceUrl}`,
         });
         if (hits.length > 0) {
@@ -185,8 +221,24 @@ async function createContentRecord(tenantId, input) {
             const phraseList = hits.map(h => `"${h.matchedPhrase}"`).join(', ');
             await _appendEvent(tx, tenantId, {
                 contentRecordId: record.id,
-                eventType: client_1.ArchiveEventType.STATUS_CHANGED,
-                eventNote: `Auto-flagged [${escalation.level}/${escalation.status}] — matched phrase${hits.length > 1 ? 's' : ''}: ${phraseList}`,
+                eventType: client_2.ArchiveEventType.STATUS_CHANGED,
+                eventNote: `Auto-flagged [${escalation.level}/${escalation.status}] — flagged language: ${phraseList}`,
+            });
+        }
+        // ── LLM audit trail ─────────────────────────────────────────────
+        // Record that the LLM service ran, what model answered, how long
+        // it took, and the raw response (capped). Stored as a NOTE_ADDED
+        // event so a regulator inspecting the audit log can see exactly
+        // what Claude returned, even if we later change the rule schema.
+        if (llmResult) {
+            const rawSnippet = (llmResult.rawResponse ?? '').slice(0, 8000);
+            const summary = llmResult.error
+                ? `LLM detection — degraded (${llmResult.error}), skipped. Phrase-only detection applied.`
+                : `LLM detection — ${llmResult.findings.length} finding${llmResult.findings.length === 1 ? '' : 's'} in ${llmResult.latencyMs}ms via ${llmResult.modelId}.`;
+            await _appendEvent(tx, tenantId, {
+                contentRecordId: record.id,
+                eventType: client_2.ArchiveEventType.NOTE_ADDED,
+                eventNote: `${summary}${rawSnippet ? '\n\nRaw response:\n' + rawSnippet : ''}`,
             });
         }
         // After record creation, send alert for HIGH escalations
@@ -302,7 +354,7 @@ async function updateArchiveStatus(tenantId, id, input) {
         });
         await _appendEvent(tx, tenantId, {
             contentRecordId: id,
-            eventType: client_1.ArchiveEventType.STATUS_CHANGED,
+            eventType: client_2.ArchiveEventType.STATUS_CHANGED,
             eventNote: input.note
                 ?? `Status changed: ${existing.archiveStatus} → ${input.archiveStatus}`,
             actorId: input.actorId,
@@ -342,7 +394,7 @@ async function attachMediaAsset(tenantId, contentRecordId, input) {
         });
         await _appendEvent(tx, tenantId, {
             contentRecordId,
-            eventType: client_1.ArchiveEventType.MEDIA_ATTACHED,
+            eventType: client_2.ArchiveEventType.MEDIA_ATTACHED,
             eventNote: `Asset attached: ${input.assetType} — ${input.assetUrl}`,
         });
         return asset;
@@ -392,12 +444,12 @@ async function getEventLog(tenantId, contentRecordId) {
 // COMPLIANCE ACTION ENGINE — Phase 1
 // ─────────────────────────────────────────
 const ACTION_EVENT_MAP = {
-    APPROVE: client_1.ArchiveEventType.COMPLIANCE_APPROVED,
-    REQUEST_EDIT: client_1.ArchiveEventType.COMPLIANCE_EDIT_REQUESTED,
-    WARN_PROMOTER: client_1.ArchiveEventType.COMPLIANCE_WARN_ISSUED,
-    SUSPEND_PROMOTER: client_1.ArchiveEventType.COMPLIANCE_PROMOTER_SUSPENDED,
-    ESCALATE: client_1.ArchiveEventType.COMPLIANCE_ESCALATED,
-    CERTIFY: client_1.ArchiveEventType.COMPLIANCE_CERTIFIED,
+    APPROVE: client_2.ArchiveEventType.COMPLIANCE_APPROVED,
+    REQUEST_EDIT: client_2.ArchiveEventType.COMPLIANCE_EDIT_REQUESTED,
+    WARN_PROMOTER: client_2.ArchiveEventType.COMPLIANCE_WARN_ISSUED,
+    SUSPEND_PROMOTER: client_2.ArchiveEventType.COMPLIANCE_PROMOTER_SUSPENDED,
+    ESCALATE: client_2.ArchiveEventType.COMPLIANCE_ESCALATED,
+    CERTIFY: client_2.ArchiveEventType.COMPLIANCE_CERTIFIED,
 };
 // ─────────────────────────────────────────────────────────────────────
 // Phase 1 action → status mapping
@@ -422,12 +474,12 @@ const ACTION_EVENT_MAP = {
 //                  to the audit log, which is what feeds the Certifications tab.
 // ─────────────────────────────────────────────────────────────────────
 const ACTION_STATUS_MAP = {
-    APPROVE: client_1.ArchiveStatus.CLOSED,
-    REQUEST_EDIT: client_1.ArchiveStatus.PENDING_REVIEW,
-    WARN_PROMOTER: client_1.ArchiveStatus.REVIEWED,
-    SUSPEND_PROMOTER: client_1.ArchiveStatus.ESCALATED,
-    ESCALATE: client_1.ArchiveStatus.ESCALATED,
-    CERTIFY: client_1.ArchiveStatus.CLOSED,
+    APPROVE: client_2.ArchiveStatus.CLOSED,
+    REQUEST_EDIT: client_2.ArchiveStatus.PENDING_REVIEW,
+    WARN_PROMOTER: client_2.ArchiveStatus.REVIEWED,
+    SUSPEND_PROMOTER: client_2.ArchiveStatus.ESCALATED,
+    ESCALATE: client_2.ArchiveStatus.ESCALATED,
+    CERTIFY: client_2.ArchiveStatus.CLOSED,
 };
 /**
  * Record a compliance decision against a content record.
@@ -462,8 +514,8 @@ async function recordComplianceAction(tenantId, contentRecordId, input) {
 // REMEDIATION RECORDS — Phase 1
 // ─────────────────────────────────────────
 const REMEDIATION_EVENT_TYPES = [
-    client_1.ArchiveEventType.COMPLIANCE_EDIT_REQUESTED,
-    client_1.ArchiveEventType.COMPLIANCE_WARN_ISSUED,
+    client_2.ArchiveEventType.COMPLIANCE_EDIT_REQUESTED,
+    client_2.ArchiveEventType.COMPLIANCE_WARN_ISSUED,
 ];
 /**
  * Return content records that have had a REQUEST_EDIT or WARN_PROMOTER
@@ -516,7 +568,7 @@ async function getRemediationRecords(tenantId) {
 async function getCertifiedRecords(tenantId) {
     return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
         const certEvents = await tx.archiveEventLog.findMany({
-            where: { tenantId, eventType: client_1.ArchiveEventType.COMPLIANCE_CERTIFIED },
+            where: { tenantId, eventType: client_2.ArchiveEventType.COMPLIANCE_CERTIFIED },
             orderBy: { createdAt: 'desc' },
             distinct: ['contentRecordId'],
         });
@@ -545,23 +597,23 @@ async function getCertifiedRecords(tenantId) {
 // ─────────────────────────────────────────
 // Maps UI category labels → sets of ArchiveEventType values
 const AUDIT_CATEGORY_MAP = {
-    capture: [client_1.ArchiveEventType.RECORD_CREATED, client_1.ArchiveEventType.MEDIA_ATTACHED],
+    capture: [client_2.ArchiveEventType.RECORD_CREATED, client_2.ArchiveEventType.MEDIA_ATTACHED],
     decision: [
-        client_1.ArchiveEventType.STATUS_CHANGED,
-        client_1.ArchiveEventType.COMPLIANCE_APPROVED,
-        client_1.ArchiveEventType.COMPLIANCE_EDIT_REQUESTED,
-        client_1.ArchiveEventType.COMPLIANCE_WARN_ISSUED,
-        client_1.ArchiveEventType.REVIEW_STARTED,
-        client_1.ArchiveEventType.REVIEW_COMPLETED,
-        client_1.ArchiveEventType.NOTE_ADDED,
+        client_2.ArchiveEventType.STATUS_CHANGED,
+        client_2.ArchiveEventType.COMPLIANCE_APPROVED,
+        client_2.ArchiveEventType.COMPLIANCE_EDIT_REQUESTED,
+        client_2.ArchiveEventType.COMPLIANCE_WARN_ISSUED,
+        client_2.ArchiveEventType.REVIEW_STARTED,
+        client_2.ArchiveEventType.REVIEW_COMPLETED,
+        client_2.ArchiveEventType.NOTE_ADDED,
     ],
     escalation: [
-        client_1.ArchiveEventType.COMPLIANCE_ESCALATED,
-        client_1.ArchiveEventType.COMPLIANCE_PROMOTER_SUSPENDED,
-        client_1.ArchiveEventType.ESCALATION_RAISED,
-        client_1.ArchiveEventType.INCIDENT_LINKED,
+        client_2.ArchiveEventType.COMPLIANCE_ESCALATED,
+        client_2.ArchiveEventType.COMPLIANCE_PROMOTER_SUSPENDED,
+        client_2.ArchiveEventType.ESCALATION_RAISED,
+        client_2.ArchiveEventType.INCIDENT_LINKED,
     ],
-    config: [client_1.ArchiveEventType.RECORD_PURGED, client_1.ArchiveEventType.RECORD_EXPORTED],
+    config: [client_2.ArchiveEventType.RECORD_PURGED, client_2.ArchiveEventType.RECORD_EXPORTED],
 };
 /**
  * Return a paginated, newest-first list of all ArchiveEventLog rows
@@ -611,7 +663,7 @@ async function getSlaBreachedRecords(tenantId) {
         const active = await tx.contentRecord.findMany({
             where: {
                 tenantId,
-                archiveStatus: { in: [client_1.ArchiveStatus.PENDING_REVIEW, client_1.ArchiveStatus.ESCALATED] },
+                archiveStatus: { in: [client_2.ArchiveStatus.PENDING_REVIEW, client_2.ArchiveStatus.ESCALATED] },
             },
             include: {
                 ambassador: { select: ambassadorSelect },
@@ -714,7 +766,7 @@ async function listDisclosureFlags(tenantId, options) {
  */
 async function listDisclosureLog(tenantId, options) {
     const { ambassadorId, outcome } = options;
-    const SATISFIED_STATUSES = [client_1.ArchiveStatus.REVIEWED, client_1.ArchiveStatus.CLOSED];
+    const SATISFIED_STATUSES = [client_2.ArchiveStatus.REVIEWED, client_2.ArchiveStatus.CLOSED];
     return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
         // Fetch all content records that have at least one DISC- detection record
         const records = await tx.contentRecord.findMany({

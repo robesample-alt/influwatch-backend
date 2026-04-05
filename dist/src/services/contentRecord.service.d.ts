@@ -96,13 +96,14 @@ export declare function getRemediationRecords(tenantId: string): Promise<{
     } | null;
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
         primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
     };
     tenantId: string;
     hasAffiliateLink: boolean;
+    severity: import(".prisma/client").$Enums.Severity | null;
     id: string;
     sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
     contentType: import(".prisma/client").$Enums.ContentType;
@@ -114,7 +115,6 @@ export declare function getRemediationRecords(tenantId: string): Promise<{
     postedAt: Date | null;
     capturedAt: Date;
     archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
-    severity: import(".prisma/client").$Enums.Severity | null;
     checksum: string | null;
     compensationPosture: string | null;
     createdAt: Date;
@@ -181,24 +181,25 @@ export declare function getSlaBreachedRecords(tenantId: string): Promise<{
     } | null;
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
         primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
     };
     detectionRecords: {
         tenantId: string;
-        id: string;
+        ruleCode: string;
         severity: import(".prisma/client").$Enums.Severity;
+        id: string;
         createdAt: Date;
         contentRecordId: string;
-        ruleCode: string;
         ruleName: string;
         matchedPhrase: string | null;
         detectionMethod: import(".prisma/client").$Enums.DetectionMethod;
     }[];
     tenantId: string;
     hasAffiliateLink: boolean;
+    severity: import(".prisma/client").$Enums.Severity | null;
     id: string;
     sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
     contentType: import(".prisma/client").$Enums.ContentType;
@@ -210,7 +211,6 @@ export declare function getSlaBreachedRecords(tenantId: string): Promise<{
     postedAt: Date | null;
     capturedAt: Date;
     archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
-    severity: import(".prisma/client").$Enums.Severity | null;
     checksum: string | null;
     compensationPosture: string | null;
     createdAt: Date;

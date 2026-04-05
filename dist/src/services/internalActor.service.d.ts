@@ -7,12 +7,12 @@ export declare function listInternalActors(tenantId: string, opts?: {
     status?: InternalActorStatus;
 }): Promise<{
     id: string;
+    role: import(".prisma/client").$Enums.InternalActorRole;
+    status: import(".prisma/client").$Enums.InternalActorStatus;
     createdAt: Date;
     updatedAt: Date;
     displayName: string;
-    status: import(".prisma/client").$Enums.InternalActorStatus;
     email: string;
-    role: import(".prisma/client").$Enums.InternalActorRole;
     seriesLicense: string | null;
     mfaEnabled: boolean;
     lastLoginAt: Date | null;
@@ -23,12 +23,12 @@ export declare function listInternalActors(tenantId: string, opts?: {
  */
 export declare function listSupervisors(tenantId: string): Promise<{
     id: string;
+    role: import(".prisma/client").$Enums.InternalActorRole;
+    status: import(".prisma/client").$Enums.InternalActorStatus;
     createdAt: Date;
     updatedAt: Date;
     displayName: string;
-    status: import(".prisma/client").$Enums.InternalActorStatus;
     email: string;
-    role: import(".prisma/client").$Enums.InternalActorRole;
     seriesLicense: string | null;
     mfaEnabled: boolean;
     lastLoginAt: Date | null;
@@ -38,12 +38,12 @@ export declare function listSupervisors(tenantId: string): Promise<{
  */
 export declare function getInternalActorById(tenantId: string, id: string): Promise<{
     id: string;
+    role: import(".prisma/client").$Enums.InternalActorRole;
+    status: import(".prisma/client").$Enums.InternalActorStatus;
     createdAt: Date;
     updatedAt: Date;
     displayName: string;
-    status: import(".prisma/client").$Enums.InternalActorStatus;
     email: string;
-    role: import(".prisma/client").$Enums.InternalActorRole;
     seriesLicense: string | null;
     mfaEnabled: boolean;
     lastLoginAt: Date | null;

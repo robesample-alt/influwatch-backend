@@ -5,19 +5,19 @@
 export declare function listTailPeriods(tenantId: string, status?: string): Promise<({
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
     tenantId: string;
     reason: string | null;
     id: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
-    status: string;
     riskTier: string | null;
     contractEndDate: Date;
     tailDays: number;
@@ -45,19 +45,19 @@ export interface CreateTailPeriodInput {
 export declare function createTailPeriod(tenantId: string, input: CreateTailPeriodInput): Promise<{
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
     tenantId: string;
     reason: string | null;
     id: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
-    status: string;
     riskTier: string | null;
     contractEndDate: Date;
     tailDays: number;
@@ -76,19 +76,19 @@ export declare function createTailPeriod(tenantId: string, input: CreateTailPeri
 export declare function closeTailPeriod(tenantId: string, id: string, closedBy: string, closedReason: string): Promise<({
     ambassador: {
         id: string;
+        status: import(".prisma/client").$Enums.AmbassadorStatus;
         displayName: string;
         handle: string;
-        status: import(".prisma/client").$Enums.AmbassadorStatus;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
     };
 } & {
     tenantId: string;
     reason: string | null;
     id: string;
+    status: string;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
-    status: string;
     riskTier: string | null;
     contractEndDate: Date;
     tailDays: number;

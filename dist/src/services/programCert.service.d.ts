@@ -5,20 +5,20 @@
 export declare function listProgramCerts(tenantId: string): Promise<({
     principal: {
         id: string;
+        role: import(".prisma/client").$Enums.InternalActorRole;
         displayName: string;
         email: string;
-        role: import(".prisma/client").$Enums.InternalActorRole;
         seriesLicense: string | null;
     };
 } & {
     tenantId: string;
+    findings: string | null;
     id: string;
     certifiedAt: Date;
     principalId: string;
     certificationYear: number;
     rulesCertified: string;
     supervisorySystemAdequate: boolean;
-    findings: string | null;
     certificationNote: string | null;
 })[]>;
 export interface CreateProgramCertInput {
@@ -36,20 +36,20 @@ export interface CreateProgramCertInput {
 export declare function createProgramCert(tenantId: string, input: CreateProgramCertInput): Promise<{
     principal: {
         id: string;
+        role: import(".prisma/client").$Enums.InternalActorRole;
         displayName: string;
         email: string;
-        role: import(".prisma/client").$Enums.InternalActorRole;
         seriesLicense: string | null;
     };
 } & {
     tenantId: string;
+    findings: string | null;
     id: string;
     certifiedAt: Date;
     principalId: string;
     certificationYear: number;
     rulesCertified: string;
     supervisorySystemAdequate: boolean;
-    findings: string | null;
     certificationNote: string | null;
 }>;
 //# sourceMappingURL=programCert.service.d.ts.map

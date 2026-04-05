@@ -23,14 +23,17 @@
 // DISCLOSURE_CHECK and PATTERN_MATCH are reserved for Phase 2.
 // ============================================================
 
-import { Severity } from '@prisma/client';
+import { Severity, DetectionMethod } from '@prisma/client';
 
 export interface RuleHit {
   ruleCode:        string;
   ruleName:        string;
   matchedPhrase:   string;
   severity:        Severity;
-  detectionMethod: 'PHRASE_MATCH' | 'DISCLOSURE_CHECK';
+  // Broadened from the original phrase/disclosure union to the full
+  // DetectionMethod enum so LLM findings (LLM_ANALYSIS) can flow
+  // through the same RuleHit pipeline as phrase matches.
+  detectionMethod: DetectionMethod;
 }
 
 // ─────────────────────────────────────────
