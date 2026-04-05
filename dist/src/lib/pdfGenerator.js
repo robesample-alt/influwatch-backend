@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateEvidencePdf = generateEvidencePdf;
 const pdfkit_1 = __importDefault(require("pdfkit"));
+const findingCopy_1 = require("../constants/findingCopy");
 // ── Brand colours ─────────────────────────────────────────────
 const C = {
     bgDark: '#09090f',
@@ -280,28 +281,48 @@ function generateEvidencePdf(input, output) {
                 doc.fillColor('#222222').font('Helvetica-Oblique').fontSize(9).text(tx, 50, y, { width: doc.page.width - 100 });
                 y += Math.ceil(tx.length / 90) * 11 + 14;
             }
-            // Detection results
-            if ((rec.detections || []).length > 0) {
-                doc.fillColor('#000000').font('Helvetica-Bold').fontSize(10).text('Detection Results', 50, y);
+            // Compliance findings — grouped by public category so the
+            // regulator-facing PDF never leaks internal rule codes or
+            // detection method names. One card per category; findings
+            // with the same category from multiple rules collapse.
+            const grouped = (0, findingCopy_1.groupDetections)(rec.detections || []);
+            if (grouped.length > 0) {
+                doc.fillColor('#000000').font('Helvetica-Bold').fontSize(10).text('Compliance Findings', 50, y);
                 y += 14;
-                for (const d of rec.detections) {
-                    if (y > doc.page.height - 100) {
+                for (const g of grouped) {
+                    if (y > doc.page.height - 140) {
                         doc.addPage();
                         drawHeader(doc, 'CONTENT RECORD · ' + rec.id + ' (cont.)');
                         y = 70;
                     }
-                    const sc = severityColor(d.severity);
+                    const sc = severityColor(g.severity);
+                    // Title row: coloured left bar + public title + severity chip
                     doc.rect(50, y, 4, 16).fill(sc);
-                    doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9).text(d.ruleCode, 60, y + 2);
-                    doc.fillColor('#444444').font('Helvetica').fontSize(9).text(d.ruleName, 130, y + 2, { width: 260 });
-                    doc.fillColor(sc).font('Helvetica-Bold').fontSize(8).text(d.severity, doc.page.width - 110, y + 4, { width: 60, align: 'right' });
+                    doc.fillColor('#000000').font('Helvetica-Bold').fontSize(10).text(g.title, 60, y + 2, { width: doc.page.width - 180 });
+                    doc.fillColor(sc).font('Helvetica-Bold').fontSize(8).text(g.severity, doc.page.width - 110, y + 4, { width: 60, align: 'right' });
                     y += 16;
-                    if (d.matchedPhrase) {
-                        doc.fillColor('#666666').font('Helvetica-Oblique').fontSize(8).text('Matched: "' + d.matchedPhrase + '"', 65, y);
-                        y += 12;
+                    // Description
+                    doc.fillColor('#444444').font('Helvetica').fontSize(9).text(g.description, 65, y, { width: doc.page.width - 130 });
+                    const descLines = Math.max(1, Math.ceil(g.description.length / 90));
+                    y += descLines * 11 + 2;
+                    // Flagged language — one line per unique phrase
+                    if (g.flaggedLanguage.length > 0) {
+                        doc.fillColor('#666666').font('Helvetica-Oblique').fontSize(8).text('Flagged language:', 65, y);
+                        y += 10;
+                        for (const phrase of g.flaggedLanguage) {
+                            if (y > doc.page.height - 100) {
+                                doc.addPage();
+                                drawHeader(doc, 'CONTENT RECORD · ' + rec.id + ' (cont.)');
+                                y = 70;
+                            }
+                            const clipped = phrase.length > 180 ? phrase.slice(0, 177) + '…' : phrase;
+                            doc.fillColor('#666666').font('Helvetica-Oblique').fontSize(8).text('· "' + clipped + '"', 75, y, { width: doc.page.width - 140 });
+                            y += Math.max(10, Math.ceil(clipped.length / 100) * 10);
+                        }
                     }
+                    y += 8;
                 }
-                y += 10;
+                y += 4;
             }
             // Supervisory decision from events
             const complianceEvt = (rec.events || []).find(e => e.eventType && e.eventType.startsWith('COMPLIANCE_'));
