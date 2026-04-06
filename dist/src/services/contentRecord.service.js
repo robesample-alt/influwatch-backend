@@ -28,6 +28,7 @@ const checksum_1 = require("../utils/checksum");
 const ruleRegistry_1 = require("../lib/ruleRegistry");
 const severityEngine_1 = require("../lib/severityEngine");
 const llmDetection_1 = require("../lib/llmDetection");
+const exposureEngine_1 = require("../lib/exposureEngine");
 const client_1 = require("@prisma/client");
 const sla_1 = require("../utils/sla");
 const client_2 = require("@prisma/client");
@@ -174,6 +175,18 @@ async function createContentRecord(tenantId, input) {
         if (severity !== 'LOW' && archiveStatus === client_2.ArchiveStatus.CAPTURED) {
             archiveStatus = client_2.ArchiveStatus.PENDING_REVIEW;
         }
+        // ── Exposure classification (Phase 2, log-only) ────────────────────────
+        // Computes and stores the exposure level alongside the record but does
+        // NOT influence archiveStatus, severity, or routing. This is a pure
+        // log-only layer — activation happens in a future phase.
+        const exposure = (0, exposureEngine_1.computeExposure)({
+            compensationType: compensationStructure?.compensationType ?? null,
+            transactionalityClass: compensationStructure?.transactionalityClass ?? null,
+            isTransactionBased: compensationStructure?.isTransactionBased ?? false,
+            isSecurityLinked: compensationStructure?.isSecurityLinked ?? false,
+            severity,
+            hitRuleCodes: hits.map(h => h.ruleCode),
+        });
         const record = await tx.contentRecord.create({
             data: {
                 tenantId,
@@ -192,6 +205,11 @@ async function createContentRecord(tenantId, input) {
                 checksum,
                 compensationPosture,
                 hasAffiliateLink,
+                // Phase 2 exposure — log-only, does NOT affect routing
+                exposureLevel: exposure.exposureLevel,
+                requiresPrincipalReview: exposure.requiresPrincipalReview,
+                exposureReasonCodes: JSON.stringify(exposure.exposureReasonCodes),
+                exposureSummary: exposure.exposureSummary,
             },
             include: {
                 ambassador: { select: ambassadorSelect },

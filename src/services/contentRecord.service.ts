@@ -11,6 +11,7 @@ import { computeChecksum } from '../utils/checksum';
 import { detectRuleHits, computeSeverityFromHits, RuleHit, CompensationContext } from '../lib/ruleRegistry';
 import { applySeverityFloor } from '../lib/severityEngine';
 import { runLlmDetection } from '../lib/llmDetection';
+import { computeExposure } from '../lib/exposureEngine';
 import { DetectionMethod } from '@prisma/client';
 import { getSlaStatus } from '../utils/sla';
 import { ArchiveEventType, ArchiveStatus } from '@prisma/client';
@@ -215,6 +216,19 @@ export async function createContentRecord(
       archiveStatus = ArchiveStatus.PENDING_REVIEW;
     }
 
+    // ── Exposure classification (Phase 2, log-only) ────────────────────────
+    // Computes and stores the exposure level alongside the record but does
+    // NOT influence archiveStatus, severity, or routing. This is a pure
+    // log-only layer — activation happens in a future phase.
+    const exposure = computeExposure({
+      compensationType:      compensationStructure?.compensationType ?? null,
+      transactionalityClass: compensationStructure?.transactionalityClass ?? null,
+      isTransactionBased:    compensationStructure?.isTransactionBased ?? false,
+      isSecurityLinked:      compensationStructure?.isSecurityLinked ?? false,
+      severity,
+      hitRuleCodes:          hits.map(h => h.ruleCode),
+    });
+
     const record = await tx.contentRecord.create({
       data: {
         tenantId,
@@ -233,6 +247,11 @@ export async function createContentRecord(
         checksum,
         compensationPosture,
         hasAffiliateLink,
+        // Phase 2 exposure — log-only, does NOT affect routing
+        exposureLevel:           exposure.exposureLevel,
+        requiresPrincipalReview: exposure.requiresPrincipalReview,
+        exposureReasonCodes:     JSON.stringify(exposure.exposureReasonCodes),
+        exposureSummary:         exposure.exposureSummary,
       },
       include: {
         ambassador:       { select: ambassadorSelect },

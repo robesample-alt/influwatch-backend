@@ -420,6 +420,13 @@ model ContentRecord {
   compensationPosture  String?       // LOW | MEDIUM | HIGH | CRITICAL
   hasAffiliateLink     Boolean       @default(false)
 
+  // Exposure context — Phase 2, log-only. Computed at ingestion, does NOT
+  // affect routing, queue selection, severity, or archiveStatus in this phase.
+  exposureLevel          String?     // NONE | REVIEWER | REVIEWER_PLUS_SUPERVISOR | PRINCIPAL_EXCEPTION | PRINCIPAL_REQUIRED
+  requiresPrincipalReview Boolean?   // Derived from exposureLevel
+  exposureReasonCodes    String?     // JSON array of reason code strings, e.g. '["EXP-001_TRANSACTION_BASED_COMP","EXP-008_UNDISCLOSED_COMPENSATION"]'
+  exposureSummary        String?     // Plain-English one-liner for audit trail
+
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 

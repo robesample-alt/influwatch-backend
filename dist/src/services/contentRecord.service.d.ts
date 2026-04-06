@@ -105,11 +105,11 @@ export declare function getRemediationRecords(tenantId: string): Promise<{
     hasAffiliateLink: boolean;
     severity: import(".prisma/client").$Enums.Severity | null;
     id: string;
+    title: string | null;
     sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
     contentType: import(".prisma/client").$Enums.ContentType;
     sourceUrl: string;
     externalContentId: string | null;
-    title: string | null;
     bodyText: string;
     transcriptText: string | null;
     postedAt: Date | null;
@@ -117,6 +117,10 @@ export declare function getRemediationRecords(tenantId: string): Promise<{
     archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
     checksum: string | null;
     compensationPosture: string | null;
+    exposureLevel: string | null;
+    requiresPrincipalReview: boolean | null;
+    exposureReasonCodes: string | null;
+    exposureSummary: string | null;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
@@ -201,11 +205,11 @@ export declare function getSlaBreachedRecords(tenantId: string): Promise<{
     hasAffiliateLink: boolean;
     severity: import(".prisma/client").$Enums.Severity | null;
     id: string;
+    title: string | null;
     sourcePlatform: import(".prisma/client").$Enums.SourcePlatform;
     contentType: import(".prisma/client").$Enums.ContentType;
     sourceUrl: string;
     externalContentId: string | null;
-    title: string | null;
     bodyText: string;
     transcriptText: string | null;
     postedAt: Date | null;
@@ -213,6 +217,10 @@ export declare function getSlaBreachedRecords(tenantId: string): Promise<{
     archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
     checksum: string | null;
     compensationPosture: string | null;
+    exposureLevel: string | null;
+    requiresPrincipalReview: boolean | null;
+    exposureReasonCodes: string | null;
+    exposureSummary: string | null;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
