@@ -131,9 +131,12 @@ function computeExposure(input) {
     if (input.isReviewerEscalation === true) {
         reasons.push('EXP-010_REVIEWER_ESCALATION');
     }
-    // EXP-011: Campaign compensation drift — TODO: requires
-    // comparison against prior compensation terms for the same
-    // campaign. Not implementable with current data.
+    // EXP-011: Campaign compensation drift — activated in Phase 4.
+    // Fires when the promoter's compensation type is explicitly not
+    // in the campaign's allowed compensation types list.
+    if (input.compensationMismatchWithCampaign === true) {
+        reasons.push('EXP-011_CAMPAIGN_COMP_DRIFT');
+    }
     // EXP-012: Manual policy trigger — not available at write time.
     // Would be set by a supervisory action, not by the ingestion pipeline.
     // ── Level derivation ───────────────────────────────────────
@@ -152,6 +155,12 @@ function computeExposure(input) {
     if (level !== 'PRINCIPAL_REQUIRED' &&
         txnClass === 'TRANSACTION_BASED' &&
         (hasSolicitation || hasGuarantee)) {
+        level = 'PRINCIPAL_REQUIRED';
+    }
+    // A3. PRINCIPAL_REQUIRED: explicit campaign compensation drift (Phase 4)
+    // A promoter operating outside the campaign's approved compensation
+    // structure is a governance violation that requires principal attention.
+    if (level !== 'PRINCIPAL_REQUIRED' && input.compensationMismatchWithCampaign === true) {
         level = 'PRINCIPAL_REQUIRED';
     }
     // B. PRINCIPAL_EXCEPTION: transaction-based without strong signal,

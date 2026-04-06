@@ -11,6 +11,7 @@ export interface ExposureInput {
     isSecurityLinked: boolean;
     severity: Severity | string | null;
     hitRuleCodes: string[];
+    compensationMismatchWithCampaign?: boolean | null;
     promoterPriorViolationCount?: number | null;
     isReviewerEscalation?: boolean;
     campaignViolationCount?: number | null;

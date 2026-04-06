@@ -12,6 +12,7 @@ import { detectRuleHits, computeSeverityFromHits, RuleHit, CompensationContext }
 import { applySeverityFloor } from '../lib/severityEngine';
 import { runLlmDetection } from '../lib/llmDetection';
 import { computeExposure } from '../lib/exposureEngine';
+import { checkCampaignConformance } from '../lib/campaignConformance';
 import { DetectionMethod } from '@prisma/client';
 import { getSlaStatus } from '../utils/sla';
 import { ArchiveEventType, ArchiveStatus } from '@prisma/client';
@@ -216,17 +217,38 @@ export async function createContentRecord(
       archiveStatus = ArchiveStatus.PENDING_REVIEW;
     }
 
-    // ── Exposure classification (Phase 2, log-only) ────────────────────────
-    // Computes and stores the exposure level alongside the record but does
-    // NOT influence archiveStatus, severity, or routing. This is a pure
-    // log-only layer — activation happens in a future phase.
+    // ── Campaign conformance (Phase 4) ─────────────────────────────────────
+    // If the record is linked to a campaign, check whether the promoter's
+    // compensation type is in the campaign's allowed list. Fetch the campaign
+    // only when a campaignId is present — no extra queries otherwise.
+    let campaignConformanceMismatch: boolean | null = null;
+    let campaignConformanceSummary:  string | null  = null;
+    if (input.campaignId) {
+      const campaign = await tx.campaign.findFirst({
+        where:  { id: input.campaignId, tenantId },
+        select: { campaignName: true, allowedCompensationTypes: true, campaignRiskMode: true },
+      });
+      if (campaign) {
+        const conformance = checkCampaignConformance({
+          compensationType:              compensationStructure?.compensationType ?? null,
+          allowedCompensationTypesJson:  campaign.allowedCompensationTypes,
+          campaignRiskMode:              campaign.campaignRiskMode,
+          campaignName:                  campaign.campaignName,
+        });
+        campaignConformanceMismatch = conformance.mismatch;
+        campaignConformanceSummary  = conformance.summary;
+      }
+    }
+
+    // ── Exposure classification (Phase 2 + Phase 3 routing + Phase 4 drift) ─
     const exposure = computeExposure({
-      compensationType:      compensationStructure?.compensationType ?? null,
-      transactionalityClass: compensationStructure?.transactionalityClass ?? null,
-      isTransactionBased:    compensationStructure?.isTransactionBased ?? false,
-      isSecurityLinked:      compensationStructure?.isSecurityLinked ?? false,
+      compensationType:                compensationStructure?.compensationType ?? null,
+      transactionalityClass:           compensationStructure?.transactionalityClass ?? null,
+      isTransactionBased:              compensationStructure?.isTransactionBased ?? false,
+      isSecurityLinked:                compensationStructure?.isSecurityLinked ?? false,
       severity,
-      hitRuleCodes:          hits.map(h => h.ruleCode),
+      hitRuleCodes:                    hits.map(h => h.ruleCode),
+      compensationMismatchWithCampaign: campaignConformanceMismatch,
     });
 
     const record = await tx.contentRecord.create({
@@ -247,6 +269,9 @@ export async function createContentRecord(
         checksum,
         compensationPosture,
         hasAffiliateLink,
+        // Phase 4 — campaign conformance
+        compensationMismatchWithCampaign: campaignConformanceMismatch,
+        campaignConformanceSummary,
         // Phase 2 exposure — log-only, does NOT affect routing
         exposureLevel:           exposure.exposureLevel,
         requiresPrincipalReview: exposure.requiresPrincipalReview,

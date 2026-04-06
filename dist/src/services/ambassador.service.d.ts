@@ -157,6 +157,9 @@ export declare function getCampaignById(tenantId: string, id: string): Promise<{
     updatedAt: Date;
     campaignName: string;
     campaignType: import(".prisma/client").$Enums.CampaignType;
+    allowedCompensationTypes: string | null;
+    campaignRiskMode: string | null;
+    requiresPrincipalAtLaunch: boolean | null;
 } | null>;
 export declare function listCampaigns(tenantId: string): Promise<{
     tenantId: string;
@@ -166,6 +169,9 @@ export declare function listCampaigns(tenantId: string): Promise<{
     updatedAt: Date;
     campaignName: string;
     campaignType: import(".prisma/client").$Enums.CampaignType;
+    allowedCompensationTypes: string | null;
+    campaignRiskMode: string | null;
+    requiresPrincipalAtLaunch: boolean | null;
 }[]>;
 /**
  * Return all ambassador profiles with aggregated capture statistics.

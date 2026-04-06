@@ -117,6 +117,8 @@ export declare function getRemediationRecords(tenantId: string): Promise<{
     archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
     checksum: string | null;
     compensationPosture: string | null;
+    compensationMismatchWithCampaign: boolean | null;
+    campaignConformanceSummary: string | null;
     exposureLevel: string | null;
     requiresPrincipalReview: boolean | null;
     exposureReasonCodes: string | null;
@@ -217,6 +219,8 @@ export declare function getSlaBreachedRecords(tenantId: string): Promise<{
     archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
     checksum: string | null;
     compensationPosture: string | null;
+    compensationMismatchWithCampaign: boolean | null;
+    campaignConformanceSummary: string | null;
     exposureLevel: string | null;
     requiresPrincipalReview: boolean | null;
     exposureReasonCodes: string | null;

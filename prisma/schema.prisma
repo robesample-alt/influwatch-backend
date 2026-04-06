@@ -358,6 +358,11 @@ model Campaign {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
+  // Phase 4 — Campaign governance (additive, nullable)
+  allowedCompensationTypes  String?   // JSON array of allowed CompensationType values, e.g. '["FLAT_FEE_PER_POST","MONTHLY_RETAINER"]'
+  campaignRiskMode          String?   // AWARENESS | EDUCATION | CONVERSION | HIGH_SCRUTINY
+  requiresPrincipalAtLaunch Boolean?
+
   // Tenant
   tenantId       String
   tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -419,6 +424,10 @@ model ContentRecord {
   // Compensation context — set at ingestion from promoter's CompensationStructure
   compensationPosture  String?       // LOW | MEDIUM | HIGH | CRITICAL
   hasAffiliateLink     Boolean       @default(false)
+
+  // Phase 4 — Campaign conformance (additive, nullable)
+  compensationMismatchWithCampaign Boolean?  // true if promoter comp type is not in campaign's allowed list
+  campaignConformanceSummary       String?   // Plain-English one-liner
 
   // Exposure context — Phase 2, log-only. Computed at ingestion, does NOT
   // affect routing, queue selection, severity, or archiveStatus in this phase.
