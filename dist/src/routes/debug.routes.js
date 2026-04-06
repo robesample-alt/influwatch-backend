@@ -130,6 +130,120 @@ router.get('/exposure-summary', async (req, res, next) => {
         next(err);
     }
 });
+/**
+ * GET /principal-dashboard
+ *
+ * Returns everything the Desk Oversight screen needs in one call:
+ *   - principal identity + license from logged-in actor
+ *   - firm info from tenant
+ *   - supervised promoters with risk tier + open counts
+ *   - metrics: principal-required pending, escalations, total decisions
+ *   - principal queue: records where requiresPrincipalReview=true
+ */
+router.get('/principal-dashboard', async (req, res, next) => {
+    try {
+        const tenantId = req.user.tenantId;
+        const actorId = req.user.id;
+        const result = await (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+            const [actor, tenant, promoters, principalRecords, allEscalated] = await Promise.all([
+                // Logged-in actor with license fields
+                tx.internalActor.findFirst({
+                    where: { id: actorId, tenantId },
+                }),
+                // Firm info
+                tx.tenant.findFirst({
+                    where: { id: tenantId },
+                    select: { firmName: true, crdNumber: true, secRegistration: true },
+                }),
+                // Promoters assigned to this actor
+                tx.ambassadorProfile.findMany({
+                    where: { assignedSupervisorId: actorId, tenantId },
+                    select: {
+                        id: true, displayName: true, handle: true,
+                        primaryPlatform: true, riskTier: true, status: true,
+                    },
+                }),
+                // Records requiring principal review (the queue)
+                tx.contentRecord.findMany({
+                    where: { tenantId, requiresPrincipalReview: true },
+                    include: {
+                        ambassador: { select: { displayName: true, handle: true, primaryPlatform: true } },
+                        campaign: { select: { campaignName: true } },
+                    },
+                    orderBy: { capturedAt: 'desc' },
+                    take: 50,
+                }),
+                // Total escalated count
+                tx.contentRecord.count({
+                    where: { tenantId, archiveStatus: 'ESCALATED' },
+                }),
+            ]);
+            // Per-promoter open record counts
+            const promoterIds = promoters.map(p => p.id);
+            const openCounts = promoterIds.length > 0
+                ? await tx.contentRecord.groupBy({
+                    by: ['ambassadorId'],
+                    where: {
+                        tenantId,
+                        ambassadorId: { in: promoterIds },
+                        archiveStatus: { in: ['PENDING_REVIEW', 'ESCALATED'] },
+                    },
+                    _count: true,
+                })
+                : [];
+            const openCountMap = {};
+            for (const g of openCounts) {
+                openCountMap[g.ambassadorId] = g._count;
+            }
+            // Enrich promoters with open count
+            const enrichedPromoters = promoters.map(p => ({
+                ...p,
+                openRecordCount: openCountMap[p.id] || 0,
+            }));
+            // Queue records — shape for frontend
+            const queue = principalRecords.map(r => ({
+                id: r.id,
+                promoterName: r.ambassador?.displayName ?? '—',
+                promoterHandle: r.ambassador?.handle ?? '',
+                platform: r.sourcePlatform,
+                campaign: r.campaign?.campaignName ?? '—',
+                severity: r.severity,
+                archiveStatus: r.archiveStatus,
+                exposureLevel: r.exposureLevel,
+                requiresPrincipalReview: r.requiresPrincipalReview,
+                exposureSummary: r.exposureSummary,
+                exposureReasonCodes: safeParseJson(r.exposureReasonCodes),
+                compensationMismatchWithCampaign: r.compensationMismatchWithCampaign,
+                capturedAt: r.capturedAt,
+            }));
+            return {
+                principal: actor ? {
+                    id: actor.id,
+                    displayName: actor.displayName,
+                    email: actor.email,
+                    role: actor.role,
+                    seriesLicense: actor.seriesLicense,
+                    crdNumber: actor.crdNumber,
+                    licenseStatus: actor.licenseStatus,
+                    licenseExpiryDate: actor.licenseExpiryDate,
+                    supervisoryScope: actor.supervisoryScope,
+                } : null,
+                firm: tenant,
+                promoters: enrichedPromoters,
+                metrics: {
+                    principalQueueCount: principalRecords.length,
+                    escalationsOpen: allEscalated,
+                    promotersSupervised: promoters.length,
+                },
+                queue,
+            };
+        });
+        return res.json(result);
+    }
+    catch (err) {
+        next(err);
+    }
+});
 function safeParseJson(val) {
     if (!val)
         return [];

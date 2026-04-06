@@ -219,9 +219,13 @@ model InternalActor {
   role            InternalActorRole
   status          InternalActorStatus @default(ACTIVE)
   passwordHash    String?             // bcrypt hash — null until first seed or password set
-  seriesLicense   String?             // e.g. "Series 24", "Series 65"
-  mfaEnabled      Boolean             @default(false)
-  lastLoginAt     DateTime?
+  seriesLicense      String?          // e.g. "Series 24", "Series 65"
+  crdNumber          String?          // Individual FINRA CRD, e.g. "1234567"
+  licenseStatus      String?          // ACTIVE | EXPIRED | SUSPENDED
+  licenseExpiryDate  DateTime?        // For attestation tracking
+  supervisoryScope   String?          // JSON or plain text describing authorized scope
+  mfaEnabled         Boolean          @default(false)
+  lastLoginAt        DateTime?
 
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
