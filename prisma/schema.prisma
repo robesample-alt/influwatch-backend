@@ -428,6 +428,7 @@ model ContentRecord {
   // Compensation context — set at ingestion from promoter's CompensationStructure
   compensationPosture  String?       // LOW | MEDIUM | HIGH | CRITICAL
   hasAffiliateLink     Boolean       @default(false)
+  hasReferralCode      Boolean       @default(false)
 
   // Phase 4 — Campaign conformance (additive, nullable)
   compensationMismatchWithCampaign Boolean?  // true if promoter comp type is not in campaign's allowed list
@@ -919,6 +920,7 @@ model CompensationStructure {
 model AffiliateLink {
   id                        String   @id @default(cuid())
   url                       String
+  referralCode              String?  // e.g. "MARCUS20", "MOOMOO2026" — matched in content body
 
   promoterId                String
   campaignId                String?

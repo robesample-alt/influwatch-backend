@@ -99,20 +99,30 @@ async function createContentRecord(tenantId, input) {
         let compensationCtx;
         let compensationPosture = null;
         let hasAffiliateLink = false;
+        let hasReferralCode = false;
         if (compensationStructure) {
             // Extract URLs from bodyText, normalize: lowercase, strip query params, strip trailing slash
             const URL_REGEX = /https?:\/\/[^\s"'<>)\]]+/gi;
             const rawUrls = bodyText.match(URL_REGEX) ?? [];
             const normalize = (url) => url.toLowerCase().replace(/\?.*$/, '').replace(/\/+$/, '');
             const extractedUrls = rawUrls.map(normalize);
-            // Match extracted URLs against active AffiliateLinks for this promoter
+            // Fetch active AffiliateLinks for this promoter (URLs + referral codes)
+            const affiliateLinks = await tx.affiliateLink.findMany({
+                where: { promoterId: input.ambassadorId, tenantId, active: true },
+                select: { url: true, referralCode: true },
+            });
+            // Match URLs
             if (extractedUrls.length > 0) {
-                const affiliateLinks = await tx.affiliateLink.findMany({
-                    where: { promoterId: input.ambassadorId, tenantId, active: true },
-                    select: { url: true },
-                });
                 const normalizedStored = affiliateLinks.map(l => normalize(l.url));
                 hasAffiliateLink = extractedUrls.some(u => normalizedStored.includes(u));
+            }
+            // Match referral codes — case-insensitive scan of body text
+            const referralCodes = affiliateLinks
+                .map(l => l.referralCode)
+                .filter((c) => !!c && c.trim().length > 0);
+            if (referralCodes.length > 0) {
+                const bodyLower = bodyText.toLowerCase();
+                hasReferralCode = referralCodes.some(code => bodyLower.includes(code.toLowerCase()));
             }
             compensationPosture = compensationStructure.supervisionPosture;
             compensationCtx = {
@@ -207,6 +217,8 @@ async function createContentRecord(tenantId, input) {
             severity,
             hitRuleCodes: hits.map(h => h.ruleCode),
             compensationMismatchWithCampaign: campaignConformanceMismatch,
+            hasAffiliateLink,
+            hasReferralCode,
         });
         const record = await tx.contentRecord.create({
             data: {
@@ -226,6 +238,7 @@ async function createContentRecord(tenantId, input) {
                 checksum,
                 compensationPosture,
                 hasAffiliateLink,
+                hasReferralCode,
                 // Phase 4 — campaign conformance
                 compensationMismatchWithCampaign: campaignConformanceMismatch,
                 campaignConformanceSummary,

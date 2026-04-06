@@ -58,7 +58,8 @@ export type ExposureReasonCode =
   | 'EXP-009_GUARANTEE_OR_FRAUD_SIGNAL'
   | 'EXP-010_REVIEWER_ESCALATION'
   | 'EXP-011_CAMPAIGN_COMP_DRIFT'
-  | 'EXP-012_MANUAL_POLICY_TRIGGER';
+  | 'EXP-012_MANUAL_POLICY_TRIGGER'
+  | 'EXP-013_COMPENSATED_SOLICITATION';
 
 export const VALID_EXPOSURE_REASON_CODES: ReadonlySet<string> = new Set<ExposureReasonCode>([
   'EXP-001_TRANSACTION_BASED_COMP',
@@ -73,6 +74,7 @@ export const VALID_EXPOSURE_REASON_CODES: ReadonlySet<string> = new Set<Exposure
   'EXP-010_REVIEWER_ESCALATION',
   'EXP-011_CAMPAIGN_COMP_DRIFT',
   'EXP-012_MANUAL_POLICY_TRIGGER',
+  'EXP-013_COMPENSATED_SOLICITATION',
 ]);
 
 // Human-readable labels for audit summaries
@@ -89,6 +91,7 @@ const REASON_LABEL: Record<ExposureReasonCode, string> = {
   'EXP-010_REVIEWER_ESCALATION':     'Manually escalated by reviewer',
   'EXP-011_CAMPAIGN_COMP_DRIFT':     'Compensation terms changed mid-campaign',
   'EXP-012_MANUAL_POLICY_TRIGGER':   'Manual policy override applied',
+  'EXP-013_COMPENSATED_SOLICITATION':'Solicitation detected with active affiliate link or referral code',
 };
 
 // ── Input / Output ────────────────────────────────────────────
@@ -108,6 +111,10 @@ export interface ExposureInput {
 
   // Phase 4 — campaign conformance
   compensationMismatchWithCampaign?: boolean | null;
+
+  // Affiliate / referral link context
+  hasAffiliateLink?:  boolean;
+  hasReferralCode?:   boolean;
 
   // Future expansion inputs — currently optional, left as TODO stubs
   promoterPriorViolationCount?: number | null;   // TODO: query promoter history
@@ -216,6 +223,17 @@ export function computeExposure(input: ExposureInput): ExposureOutput {
   // EXP-012: Manual policy trigger — not available at write time.
   // Would be set by a supervisory action, not by the ingestion pipeline.
 
+  // EXP-013: Compensated solicitation — solicitation behavior detected
+  // AND the promoter has an active affiliate link or referral code.
+  // This connects the content behavior (what they said) to the
+  // distribution mechanism (their tracked link/code). The triangle of
+  // solicitation + compensation + tracked distribution is what FINRA
+  // examines most closely.
+  const hasDistributionMechanism = input.hasAffiliateLink || input.hasReferralCode;
+  if (hasSolicitation && hasDistributionMechanism) {
+    reasons.push('EXP-013_COMPENSATED_SOLICITATION');
+  }
+
   // ── Level derivation ───────────────────────────────────────
 
   // A. PRINCIPAL_REQUIRED: transaction-based compensation types
@@ -240,9 +258,19 @@ export function computeExposure(input: ExposureInput): ExposureOutput {
   }
 
   // A3. PRINCIPAL_REQUIRED: explicit campaign compensation drift (Phase 4)
-  // A promoter operating outside the campaign's approved compensation
-  // structure is a governance violation that requires principal attention.
   if (level !== 'PRINCIPAL_REQUIRED' && input.compensationMismatchWithCampaign === true) {
+    level = 'PRINCIPAL_REQUIRED';
+  }
+
+  // A4. PRINCIPAL_REQUIRED: compensated solicitation with transaction-based
+  // or security-linked compensation. The full triangle:
+  // solicitation behavior + tracked distribution + transactional comp.
+  if (
+    level !== 'PRINCIPAL_REQUIRED' &&
+    hasSolicitation &&
+    hasDistributionMechanism &&
+    (input.isTransactionBased || input.isSecurityLinked)
+  ) {
     level = 'PRINCIPAL_REQUIRED';
   }
 
