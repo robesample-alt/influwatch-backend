@@ -16,6 +16,7 @@
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.classifyCompensation = classifyCompensation;
+const compensationPrecision_1 = require("./compensationPrecision");
 // ─────────────────────────────────────────
 // VALUE SETS
 // ─────────────────────────────────────────
@@ -113,6 +114,8 @@ function classifyCompensation(input) {
     const requiresDisclosure = isSecurityLinked ||
         isTransactionBased ||
         DISCLOSURE_FORMS.has(compensationForm);
+    // ── 7. Phase 1 Compensation Precision (additive) ───────────
+    const precision = (0, compensationPrecision_1.deriveCompensationPrecision)(input);
     return {
         isTransactionBased,
         isSecurityLinked,
@@ -120,6 +123,9 @@ function classifyCompensation(input) {
         requiresDisclosure,
         requiresPrincipalReview,
         supervisionPosture,
+        compensationType: precision.compensationType,
+        compensationBasis: precision.compensationBasis,
+        transactionalityClass: precision.transactionalityClass,
     };
 }
 //# sourceMappingURL=compensationClassifier.js.map

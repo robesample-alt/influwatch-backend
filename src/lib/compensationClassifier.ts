@@ -14,6 +14,13 @@
 // DO NOT simplify or collapse the decision logic.
 // ============================================================
 
+import {
+  deriveCompensationPrecision,
+  type CompensationType,
+  type CompensationBasis,
+  type TransactionalityClass,
+} from './compensationPrecision';
+
 export type CompensationInput = {
   compensationForm:    string;
   compensationTrigger: string;
@@ -27,6 +34,10 @@ export type CompensationClassification = {
   requiresDisclosure:       boolean;
   requiresPrincipalReview:  boolean;
   supervisionPosture:       'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  // Phase 1 — Compensation Precision (additive)
+  compensationType:         CompensationType;
+  compensationBasis:        CompensationBasis;
+  transactionalityClass:    TransactionalityClass;
 };
 
 // ─────────────────────────────────────────
@@ -151,6 +162,9 @@ export function classifyCompensation(
     isTransactionBased ||
     DISCLOSURE_FORMS.has(compensationForm);
 
+  // ── 7. Phase 1 Compensation Precision (additive) ───────────
+  const precision = deriveCompensationPrecision(input);
+
   return {
     isTransactionBased,
     isSecurityLinked,
@@ -158,5 +172,8 @@ export function classifyCompensation(
     requiresDisclosure,
     requiresPrincipalReview,
     supervisionPosture,
+    compensationType:      precision.compensationType,
+    compensationBasis:     precision.compensationBasis,
+    transactionalityClass: precision.transactionalityClass,
   };
 }

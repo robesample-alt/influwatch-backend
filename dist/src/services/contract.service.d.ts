@@ -18,6 +18,7 @@ export declare function listContracts(tenantId: string, ambassadorId?: string): 
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
+    compensationType: string | null;
     notes: string | null;
     agreementType: string;
     contractId: string;
@@ -28,7 +29,6 @@ export declare function listContracts(tenantId: string, ambassadorId?: string): 
     disclosureAck: boolean;
     disclosureRuleEnforced: boolean;
     compensationCap: number | null;
-    compensationType: string | null;
     compensationRate: string | null;
 })[]>;
 /**
@@ -51,6 +51,7 @@ export declare function getContract(tenantId: string, id: string): Promise<({
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
+    compensationType: string | null;
     notes: string | null;
     agreementType: string;
     contractId: string;
@@ -61,7 +62,6 @@ export declare function getContract(tenantId: string, id: string): Promise<({
     disclosureAck: boolean;
     disclosureRuleEnforced: boolean;
     compensationCap: number | null;
-    compensationType: string | null;
     compensationRate: string | null;
 }) | null>;
 export interface CreateContractInput {
@@ -100,6 +100,7 @@ export declare function createContract(tenantId: string, input: CreateContractIn
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
+    compensationType: string | null;
     notes: string | null;
     agreementType: string;
     contractId: string;
@@ -110,7 +111,6 @@ export declare function createContract(tenantId: string, input: CreateContractIn
     disclosureAck: boolean;
     disclosureRuleEnforced: boolean;
     compensationCap: number | null;
-    compensationType: string | null;
     compensationRate: string | null;
 }>;
 //# sourceMappingURL=contract.service.d.ts.map

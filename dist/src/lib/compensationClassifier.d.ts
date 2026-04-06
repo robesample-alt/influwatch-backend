@@ -1,3 +1,4 @@
+import { type CompensationType, type CompensationBasis, type TransactionalityClass } from './compensationPrecision';
 export type CompensationInput = {
     compensationForm: string;
     compensationTrigger: string;
@@ -10,6 +11,9 @@ export type CompensationClassification = {
     requiresDisclosure: boolean;
     requiresPrincipalReview: boolean;
     supervisionPosture: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    compensationType: CompensationType;
+    compensationBasis: CompensationBasis;
+    transactionalityClass: TransactionalityClass;
 };
 /**
  * Classify a compensation structure into supervision posture
