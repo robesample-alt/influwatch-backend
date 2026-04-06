@@ -343,6 +343,7 @@ export async function listContentRecords(
       severity,
       capturedFrom,
       capturedTo,
+      requiresPrincipalReview,
       page     = 1,
       pageSize = 25,
     } = filters;
@@ -359,6 +360,11 @@ export async function listContentRecords(
       ...(archiveStatus  ? { archiveStatus }  : {}),
       ...(severity       ? { severity }       : {}),
       ...(Object.keys(capturedAt).length ? { capturedAt } : {}),
+      // Phase 3 — exposure-based principal filter.
+      // When true: returns only records where exposure engine flagged
+      // principal review as mandatory (PRINCIPAL_REQUIRED).
+      // When absent/undefined: legacy behavior, no filter applied.
+      ...(requiresPrincipalReview != null ? { requiresPrincipalReview } : {}),
     };
 
     const [total, records] = await Promise.all([

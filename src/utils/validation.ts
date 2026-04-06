@@ -12,6 +12,7 @@ import {
   ContentType,
   AssetType,
   PromoterRiskTier,
+  Severity,
 } from '@prisma/client';
 
 import type {
@@ -118,6 +119,16 @@ export function parseContentRecordFilters(
 
   if (isEnumValue(ArchiveStatus, query.archiveStatus))
     filters.archiveStatus = query.archiveStatus;
+
+  if (isEnumValue(Severity, query.severity))
+    filters.severity = query.severity;
+
+  if (isNonEmptyString(query.capturedFrom)) filters.capturedFrom = query.capturedFrom;
+  if (isNonEmptyString(query.capturedTo))   filters.capturedTo   = query.capturedTo;
+
+  // Phase 3 — exposure-based principal filter
+  if (query.requiresPrincipalReview === 'true')  filters.requiresPrincipalReview = true;
+  if (query.requiresPrincipalReview === 'false') filters.requiresPrincipalReview = false;
 
   const page     = parseInt(String(query.page), 10);
   const pageSize = parseInt(String(query.pageSize), 10);

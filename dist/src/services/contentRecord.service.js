@@ -282,7 +282,7 @@ async function createContentRecord(tenantId, input) {
  */
 async function listContentRecords(tenantId, filters) {
     return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
-        const { ambassadorId, campaignId, sourcePlatform, archiveStatus, severity, capturedFrom, capturedTo, page = 1, pageSize = 25, } = filters;
+        const { ambassadorId, campaignId, sourcePlatform, archiveStatus, severity, capturedFrom, capturedTo, requiresPrincipalReview, page = 1, pageSize = 25, } = filters;
         const capturedAt = {};
         if (capturedFrom)
             capturedAt.gte = new Date(capturedFrom);
@@ -296,6 +296,11 @@ async function listContentRecords(tenantId, filters) {
             ...(archiveStatus ? { archiveStatus } : {}),
             ...(severity ? { severity } : {}),
             ...(Object.keys(capturedAt).length ? { capturedAt } : {}),
+            // Phase 3 — exposure-based principal filter.
+            // When true: returns only records where exposure engine flagged
+            // principal review as mandatory (PRINCIPAL_REQUIRED).
+            // When absent/undefined: legacy behavior, no filter applied.
+            ...(requiresPrincipalReview != null ? { requiresPrincipalReview } : {}),
         };
         const [total, records] = await Promise.all([
             tx.contentRecord.count({ where }),

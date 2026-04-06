@@ -86,7 +86,7 @@ describe('PRINCIPAL_REQUIRED', () => {
 // ─────────────────────────────────────────
 
 describe('PRINCIPAL_EXCEPTION', () => {
-  it('TRANSACTION_BASED without solicitation/guarantee → PRINCIPAL_EXCEPTION', () => {
+  it('TRANSACTION_BASED without solicitation/guarantee → PRINCIPAL_EXCEPTION (NOT mandatory principal)', () => {
     const r = computeExposure(input({
       compensationType: 'PER_ACCOUNT_OPENED',
       transactionalityClass: 'TRANSACTION_BASED',
@@ -95,25 +95,29 @@ describe('PRINCIPAL_EXCEPTION', () => {
       hitRuleCodes: [],
     }));
     expect(r.exposureLevel).toBe('PRINCIPAL_EXCEPTION');
-    expect(r.requiresPrincipalReview).toBe(true);
+    // Phase 3: PRINCIPAL_EXCEPTION does NOT set requiresPrincipalReview
+    expect(r.requiresPrincipalReview).toBe(false);
   });
 
-  it('POTENTIALLY_TRANSACTIONAL + HIGH severity → PRINCIPAL_EXCEPTION', () => {
+  it('POTENTIALLY_TRANSACTIONAL + HIGH severity → PRINCIPAL_EXCEPTION (NOT mandatory principal)', () => {
     const r = computeExposure(input({
       compensationType: 'LEAD_GEN_NON_FUNDED',
       transactionalityClass: 'POTENTIALLY_TRANSACTIONAL',
       severity: 'HIGH',
     }));
     expect(r.exposureLevel).toBe('PRINCIPAL_EXCEPTION');
+    // Phase 3: PRINCIPAL_EXCEPTION does NOT route as mandatory principal
+    expect(r.requiresPrincipalReview).toBe(false);
   });
 
-  it('POTENTIALLY_TRANSACTIONAL + CRITICAL severity → PRINCIPAL_EXCEPTION', () => {
+  it('POTENTIALLY_TRANSACTIONAL + CRITICAL severity → PRINCIPAL_EXCEPTION (NOT mandatory principal)', () => {
     const r = computeExposure(input({
       compensationType: 'PER_ACCOUNT_OPENED',
       transactionalityClass: 'POTENTIALLY_TRANSACTIONAL',
       severity: 'CRITICAL',
     }));
     expect(r.exposureLevel).toBe('PRINCIPAL_EXCEPTION');
+    expect(r.requiresPrincipalReview).toBe(false);
   });
 });
 
@@ -252,7 +256,7 @@ describe('Safe fallback', () => {
 // ─────────────────────────────────────────
 
 describe('Boost logic', () => {
-  it('guarantee on non-transactional comp boosts to PRINCIPAL_EXCEPTION', () => {
+  it('guarantee on non-transactional comp boosts to PRINCIPAL_EXCEPTION (NOT mandatory principal)', () => {
     const r = computeExposure(input({
       compensationType: 'FLAT_FEE_PER_POST',
       transactionalityClass: 'NON_TRANSACTIONAL',
@@ -260,6 +264,7 @@ describe('Boost logic', () => {
       hitRuleCodes: ['RISK-001'],
     }));
     expect(r.exposureLevel).toBe('PRINCIPAL_EXCEPTION');
+    expect(r.requiresPrincipalReview).toBe(false);
   });
 
   it('disclosure + security-linked on LOW severity boosts to REVIEWER_PLUS_SUPERVISOR', () => {

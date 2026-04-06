@@ -93,11 +93,22 @@ router.get('/exposure-summary', async (req, res, next) => {
                 compensationBasis: c.compensationBasis,
                 transactionalityClass: c.transactionalityClass,
             }));
+            // Phase 3 — routing source counts
+            const totalRecords = await tx.contentRecord.count({ where: { tenantId } });
+            const exposureRoutedPrincipal = records.filter(r => r.requiresPrincipalReview === true).length;
+            const legacyRecords = totalRecords - records.length;
             return {
+                totalRecords,
                 totalRecordsWithExposure: records.length,
+                legacyRecordsWithoutExposure: legacyRecords,
                 countByExposureLevel: byLevel,
                 countByCompensationType: byCompType,
                 principalReviewRequired: principalCount,
+                routing: {
+                    exposureRoutedPrincipal,
+                    legacyFallbackRecords: legacyRecords,
+                    note: 'Records with null exposure use posture-based legacy routing. New records use exposure-based routing.',
+                },
                 samples,
                 compensationStructures: compSummary,
             };

@@ -197,7 +197,12 @@ function computeExposure(input) {
         level = 'REVIEWER_PLUS_SUPERVISOR';
     }
     // ── Output ─────────────────────────────────────────────────
-    const requiresPrincipalReview = level === 'PRINCIPAL_REQUIRED' || level === 'PRINCIPAL_EXCEPTION';
+    // Phase 3 correction: only PRINCIPAL_REQUIRED sets the mandatory
+    // principal-review flag. PRINCIPAL_EXCEPTION is visible in data and
+    // debug layers but does NOT automatically route as mandatory principal
+    // review. This is the key semantic change that makes principal routing
+    // exposure-driven rather than severity-driven.
+    const requiresPrincipalReview = level === 'PRINCIPAL_REQUIRED';
     const summary = buildSummary(level, reasons);
     return {
         exposureLevel: level,

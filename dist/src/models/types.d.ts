@@ -36,6 +36,7 @@ export interface ContentRecordFilters {
     severity?: Severity;
     capturedFrom?: string;
     capturedTo?: string;
+    requiresPrincipalReview?: boolean;
     page?: number;
     pageSize?: number;
 }

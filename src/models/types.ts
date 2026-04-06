@@ -73,12 +73,16 @@ export interface CreateMediaAssetInput {
 }
 
 export interface ContentRecordFilters {
-  ambassadorId?:   string;
-  campaignId?:     string;
-  sourcePlatform?: SourcePlatform;
-  archiveStatus?:  ArchiveStatus;
-  page?:           number;
-  pageSize?:       number;
+  ambassadorId?:            string;
+  campaignId?:              string;
+  sourcePlatform?:          SourcePlatform;
+  archiveStatus?:           ArchiveStatus;
+  severity?:                Severity;
+  capturedFrom?:            string;
+  capturedTo?:              string;
+  requiresPrincipalReview?: boolean;   // Phase 3 — exposure-based principal filter
+  page?:                    number;
+  pageSize?:                number;
 }
 
 export interface UpdateArchiveStatusInput {
