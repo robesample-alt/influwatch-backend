@@ -63,6 +63,7 @@ const ingest_routes_1 = __importDefault(require("./routes/ingest.routes"));
 const compensationStructure_routes_1 = __importDefault(require("./routes/compensationStructure.routes"));
 const affiliateLinks_routes_1 = __importDefault(require("./routes/affiliateLinks.routes"));
 const phyllo_routes_1 = __importStar(require("./routes/phyllo.routes"));
+const debug_routes_1 = __importDefault(require("./routes/debug.routes"));
 const authenticate_1 = require("./middleware/authenticate");
 const tenantGuard_1 = require("./middleware/tenantGuard");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -118,6 +119,7 @@ app.use('/api/influwatch/ingest', authenticate_1.authenticate, tenantGuard_1.ten
 app.use('/api/influwatch/compensation-structures', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, compensationStructure_routes_1.default);
 app.use('/api/influwatch/affiliate-links', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, affiliateLinks_routes_1.default);
 app.use('/api/influwatch/phyllo', authenticate_1.authenticate, tenantGuard_1.tenantGuard, phyllo_routes_1.default);
+app.use('/api/influwatch/debug', authenticate_1.authenticate, tenantGuard_1.tenantGuard, debug_routes_1.default);
 // ── Error handler (must be last) ──────────
 app.use(errorHandler_1.errorHandler);
 if (process.env.NODE_ENV !== 'test') {

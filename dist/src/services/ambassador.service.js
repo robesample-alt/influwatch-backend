@@ -71,6 +71,11 @@ async function getAmbassadorDetail(tenantId, id) {
                     capturedAt: true,
                     checksum: true,
                     sourceUrl: true,
+                    // Phase 2.5 visibility — exposure fields
+                    exposureLevel: true,
+                    requiresPrincipalReview: true,
+                    exposureReasonCodes: true,
+                    exposureSummary: true,
                 },
             }),
         ]);

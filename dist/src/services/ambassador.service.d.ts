@@ -81,6 +81,10 @@ export declare function getAmbassadorDetail(tenantId: string, id: string): Promi
         capturedAt: Date;
         archiveStatus: import(".prisma/client").$Enums.ArchiveStatus;
         checksum: string | null;
+        exposureLevel: string | null;
+        requiresPrincipalReview: boolean | null;
+        exposureReasonCodes: string | null;
+        exposureSummary: string | null;
     }[];
     statusCounts: {
         total: number;

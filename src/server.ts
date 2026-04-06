@@ -26,6 +26,8 @@ import preApprovalRouter    from './routes/preApproval.routes';
 import ingestRouter                  from './routes/ingest.routes';
 import compensationStructureRouter   from './routes/compensationStructure.routes';
 import affiliateLinksRouter          from './routes/affiliateLinks.routes';
+import phylloRouter, { phylloWebhookHandler } from './routes/phyllo.routes';
+import debugRouter         from './routes/debug.routes';
 import { authenticate }    from './middleware/authenticate';
 import { tenantGuard }     from './middleware/tenantGuard';
 import { errorHandler }    from './middleware/errorHandler';
@@ -69,6 +71,9 @@ app.get('/health', (_req, res) =>
 // ── Auth (open — no token required) ──────
 app.use('/api/influwatch/auth', loginLimiter, authRouter);
 
+// ── Phyllo webhook (public — no JWT, verified by Phyllo) ──
+app.post('/api/influwatch/phyllo/webhook', phylloWebhookHandler);
+
 // ── Protected Routes ──────────────────────
 // All routes below require a valid JWT bearer token + tenant context.
 // tenantGuard sets app.tenant_id in PostgreSQL for RLS enforcement.
@@ -86,6 +91,8 @@ app.use('/api/influwatch/pre-approvals',           authenticate, tenantGuard, wr
 app.use('/api/influwatch/ingest',                 authenticate, tenantGuard, ingestRouter);
 app.use('/api/influwatch/compensation-structures', authenticate, tenantGuard, writeLimiter, compensationStructureRouter);
 app.use('/api/influwatch/affiliate-links',         authenticate, tenantGuard, writeLimiter, affiliateLinksRouter);
+app.use('/api/influwatch/phyllo',                  authenticate, tenantGuard, phylloRouter);
+app.use('/api/influwatch/debug',                   authenticate, tenantGuard, debugRouter);
 
 // ── Error handler (must be last) ──────────
 app.use(errorHandler);
