@@ -37,6 +37,8 @@ export interface ContentRecordFilters {
     capturedFrom?: string;
     capturedTo?: string;
     requiresPrincipalReview?: boolean;
+    exposureLevel?: string;
+    compensationMismatchWithCampaign?: boolean;
     page?: number;
     pageSize?: number;
 }

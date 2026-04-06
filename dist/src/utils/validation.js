@@ -89,6 +89,13 @@ function parseContentRecordFilters(query) {
         filters.requiresPrincipalReview = true;
     if (query.requiresPrincipalReview === 'false')
         filters.requiresPrincipalReview = false;
+    // Phase 5 — exposure level + campaign mismatch filters
+    if (isNonEmptyString(query.exposureLevel))
+        filters.exposureLevel = query.exposureLevel;
+    if (query.compensationMismatchWithCampaign === 'true')
+        filters.compensationMismatchWithCampaign = true;
+    if (query.compensationMismatchWithCampaign === 'false')
+        filters.compensationMismatchWithCampaign = false;
     const page = parseInt(String(query.page), 10);
     const pageSize = parseInt(String(query.pageSize), 10);
     filters.page = !isNaN(page) && page > 0 ? page : 1;

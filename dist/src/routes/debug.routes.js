@@ -39,6 +39,8 @@ router.get('/exposure-summary', async (req, res, next) => {
                     requiresPrincipalReview: true,
                     exposureReasonCodes: true,
                     exposureSummary: true,
+                    compensationMismatchWithCampaign: true,
+                    campaignConformanceSummary: true,
                     capturedAt: true,
                     ambassador: { select: { displayName: true } },
                 },
@@ -97,13 +99,22 @@ router.get('/exposure-summary', async (req, res, next) => {
             const totalRecords = await tx.contentRecord.count({ where: { tenantId } });
             const exposureRoutedPrincipal = records.filter(r => r.requiresPrincipalReview === true).length;
             const legacyRecords = totalRecords - records.length;
+            // Phase 5 — transactionality + campaign mismatch counts
+            const byTxnClass = {};
+            for (const c of compStructs) {
+                const t = c.transactionalityClass || 'NULL';
+                byTxnClass[t] = (byTxnClass[t] || 0) + 1;
+            }
+            const mismatchCount = records.filter(r => r.compensationMismatchWithCampaign === true).length;
             return {
                 totalRecords,
                 totalRecordsWithExposure: records.length,
                 legacyRecordsWithoutExposure: legacyRecords,
                 countByExposureLevel: byLevel,
                 countByCompensationType: byCompType,
+                countByTransactionalityClass: byTxnClass,
                 principalReviewRequired: principalCount,
+                campaignMismatchCount: mismatchCount,
                 routing: {
                     exposureRoutedPrincipal,
                     legacyFallbackRecords: legacyRecords,

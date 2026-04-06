@@ -80,9 +80,11 @@ export interface ContentRecordFilters {
   severity?:                Severity;
   capturedFrom?:            string;
   capturedTo?:              string;
-  requiresPrincipalReview?: boolean;   // Phase 3 — exposure-based principal filter
-  page?:                    number;
-  pageSize?:                number;
+  requiresPrincipalReview?:          boolean;   // Phase 3
+  exposureLevel?:                    string;    // Phase 5
+  compensationMismatchWithCampaign?: boolean;   // Phase 5
+  page?:                             number;
+  pageSize?:                         number;
 }
 
 export interface UpdateArchiveStatusInput {
