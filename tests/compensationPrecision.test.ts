@@ -12,7 +12,15 @@
 import {
   deriveCompensationPrecision,
   deriveTransactionalityClass,
+  normalizePrecisionOutput,
+  isValidCompensationType,
+  isValidCompensationBasis,
+  isValidTransactionalityClass,
+  VALID_COMPENSATION_TYPES,
+  VALID_COMPENSATION_BASES,
+  VALID_TRANSACTIONALITY_CLASSES,
   type CompensationType,
+  type CompensationPrecisionOutput,
 } from '../src/lib/compensationPrecision';
 
 // ─────────────────────────────────────────
@@ -123,10 +131,11 @@ describe('deriveCompensationPrecision', () => {
     expect(r.transactionalityClass).toBe('POTENTIALLY_TRANSACTIONAL');
   });
 
-  it('handles empty strings without throwing', () => {
+  it('handles empty strings as UNCOMPENSATED', () => {
     const r = deriveCompensationPrecision({ compensationForm: '', compensationTrigger: '', productType: '' });
-    expect(r.compensationType).toBe('OTHER');
-    expect(r.compensationBasis).toBe('MANUAL_REVIEW');
+    expect(r.compensationType).toBe('UNCOMPENSATED');
+    expect(r.compensationBasis).toBe('NONE');
+    expect(r.transactionalityClass).toBe('NON_TRANSACTIONAL');
   });
 });
 
@@ -170,6 +179,8 @@ describe('Legacy prod row mapping', () => {
     { form: 'FLAT_FEE',        trigger: 'LEAD',           product: 'OTHER',   expectedType: 'LEAD_GEN_NON_FUNDED',           expectedClass: 'POTENTIALLY_TRANSACTIONAL' },
     { form: 'PER_CONTENT',     trigger: 'SIGNUP',         product: 'REG_D',   expectedType: 'FLAT_FEE_PER_POST',             expectedClass: 'NON_TRANSACTIONAL' },
     { form: 'PER_CONVERSION',  trigger: 'CONVERSION',     product: 'FINTECH', expectedType: 'PER_ACCOUNT_OPENED',            expectedClass: 'POTENTIALLY_TRANSACTIONAL' },
+    // CS-DEMO-06 corrected to NONE (uncompensated)
+    { form: 'NONE',            trigger: 'NONE',           product: 'OTHER',   expectedType: 'UNCOMPENSATED',                 expectedClass: 'NON_TRANSACTIONAL' },
   ];
 
   test.each(prodRows)('$form + $trigger + $product → $expectedType / $expectedClass', (row) => {
@@ -178,5 +189,156 @@ describe('Legacy prod row mapping', () => {
     });
     expect(r.compensationType).toBe(row.expectedType);
     expect(r.transactionalityClass).toBe(row.expectedClass);
+  });
+});
+
+// ─────────────────────────────────────────
+// D. Phase 1.1 — Validation helpers
+// ─────────────────────────────────────────
+
+describe('isValidCompensationType', () => {
+  it('accepts all canonical values', () => {
+    VALID_COMPENSATION_TYPES.forEach(v => expect(isValidCompensationType(v)).toBe(true));
+  });
+  it('rejects unknown values', () => {
+    expect(isValidCompensationType('BOGUS')).toBe(false);
+    expect(isValidCompensationType('')).toBe(false);
+    expect(isValidCompensationType('flat_fee_per_post')).toBe(false); // case-sensitive
+  });
+});
+
+describe('isValidCompensationBasis', () => {
+  it('accepts all canonical values', () => {
+    VALID_COMPENSATION_BASES.forEach(v => expect(isValidCompensationBasis(v)).toBe(true));
+  });
+  it('rejects unknown values', () => {
+    expect(isValidCompensationBasis('BOGUS')).toBe(false);
+  });
+});
+
+describe('isValidTransactionalityClass', () => {
+  it('accepts all canonical values', () => {
+    VALID_TRANSACTIONALITY_CLASSES.forEach(v => expect(isValidTransactionalityClass(v)).toBe(true));
+  });
+  it('rejects unknown values', () => {
+    expect(isValidTransactionalityClass('BOGUS')).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────
+// E. Phase 1.1 — normalizePrecisionOutput fallback
+// ─────────────────────────────────────────
+
+describe('normalizePrecisionOutput', () => {
+  it('passes through valid values unchanged', () => {
+    const valid: CompensationPrecisionOutput = {
+      compensationType: 'FLAT_FEE_PER_POST',
+      compensationBasis: 'FIXED',
+      transactionalityClass: 'NON_TRANSACTIONAL',
+    };
+    expect(normalizePrecisionOutput(valid)).toEqual(valid);
+  });
+
+  it('falls back to safe defaults on invalid compensationType', () => {
+    const r = normalizePrecisionOutput({
+      compensationType: 'INVENTED_TYPE',
+      compensationBasis: 'FIXED',
+      transactionalityClass: 'NON_TRANSACTIONAL',
+    } as unknown as CompensationPrecisionOutput);
+    expect(r.compensationType).toBe('OTHER');
+    expect(r.compensationBasis).toBe('FIXED');
+    expect(r.transactionalityClass).toBe('NON_TRANSACTIONAL');
+  });
+
+  it('falls back to safe defaults on invalid compensationBasis', () => {
+    const r = normalizePrecisionOutput({
+      compensationType: 'FLAT_FEE_PER_POST',
+      compensationBasis: 'BOGUS',
+      transactionalityClass: 'NON_TRANSACTIONAL',
+    } as unknown as CompensationPrecisionOutput);
+    expect(r.compensationType).toBe('FLAT_FEE_PER_POST');
+    expect(r.compensationBasis).toBe('MANUAL_REVIEW');
+    expect(r.transactionalityClass).toBe('NON_TRANSACTIONAL');
+  });
+
+  it('falls back to safe defaults on invalid transactionalityClass', () => {
+    const r = normalizePrecisionOutput({
+      compensationType: 'FLAT_FEE_PER_POST',
+      compensationBasis: 'FIXED',
+      transactionalityClass: 'VERY_BAD',
+    } as unknown as CompensationPrecisionOutput);
+    expect(r.transactionalityClass).toBe('POTENTIALLY_TRANSACTIONAL');
+  });
+
+  it('falls back on all invalid fields simultaneously', () => {
+    const r = normalizePrecisionOutput({
+      compensationType: 'X',
+      compensationBasis: 'Y',
+      transactionalityClass: 'Z',
+    } as unknown as CompensationPrecisionOutput);
+    expect(r.compensationType).toBe('OTHER');
+    expect(r.compensationBasis).toBe('MANUAL_REVIEW');
+    expect(r.transactionalityClass).toBe('POTENTIALLY_TRANSACTIONAL');
+  });
+});
+
+// ─────────────────────────────────────────
+// F. Phase 1.1 — Ambiguous mapping branches
+// ─────────────────────────────────────────
+
+describe('Ambiguous mapping branches', () => {
+  it('FLAT_FEE + LEAD → LEAD_GEN_NON_FUNDED (not FLAT_FEE_PER_POST)', () => {
+    const r = deriveCompensationPrecision({ compensationForm: 'FLAT_FEE', compensationTrigger: 'LEAD', productType: 'REG_D' });
+    expect(r.compensationType).toBe('LEAD_GEN_NON_FUNDED');
+    expect(r.transactionalityClass).toBe('POTENTIALLY_TRANSACTIONAL');
+  });
+
+  it('PER_CONTENT + FUNDED_ACCOUNT → PER_ACCOUNT_OPENED (hybrid)', () => {
+    const r = deriveCompensationPrecision({ compensationForm: 'PER_CONTENT', compensationTrigger: 'FUNDED_ACCOUNT', productType: 'FINTECH' });
+    expect(r.compensationType).toBe('PER_ACCOUNT_OPENED');
+  });
+
+  it('PER_CONVERSION + CONVERSION + REG_D → TRANSACTION_BASED (security tiebreak)', () => {
+    const r = deriveCompensationPrecision({ compensationForm: 'PER_CONVERSION', compensationTrigger: 'CONVERSION', productType: 'REG_D' });
+    expect(r.compensationType).toBe('PER_ACCOUNT_OPENED_AND_FUNDED');
+    expect(r.transactionalityClass).toBe('TRANSACTION_BASED');
+  });
+
+  it('PER_CONVERSION + CONVERSION + FINTECH → POTENTIALLY_TRANSACTIONAL (non-security tiebreak)', () => {
+    const r = deriveCompensationPrecision({ compensationForm: 'PER_CONVERSION', compensationTrigger: 'CONVERSION', productType: 'FINTECH' });
+    expect(r.compensationType).toBe('PER_ACCOUNT_OPENED');
+    expect(r.transactionalityClass).toBe('POTENTIALLY_TRANSACTIONAL');
+  });
+
+  it('PER_CONVERSION + SIGNUP + REG_D → TRANSACTION_BASED (SIGNUP treated like CONVERSION for securities)', () => {
+    const r = deriveCompensationPrecision({ compensationForm: 'PER_CONVERSION', compensationTrigger: 'SIGNUP', productType: 'REG_D' });
+    expect(r.compensationType).toBe('PER_ACCOUNT_OPENED_AND_FUNDED');
+    expect(r.transactionalityClass).toBe('TRANSACTION_BASED');
+  });
+
+  it('REVENUE_SHARE + CAPITAL_RAISED + FINTECH → ELEVATED (not TRANSACTION_BASED)', () => {
+    const r = deriveCompensationPrecision({ compensationForm: 'REVENUE_SHARE', compensationTrigger: 'CAPITAL_RAISED', productType: 'FINTECH' });
+    expect(r.compensationType).toBe('AFFILIATE_NON_SECURITIES');
+    expect(r.transactionalityClass).toBe('ELEVATED_NON_TRANSACTIONAL');
+  });
+
+  it('REVENUE_SHARE + CAPITAL_RAISED + FUND → TRANSACTION_BASED (security product)', () => {
+    const r = deriveCompensationPrecision({ compensationForm: 'REVENUE_SHARE', compensationTrigger: 'CAPITAL_RAISED', productType: 'FUND' });
+    expect(r.compensationType).toBe('REVENUE_SHARE_SECURITIES');
+    expect(r.transactionalityClass).toBe('TRANSACTION_BASED');
+  });
+
+  it('NONE form → UNCOMPENSATED', () => {
+    const r = deriveCompensationPrecision({ compensationForm: 'NONE', compensationTrigger: 'NONE', productType: 'OTHER' });
+    expect(r.compensationType).toBe('UNCOMPENSATED');
+    expect(r.compensationBasis).toBe('NONE');
+    expect(r.transactionalityClass).toBe('NON_TRANSACTIONAL');
+  });
+
+  it('empty form → UNCOMPENSATED', () => {
+    const r = deriveCompensationPrecision({ compensationForm: '', compensationTrigger: '', productType: '' });
+    expect(r.compensationType).toBe('UNCOMPENSATED');
+    expect(r.compensationBasis).toBe('NONE');
+    expect(r.transactionalityClass).toBe('NON_TRANSACTIONAL');
   });
 });

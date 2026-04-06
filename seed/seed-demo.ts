@@ -359,7 +359,7 @@ async function main() {
     { id: 'CS-DEMO-03', promoterId: 'AMB-DEMO-03', form: 'FLAT_FEE', trigger: 'LEAD', product: 'REG_D', txn: false, sec: false, variable: false, disc: true, principal: false, posture: 'MEDIUM' },
     { id: 'CS-DEMO-04', promoterId: 'AMB-DEMO-04', form: 'FLAT_FEE', trigger: 'LEAD', product: 'REG_D', txn: false, sec: false, variable: false, disc: true, principal: false, posture: 'LOW' },
     { id: 'CS-DEMO-05', promoterId: 'AMB-DEMO-05', form: 'REVENUE_SHARE', trigger: 'CAPITAL_RAISED', product: 'FUND', txn: true, sec: true, variable: true, disc: true, principal: true, posture: 'HIGH' },
-    { id: 'CS-DEMO-06', promoterId: 'AMB-DEMO-06', form: 'FLAT_FEE', trigger: 'LEAD', product: 'OTHER', txn: false, sec: false, variable: false, disc: false, principal: false, posture: 'LOW', notes: 'Uncompensated content creator. Monitoring for regulatory purposes only.' },
+    { id: 'CS-DEMO-06', promoterId: 'AMB-DEMO-06', form: 'NONE', trigger: 'NONE', product: 'OTHER', txn: false, sec: false, variable: false, disc: false, principal: false, posture: 'LOW', notes: 'Uncompensated content creator. Monitoring for regulatory purposes only.' },
     { id: 'CS-DEMO-07', promoterId: 'AMB-DEMO-07', form: 'PER_CONTENT', trigger: 'SIGNUP', product: 'REG_D', txn: true, sec: true, variable: true, disc: true, principal: true, posture: 'HIGH', notes: 'Contract terminated 2026-02-28. Tail period monitoring active.' },
   ];
 

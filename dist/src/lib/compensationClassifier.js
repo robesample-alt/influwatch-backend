@@ -115,7 +115,12 @@ function classifyCompensation(input) {
         isTransactionBased ||
         DISCLOSURE_FORMS.has(compensationForm);
     // ── 7. Phase 1 Compensation Precision (additive) ───────────
-    const precision = (0, compensationPrecision_1.deriveCompensationPrecision)(input);
+    // normalizePrecisionOutput validates each value against the
+    // allowlist and falls back to OTHER / MANUAL_REVIEW /
+    // POTENTIALLY_TRANSACTIONAL if derivation somehow produced an
+    // invalid value. This is a Phase 1.1 drift guardrail — prevents
+    // invalid strings from ever reaching the database.
+    const precision = (0, compensationPrecision_1.normalizePrecisionOutput)((0, compensationPrecision_1.deriveCompensationPrecision)(input));
     return {
         isTransactionBased,
         isSecurityLinked,
