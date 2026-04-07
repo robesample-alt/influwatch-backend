@@ -69,7 +69,7 @@ router.get('/', async (req, res, next) => {
 // Only fields present in the request body are changed.
 // Returns the full updated config record.
 // ─────────────────────────────────────────
-router.patch('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.TENANT_ADMIN), async (req, res, next) => {
+router.patch('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.TENANT_ADMIN, client_1.InternalActorRole.REGISTERED_PRINCIPAL), async (req, res, next) => {
     try {
         const { firmName, crdNumber, secRegistration, primaryContact, pollIntervalMinutes, historicalBackfillDays, authErrorAlertThreshold, gapReportThreshold, postContractTailDays, slaThresholdCritical, slaThresholdHigh, slaThresholdMedium, slaThresholdLow, retentionYears, objectLockMode, } = req.body;
         const tenantId = req.user.tenantId;

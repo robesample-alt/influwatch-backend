@@ -39,7 +39,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 // Returns the full updated config record.
 // ─────────────────────────────────────────
 
-router.patch('/', requireRole(InternalActorRole.TENANT_ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/', requireRole(InternalActorRole.TENANT_ADMIN, InternalActorRole.REGISTERED_PRINCIPAL), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
       firmName,
