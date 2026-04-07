@@ -301,6 +301,7 @@ const scanUpload = multer({
 let _autoIngestInterval: ReturnType<typeof setInterval> | null = null;
 let _autoIngestTenantId: string | null = null;
 let _autoIngestToken: string | null = null;
+let _autoIngestTenantType: string | null = null;
 
 /**
  * POST /simulate-ingest
@@ -313,7 +314,8 @@ router.post('/simulate-ingest', async (req: Request, res: Response, next: NextFu
   try {
     const tenantId = req.user!.tenantId;
     const count = Math.min(Math.max(Number(req.query.count) || 2, 1), 5);
-    const scenarios = pickRandomScenarios(count);
+    const tenantTypeFilter = (req.query.tenantType as string) || undefined;
+    const scenarios = pickRandomScenarios(count, tenantTypeFilter);
     const results: any[] = [];
 
     for (const s of scenarios) {
@@ -371,7 +373,8 @@ router.post('/demo-reset', async (req: Request, res: Response, next: NextFunctio
     });
 
     // Ingest starter batch through the real pipeline
-    const scenarios = pickRandomScenarios(12);
+    const resetTenantType = (req.query.tenantType as string) || undefined;
+    const scenarios = pickRandomScenarios(12, resetTenantType);
     const results: any[] = [];
     for (const s of scenarios) {
       try {
@@ -415,12 +418,13 @@ router.post('/simulate-start', async (req: Request, res: Response) => {
   const intervalMs = Math.max(Number(req.query.interval) || 300000, 60000); // min 1 minute, default 5 minutes
 
   _autoIngestTenantId = tenantId;
+  _autoIngestTenantType = (req.query.tenantType as string) || null;
 
   const runOnce = async () => {
     if (!_autoIngestTenantId) return;
     try {
       const count = Math.random() < 0.5 ? 1 : 2;
-      const scenarios = pickRandomScenarios(count);
+      const scenarios = pickRandomScenarios(count, _autoIngestTenantType || undefined);
       for (const s of scenarios) {
         try {
           await ContentRecordService.createContentRecord(_autoIngestTenantId, {

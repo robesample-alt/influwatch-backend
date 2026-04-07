@@ -314,6 +314,7 @@ const scanUpload = (0, multer_1.default)({
 let _autoIngestInterval = null;
 let _autoIngestTenantId = null;
 let _autoIngestToken = null;
+let _autoIngestTenantType = null;
 /**
  * POST /simulate-ingest
  *
@@ -325,7 +326,8 @@ router.post('/simulate-ingest', async (req, res, next) => {
     try {
         const tenantId = req.user.tenantId;
         const count = Math.min(Math.max(Number(req.query.count) || 2, 1), 5);
-        const scenarios = (0, demoSimulator_1.pickRandomScenarios)(count);
+        const tenantTypeFilter = req.query.tenantType || undefined;
+        const scenarios = (0, demoSimulator_1.pickRandomScenarios)(count, tenantTypeFilter);
         const results = [];
         for (const s of scenarios) {
             try {
@@ -380,7 +382,8 @@ router.post('/demo-reset', async (req, res, next) => {
             await tx.contentRecord.deleteMany({ where: { tenantId } });
         });
         // Ingest starter batch through the real pipeline
-        const scenarios = (0, demoSimulator_1.pickRandomScenarios)(12);
+        const resetTenantType = req.query.tenantType || undefined;
+        const scenarios = (0, demoSimulator_1.pickRandomScenarios)(12, resetTenantType);
         const results = [];
         for (const s of scenarios) {
             try {
@@ -422,12 +425,13 @@ router.post('/simulate-start', async (req, res) => {
     const tenantId = req.user.tenantId;
     const intervalMs = Math.max(Number(req.query.interval) || 300000, 60000); // min 1 minute, default 5 minutes
     _autoIngestTenantId = tenantId;
+    _autoIngestTenantType = req.query.tenantType || null;
     const runOnce = async () => {
         if (!_autoIngestTenantId)
             return;
         try {
             const count = Math.random() < 0.5 ? 1 : 2;
-            const scenarios = (0, demoSimulator_1.pickRandomScenarios)(count);
+            const scenarios = (0, demoSimulator_1.pickRandomScenarios)(count, _autoIngestTenantType || undefined);
             for (const s of scenarios) {
                 try {
                     await ContentRecordService.createContentRecord(_autoIngestTenantId, {
