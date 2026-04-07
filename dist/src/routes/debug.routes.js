@@ -287,6 +287,9 @@ const demoSimulator_1 = require("../lib/demoSimulator");
 const ContentRecordService = __importStar(require("../services/contentRecord.service"));
 const ruleRegistry_1 = require("../lib/ruleRegistry");
 const llmDetection_1 = require("../lib/llmDetection");
+const llmDetection_constants_1 = require("../lib/llmDetection.constants");
+const requireRole_1 = require("../middleware/requireRole");
+const client_1 = require("@prisma/client");
 const findingCopy_1 = require("../constants/findingCopy");
 const transcription_service_1 = require("../services/transcription.service");
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
@@ -467,6 +470,38 @@ router.post('/simulate-stop', async (_req, res) => {
  */
 router.get('/simulate-status', async (_req, res) => {
     return res.json({ running: !!_autoIngestInterval });
+});
+// ════════════════════════════════════════════════════════════════
+// RULE ENGINE — read-only rule metadata (no phrases exposed)
+// ════════════════════════════════════════════════════════════════
+/**
+ * GET /rules
+ *
+ * Returns metadata for all detection rules (phrase + LLM).
+ * NEVER returns actual phrase lists — only pattern counts.
+ * Requires COMPLIANCE_OFFICER, REVIEWER, REGISTERED_PRINCIPAL,
+ * DESIGNATED_SUPERVISOR, or TENANT_ADMIN role.
+ */
+router.get('/rules', (0, requireRole_1.requireRole)(client_1.InternalActorRole.COMPLIANCE_OFFICER, client_1.InternalActorRole.REVIEWER, client_1.InternalActorRole.REGISTERED_PRINCIPAL, client_1.InternalActorRole.DESIGNATED_SUPERVISOR, client_1.InternalActorRole.TENANT_ADMIN), async (_req, res) => {
+    // Phrase detection rules — metadata only, no phrases
+    const phraseRules = (0, ruleRegistry_1.getRuleMetadata)();
+    // LLM detection rules
+    const llmRules = llmDetection_constants_1.LLM_RULE_CODES.map(code => ({
+        code,
+        name: llmDetection_constants_1.LLM_RULE_CODE_NAME[code],
+        description: llmDetection_constants_1.LLM_RULE_CODE_CATEGORY[code],
+        severity: llmDetection_constants_1.LLM_SEVERITY_CEILING[code],
+        category: 'AI Semantic Detection',
+        active: true,
+        patternCount: 0, // LLM rules don't use phrase patterns
+    }));
+    return res.json({
+        phraseRules,
+        llmRules,
+        totalPhraseRules: phraseRules.length,
+        totalLlmRules: llmRules.length,
+        totalPatternsMonitored: phraseRules.reduce((sum, r) => sum + r.patternCount, 0),
+    });
 });
 // ════════════════════════════════════════════════════════════════
 // COMPLIANCE SCAN — analyze content without creating records

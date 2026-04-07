@@ -26,4 +26,14 @@ export declare function detectRuleHits(bodyText: string, compensationCtx?: Compe
  * Returns the highest severity found, or LOW if no hits.
  */
 export declare function computeSeverityFromHits(hits: RuleHit[]): Severity;
+export interface RuleMetadata {
+    code: string;
+    name: string;
+    description: string;
+    severity: string;
+    category: string;
+    active: boolean;
+    patternCount: number;
+}
+export declare function getRuleMetadata(): RuleMetadata[];
 //# sourceMappingURL=ruleRegistry.d.ts.map

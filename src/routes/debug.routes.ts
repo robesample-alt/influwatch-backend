@@ -270,8 +270,11 @@ router.get('/principal-dashboard', async (req: Request, res: Response, next: Nex
 
 import { pickRandomScenarios } from '../lib/demoSimulator';
 import * as ContentRecordService from '../services/contentRecord.service';
-import { detectRuleHits, computeSeverityFromHits } from '../lib/ruleRegistry';
+import { detectRuleHits, computeSeverityFromHits, getRuleMetadata } from '../lib/ruleRegistry';
 import { runLlmDetection } from '../lib/llmDetection';
+import { LLM_RULE_CODES, LLM_RULE_CODE_NAME, LLM_RULE_CODE_CATEGORY, LLM_SEVERITY_CEILING } from '../lib/llmDetection.constants';
+import { requireRole } from '../middleware/requireRole';
+import { InternalActorRole } from '@prisma/client';
 import { groupDetections } from '../constants/findingCopy';
 import { transcribeFile, transcribeUrl } from '../services/transcription.service';
 import Anthropic from '@anthropic-ai/sdk';
@@ -463,6 +466,51 @@ router.post('/simulate-stop', async (_req: Request, res: Response) => {
 router.get('/simulate-status', async (_req: Request, res: Response) => {
   return res.json({ running: !!_autoIngestInterval });
 });
+
+// ════════════════════════════════════════════════════════════════
+// RULE ENGINE — read-only rule metadata (no phrases exposed)
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * GET /rules
+ *
+ * Returns metadata for all detection rules (phrase + LLM).
+ * NEVER returns actual phrase lists — only pattern counts.
+ * Requires COMPLIANCE_OFFICER, REVIEWER, REGISTERED_PRINCIPAL,
+ * DESIGNATED_SUPERVISOR, or TENANT_ADMIN role.
+ */
+router.get('/rules',
+  requireRole(
+    InternalActorRole.COMPLIANCE_OFFICER,
+    InternalActorRole.REVIEWER,
+    InternalActorRole.REGISTERED_PRINCIPAL,
+    InternalActorRole.DESIGNATED_SUPERVISOR,
+    InternalActorRole.TENANT_ADMIN,
+  ),
+  async (_req: Request, res: Response) => {
+    // Phrase detection rules — metadata only, no phrases
+    const phraseRules = getRuleMetadata();
+
+    // LLM detection rules
+    const llmRules = LLM_RULE_CODES.map(code => ({
+      code,
+      name: LLM_RULE_CODE_NAME[code],
+      description: LLM_RULE_CODE_CATEGORY[code],
+      severity: LLM_SEVERITY_CEILING[code],
+      category: 'AI Semantic Detection',
+      active: true,
+      patternCount: 0, // LLM rules don't use phrase patterns
+    }));
+
+    return res.json({
+      phraseRules,
+      llmRules,
+      totalPhraseRules: phraseRules.length,
+      totalLlmRules: llmRules.length,
+      totalPatternsMonitored: phraseRules.reduce((sum, r) => sum + r.patternCount, 0),
+    });
+  },
+);
 
 // ════════════════════════════════════════════════════════════════
 // COMPLIANCE SCAN — analyze content without creating records

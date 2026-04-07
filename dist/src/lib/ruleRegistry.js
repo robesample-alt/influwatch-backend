@@ -7,6 +7,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.detectRuleHits = detectRuleHits;
 exports.computeSeverityFromHits = computeSeverityFromHits;
+exports.getRuleMetadata = getRuleMetadata;
 // ============================================================
 // FUNDUREX — INFLUWATCH PHASE 1
 // Rule Registry
@@ -335,5 +336,26 @@ function computeSeverityFromHits(hits) {
             return level;
     }
     return client_1.Severity.LOW;
+}
+function getRuleMetadata() {
+    // Aggregate phrase counts per rule code from PHRASE_MAP
+    const phraseCounts = {};
+    for (const def of Object.values(PHRASE_MAP)) {
+        phraseCounts[def.ruleCode] = (phraseCounts[def.ruleCode] || 0) + 1;
+    }
+    // Build metadata for all rule families
+    const rules = [
+        { code: 'RISK-001', name: 'False or Misleading Statements', description: 'Detects absolute return guarantees, insider-knowledge language, and unsubstantiable claims about investment outcomes.', severity: 'CRITICAL', category: 'Promotional Claims', active: true, patternCount: phraseCounts['RISK-001'] || 0 },
+        { code: 'RISK-002', name: 'Unbalanced Risk Disclosure', description: 'Flags content that emphasizes upside or lifestyle outcomes without balanced discussion of investment risk.', severity: 'HIGH', category: 'Risk Disclosure', active: true, patternCount: phraseCounts['RISK-002'] || 0 },
+        { code: 'RISK-003', name: 'Performance Claims Without Required Disclosures', description: 'Identifies specific performance expectations or relative outperformance claims lacking required disclaimers.', severity: 'MEDIUM', category: 'Performance Claims', active: true, patternCount: phraseCounts['RISK-003'] || 0 },
+        { code: 'RISK-004', name: 'Forward-Looking Statement Without Disclaimer', description: 'Detects predictions about future performance without the required safe-harbour disclaimer language.', severity: 'HIGH', category: 'Forward-Looking Statements', active: true, patternCount: RISK_004_TRIGGERS.length },
+        { code: 'RISK-005', name: 'Testimonial Without Required Disclosures', description: 'Flags personal endorsements or testimonials missing the required compensation, typicality, and risk disclosures.', severity: 'HIGH', category: 'Testimonials', active: true, patternCount: RISK_005_TRIGGERS.length },
+        { code: 'DISC-001', name: 'Missing Required Disclosure', description: 'Fires when content references a specific investment product but contains no compensation disclosure.', severity: 'HIGH', category: 'Disclosure', active: true, patternCount: DISCLOSURE_PATTERNS.length },
+        { code: 'DISC-002', name: 'Paid Promotion Without Disclosure', description: 'Detects paid-promotion context without adequate FTC/FINRA disclosure tags.', severity: 'HIGH', category: 'Disclosure', active: true, patternCount: DISCLOSURE_PATTERNS.length },
+        { code: 'COMP-001', name: 'Transaction-Based Compensation Solicitation Risk', description: 'Flags content from promoters with transaction-based compensation on security-linked products who are pushing affiliate links.', severity: 'CRITICAL', category: 'Compensation Structure', active: true, patternCount: 0 },
+        { code: 'COMP-002', name: 'Unregistered Solicitation Language', description: 'Detects explicit solicitation language from CRITICAL-posture promoters that may constitute unregistered broker-dealer activity.', severity: 'CRITICAL', category: 'Solicitation', active: true, patternCount: COMP_002_PHRASES.length },
+        { code: 'COMP-003', name: 'Compensation Disclosure Insufficient', description: 'Fires when equity/carry/revenue-share promoters fail to include ownership-interest disclosure in their content.', severity: 'HIGH', category: 'Compensation Disclosure', active: true, patternCount: OWNERSHIP_DISCLOSURE_PATTERNS.length },
+    ];
+    return rules;
 }
 //# sourceMappingURL=ruleRegistry.js.map
