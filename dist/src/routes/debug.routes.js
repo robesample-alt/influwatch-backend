@@ -9,6 +9,39 @@
 //
 // GET /api/influwatch/debug/exposure-summary
 // ============================================================
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const tenantContext_1 = require("../utils/tenantContext");
@@ -243,6 +276,171 @@ router.get('/principal-dashboard', async (req, res, next) => {
     catch (err) {
         next(err);
     }
+});
+// ════════════════════════════════════════════════════════════════
+// DEMO SIMULATOR ENDPOINTS
+// ════════════════════════════════════════════════════════════════
+const demoSimulator_1 = require("../lib/demoSimulator");
+const ContentRecordService = __importStar(require("../services/contentRecord.service"));
+let _autoIngestInterval = null;
+let _autoIngestTenantId = null;
+let _autoIngestToken = null;
+/**
+ * POST /simulate-ingest
+ *
+ * Picks 1-3 random scenarios and creates real ContentRecords
+ * through the full pipeline. Each record gets phrase detection,
+ * LLM analysis, severity, exposure, referral code matching.
+ */
+router.post('/simulate-ingest', async (req, res, next) => {
+    try {
+        const tenantId = req.user.tenantId;
+        const count = Math.min(Math.max(Number(req.query.count) || 2, 1), 5);
+        const scenarios = (0, demoSimulator_1.pickRandomScenarios)(count);
+        const results = [];
+        for (const s of scenarios) {
+            try {
+                const record = await ContentRecordService.createContentRecord(tenantId, {
+                    ambassadorId: s.ambassadorId,
+                    sourcePlatform: s.sourcePlatform,
+                    contentType: s.contentType,
+                    sourceUrl: s.sourceUrl,
+                    bodyText: s.bodyText,
+                    campaignId: s.campaignId,
+                });
+                results.push({
+                    id: record.id,
+                    ambassadorId: s.ambassadorId,
+                    severity: record.severity,
+                    archiveStatus: record.archiveStatus,
+                    exposureLevel: record.exposureLevel,
+                    requiresPrincipalReview: record.requiresPrincipalReview,
+                });
+            }
+            catch (err) {
+                results.push({
+                    ambassadorId: s.ambassadorId,
+                    error: err.message || 'creation failed',
+                });
+            }
+        }
+        return res.json({ ingested: results.length, results });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+/**
+ * POST /demo-reset
+ *
+ * Purges all content records, detection records, and event logs.
+ * Keeps structural data (promoters, compensation, affiliate links,
+ * actors, campaigns, tenant). Then ingests 12 starter records
+ * through the full pipeline so the system has content immediately.
+ */
+router.post('/demo-reset', async (req, res, next) => {
+    try {
+        const tenantId = req.user.tenantId;
+        await (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+            // Order matters — foreign key constraints
+            await tx.detectionRecord.deleteMany({ where: { tenantId } });
+            await tx.archiveEventLog.deleteMany({ where: { tenantId } });
+            // Evidence exports reference content records
+            await tx.evidenceExport.deleteMany({ where: { tenantId } });
+            await tx.contentMediaAsset.deleteMany({ where: { tenantId } });
+            await tx.contentRecord.deleteMany({ where: { tenantId } });
+        });
+        // Ingest starter batch through the real pipeline
+        const scenarios = (0, demoSimulator_1.pickRandomScenarios)(12);
+        const results = [];
+        for (const s of scenarios) {
+            try {
+                const record = await ContentRecordService.createContentRecord(tenantId, {
+                    ambassadorId: s.ambassadorId,
+                    sourcePlatform: s.sourcePlatform,
+                    contentType: s.contentType,
+                    sourceUrl: s.sourceUrl,
+                    bodyText: s.bodyText,
+                    campaignId: s.campaignId,
+                });
+                results.push({ id: record.id, severity: record.severity });
+            }
+            catch (err) {
+                results.push({ error: err.message });
+            }
+        }
+        return res.json({
+            purged: true,
+            starterRecords: results.length,
+            message: 'Demo environment reset. ' + results.length + ' starter records created through the full pipeline.',
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+/**
+ * POST /simulate-start
+ *
+ * Starts auto-ingestion: every intervalMs (default 5 minutes),
+ * picks 1-2 random scenarios and ingests them. Runs until
+ * simulate-stop is called.
+ */
+router.post('/simulate-start', async (req, res) => {
+    if (_autoIngestInterval) {
+        return res.json({ running: true, message: 'Auto-ingest already running.' });
+    }
+    const tenantId = req.user.tenantId;
+    const intervalMs = Math.max(Number(req.query.interval) || 300000, 60000); // min 1 minute, default 5 minutes
+    _autoIngestTenantId = tenantId;
+    const runOnce = async () => {
+        if (!_autoIngestTenantId)
+            return;
+        try {
+            const count = Math.random() < 0.5 ? 1 : 2;
+            const scenarios = (0, demoSimulator_1.pickRandomScenarios)(count);
+            for (const s of scenarios) {
+                try {
+                    await ContentRecordService.createContentRecord(_autoIngestTenantId, {
+                        ambassadorId: s.ambassadorId,
+                        sourcePlatform: s.sourcePlatform,
+                        contentType: s.contentType,
+                        sourceUrl: s.sourceUrl,
+                        bodyText: s.bodyText,
+                        campaignId: s.campaignId,
+                    });
+                }
+                catch { /* skip individual failures */ }
+            }
+        }
+        catch { /* skip cycle failures */ }
+    };
+    _autoIngestInterval = setInterval(runOnce, intervalMs);
+    return res.json({
+        running: true,
+        intervalMs,
+        message: 'Auto-ingest started. ' + (intervalMs / 1000) + 's between cycles. POST /debug/simulate-stop to stop.',
+    });
+});
+/**
+ * POST /simulate-stop
+ *
+ * Stops the auto-ingest cycle.
+ */
+router.post('/simulate-stop', async (_req, res) => {
+    if (_autoIngestInterval) {
+        clearInterval(_autoIngestInterval);
+        _autoIngestInterval = null;
+        _autoIngestTenantId = null;
+        return res.json({ running: false, message: 'Auto-ingest stopped.' });
+    }
+    return res.json({ running: false, message: 'Auto-ingest was not running.' });
+});
+/**
+ * GET /simulate-status
+ */
+router.get('/simulate-status', async (_req, res) => {
+    return res.json({ running: !!_autoIngestInterval });
 });
 function safeParseJson(val) {
     if (!val)

@@ -264,6 +264,182 @@ router.get('/principal-dashboard', async (req: Request, res: Response, next: Nex
   }
 });
 
+// ════════════════════════════════════════════════════════════════
+// DEMO SIMULATOR ENDPOINTS
+// ════════════════════════════════════════════════════════════════
+
+import { pickRandomScenarios } from '../lib/demoSimulator';
+import * as ContentRecordService from '../services/contentRecord.service';
+
+let _autoIngestInterval: ReturnType<typeof setInterval> | null = null;
+let _autoIngestTenantId: string | null = null;
+let _autoIngestToken: string | null = null;
+
+/**
+ * POST /simulate-ingest
+ *
+ * Picks 1-3 random scenarios and creates real ContentRecords
+ * through the full pipeline. Each record gets phrase detection,
+ * LLM analysis, severity, exposure, referral code matching.
+ */
+router.post('/simulate-ingest', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const count = Math.min(Math.max(Number(req.query.count) || 2, 1), 5);
+    const scenarios = pickRandomScenarios(count);
+    const results: any[] = [];
+
+    for (const s of scenarios) {
+      try {
+        const record = await ContentRecordService.createContentRecord(tenantId, {
+          ambassadorId:   s.ambassadorId,
+          sourcePlatform: s.sourcePlatform as any,
+          contentType:    s.contentType as any,
+          sourceUrl:      s.sourceUrl,
+          bodyText:       s.bodyText,
+          campaignId:     s.campaignId,
+        });
+        results.push({
+          id: record.id,
+          ambassadorId: s.ambassadorId,
+          severity: record.severity,
+          archiveStatus: record.archiveStatus,
+          exposureLevel: (record as any).exposureLevel,
+          requiresPrincipalReview: (record as any).requiresPrincipalReview,
+        });
+      } catch (err: any) {
+        results.push({
+          ambassadorId: s.ambassadorId,
+          error: err.message || 'creation failed',
+        });
+      }
+    }
+
+    return res.json({ ingested: results.length, results });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /demo-reset
+ *
+ * Purges all content records, detection records, and event logs.
+ * Keeps structural data (promoters, compensation, affiliate links,
+ * actors, campaigns, tenant). Then ingests 12 starter records
+ * through the full pipeline so the system has content immediately.
+ */
+router.post('/demo-reset', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId;
+
+    await withTenantContext({ tenantId }, async (tx) => {
+      // Order matters — foreign key constraints
+      await tx.detectionRecord.deleteMany({ where: { tenantId } });
+      await tx.archiveEventLog.deleteMany({ where: { tenantId } });
+      // Evidence exports reference content records
+      await tx.evidenceExport.deleteMany({ where: { tenantId } });
+      await tx.contentMediaAsset.deleteMany({ where: { tenantId } });
+      await tx.contentRecord.deleteMany({ where: { tenantId } });
+    });
+
+    // Ingest starter batch through the real pipeline
+    const scenarios = pickRandomScenarios(12);
+    const results: any[] = [];
+    for (const s of scenarios) {
+      try {
+        const record = await ContentRecordService.createContentRecord(tenantId, {
+          ambassadorId:   s.ambassadorId,
+          sourcePlatform: s.sourcePlatform as any,
+          contentType:    s.contentType as any,
+          sourceUrl:      s.sourceUrl,
+          bodyText:       s.bodyText,
+          campaignId:     s.campaignId,
+        });
+        results.push({ id: record.id, severity: record.severity });
+      } catch (err: any) {
+        results.push({ error: err.message });
+      }
+    }
+
+    return res.json({
+      purged: true,
+      starterRecords: results.length,
+      message: 'Demo environment reset. ' + results.length + ' starter records created through the full pipeline.',
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /simulate-start
+ *
+ * Starts auto-ingestion: every intervalMs (default 5 minutes),
+ * picks 1-2 random scenarios and ingests them. Runs until
+ * simulate-stop is called.
+ */
+router.post('/simulate-start', async (req: Request, res: Response) => {
+  if (_autoIngestInterval) {
+    return res.json({ running: true, message: 'Auto-ingest already running.' });
+  }
+
+  const tenantId = req.user!.tenantId;
+  const intervalMs = Math.max(Number(req.query.interval) || 300000, 60000); // min 1 minute, default 5 minutes
+
+  _autoIngestTenantId = tenantId;
+
+  const runOnce = async () => {
+    if (!_autoIngestTenantId) return;
+    try {
+      const count = Math.random() < 0.5 ? 1 : 2;
+      const scenarios = pickRandomScenarios(count);
+      for (const s of scenarios) {
+        try {
+          await ContentRecordService.createContentRecord(_autoIngestTenantId, {
+            ambassadorId:   s.ambassadorId,
+            sourcePlatform: s.sourcePlatform as any,
+            contentType:    s.contentType as any,
+            sourceUrl:      s.sourceUrl,
+            bodyText:       s.bodyText,
+            campaignId:     s.campaignId,
+          });
+        } catch { /* skip individual failures */ }
+      }
+    } catch { /* skip cycle failures */ }
+  };
+
+  _autoIngestInterval = setInterval(runOnce, intervalMs);
+
+  return res.json({
+    running: true,
+    intervalMs,
+    message: 'Auto-ingest started. ' + (intervalMs / 1000) + 's between cycles. POST /debug/simulate-stop to stop.',
+  });
+});
+
+/**
+ * POST /simulate-stop
+ *
+ * Stops the auto-ingest cycle.
+ */
+router.post('/simulate-stop', async (_req: Request, res: Response) => {
+  if (_autoIngestInterval) {
+    clearInterval(_autoIngestInterval);
+    _autoIngestInterval = null;
+    _autoIngestTenantId = null;
+    return res.json({ running: false, message: 'Auto-ingest stopped.' });
+  }
+  return res.json({ running: false, message: 'Auto-ingest was not running.' });
+});
+
+/**
+ * GET /simulate-status
+ */
+router.get('/simulate-status', async (_req: Request, res: Response) => {
+  return res.json({ running: !!_autoIngestInterval });
+});
+
 function safeParseJson(val: string | null | undefined): string[] {
   if (!val) return [];
   try { const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : []; }
