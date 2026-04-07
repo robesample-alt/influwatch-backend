@@ -30,6 +30,7 @@ const severityEngine_1 = require("../lib/severityEngine");
 const llmDetection_1 = require("../lib/llmDetection");
 const exposureEngine_1 = require("../lib/exposureEngine");
 const campaignConformance_1 = require("../lib/campaignConformance");
+const affiliateLinkDiscovery_1 = require("../lib/affiliateLinkDiscovery");
 const client_1 = require("@prisma/client");
 const sla_1 = require("../utils/sla");
 const client_2 = require("@prisma/client");
@@ -123,6 +124,33 @@ async function createContentRecord(tenantId, input) {
             if (referralCodes.length > 0) {
                 const bodyLower = bodyText.toLowerCase();
                 hasReferralCode = referralCodes.some(code => bodyLower.includes(code.toLowerCase()));
+            }
+            // Auto-discover potential affiliate links not yet in the database.
+            // Any URL matching common affiliate/referral patterns that isn't
+            // already a stored link gets created as PENDING_REVIEW so the CCO
+            // can confirm or dismiss it.
+            if (extractedUrls.length > 0) {
+                const knownUrlSet = new Set(affiliateLinks.map(l => normalize(l.url)));
+                const discovered = (0, affiliateLinkDiscovery_1.discoverAffiliateLinks)(rawUrls, // raw (un-normalized) URLs so the URL parser works
+                knownUrlSet);
+                // Create pending-review affiliate links for each discovery.
+                // Fire-and-forget — don't block record creation.
+                for (const d of discovered) {
+                    try {
+                        await tx.affiliateLink.create({
+                            data: {
+                                tenantId,
+                                url: d.url,
+                                promoterId: input.ambassadorId,
+                                linkType: 'TRACKED_REFERRAL',
+                                linkStatus: 'PENDING_REVIEW',
+                                discoveredInContentId: null, // will be set after record is created
+                                active: false, // not active until CCO confirms
+                            },
+                        });
+                    }
+                    catch { /* skip duplicates / constraint errors */ }
+                }
             }
             compensationPosture = compensationStructure.supervisionPosture;
             compensationCtx = {

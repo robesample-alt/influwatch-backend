@@ -13,6 +13,7 @@ import { applySeverityFloor } from '../lib/severityEngine';
 import { runLlmDetection } from '../lib/llmDetection';
 import { computeExposure } from '../lib/exposureEngine';
 import { checkCampaignConformance } from '../lib/campaignConformance';
+import { discoverAffiliateLinks } from '../lib/affiliateLinkDiscovery';
 import { DetectionMethod } from '@prisma/client';
 import { getSlaStatus } from '../utils/sla';
 import { ArchiveEventType, ArchiveStatus } from '@prisma/client';
@@ -153,6 +154,35 @@ export async function createContentRecord(
         hasReferralCode = referralCodes.some(code =>
           bodyLower.includes(code.toLowerCase()),
         );
+      }
+
+      // Auto-discover potential affiliate links not yet in the database.
+      // Any URL matching common affiliate/referral patterns that isn't
+      // already a stored link gets created as PENDING_REVIEW so the CCO
+      // can confirm or dismiss it.
+      if (extractedUrls.length > 0) {
+        const knownUrlSet = new Set(affiliateLinks.map(l => normalize(l.url)));
+        const discovered = discoverAffiliateLinks(
+          rawUrls, // raw (un-normalized) URLs so the URL parser works
+          knownUrlSet,
+        );
+        // Create pending-review affiliate links for each discovery.
+        // Fire-and-forget — don't block record creation.
+        for (const d of discovered) {
+          try {
+            await tx.affiliateLink.create({
+              data: {
+                tenantId,
+                url: d.url,
+                promoterId: input.ambassadorId,
+                linkType: 'TRACKED_REFERRAL',
+                linkStatus: 'PENDING_REVIEW',
+                discoveredInContentId: null, // will be set after record is created
+                active: false, // not active until CCO confirms
+              },
+            });
+          } catch { /* skip duplicates / constraint errors */ }
+        }
       }
 
       compensationPosture = compensationStructure.supervisionPosture;

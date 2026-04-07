@@ -42,6 +42,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
       url,
+      referralCode,
       promoterId,
       campaignId,
       compensationStructureId,
@@ -61,6 +62,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         data: {
           tenantId,
           url,
+          referralCode:            referralCode            ?? null,
           promoterId,
           campaignId:              campaignId              ?? null,
           compensationStructureId: compensationStructureId ?? null,
@@ -108,6 +110,58 @@ router.patch('/:id/deactivate', async (req: Request, res: Response, next: NextFu
   } catch (err) {
     next(err);
   }
+});
+
+// ─────────────────────────────────────────
+// PATCH /affiliate-links/:id/confirm
+// Confirms an auto-discovered link — sets active=true, linkStatus=CONFIRMED
+// ─────────────────────────────────────────
+
+router.patch('/:id/confirm', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId;
+
+    const link = await withTenantContext({ tenantId }, async (tx) => {
+      const existing = await tx.affiliateLink.findFirst({
+        where: { id: req.params.id, tenantId },
+      });
+      if (!existing) return null;
+
+      return tx.affiliateLink.update({
+        where: { id: req.params.id },
+        data:  { active: true, linkStatus: 'CONFIRMED' },
+      });
+    });
+
+    if (!link) return res.status(404).json({ error: 'Not found' });
+    return res.json(link);
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────
+// PATCH /affiliate-links/:id/dismiss
+// Dismisses an auto-discovered link — sets linkStatus=DISMISSED, keeps inactive
+// ─────────────────────────────────────────
+
+router.patch('/:id/dismiss', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId;
+
+    const link = await withTenantContext({ tenantId }, async (tx) => {
+      const existing = await tx.affiliateLink.findFirst({
+        where: { id: req.params.id, tenantId },
+      });
+      if (!existing) return null;
+
+      return tx.affiliateLink.update({
+        where: { id: req.params.id },
+        data:  { active: false, linkStatus: 'DISMISSED' },
+      });
+    });
+
+    if (!link) return res.status(404).json({ error: 'Not found' });
+    return res.json(link);
+  } catch (err) { next(err); }
 });
 
 export default router;
