@@ -237,6 +237,7 @@ async function createContentRecord(tenantId, input) {
                 severity,
                 checksum,
                 compensationPosture,
+                compensationType: compensationStructure?.compensationType ?? null,
                 hasAffiliateLink,
                 hasReferralCode,
                 // Phase 4 — campaign conformance
@@ -319,7 +320,7 @@ async function createContentRecord(tenantId, input) {
  */
 async function listContentRecords(tenantId, filters) {
     return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
-        const { ambassadorId, campaignId, sourcePlatform, archiveStatus, severity, capturedFrom, capturedTo, requiresPrincipalReview, exposureLevel, compensationMismatchWithCampaign, page = 1, pageSize = 25, } = filters;
+        const { ambassadorId, campaignId, sourcePlatform, archiveStatus, severity, capturedFrom, capturedTo, requiresPrincipalReview, exposureLevel, compensationType: compTypeFilter, compensationMismatchWithCampaign, page = 1, pageSize = 25, } = filters;
         const capturedAt = {};
         if (capturedFrom)
             capturedAt.gte = new Date(capturedFrom);
@@ -335,6 +336,7 @@ async function listContentRecords(tenantId, filters) {
             ...(Object.keys(capturedAt).length ? { capturedAt } : {}),
             ...(requiresPrincipalReview != null ? { requiresPrincipalReview } : {}),
             ...(exposureLevel ? { exposureLevel } : {}),
+            ...(compTypeFilter ? { compensationType: compTypeFilter } : {}),
             ...(compensationMismatchWithCampaign != null ? { compensationMismatchWithCampaign } : {}),
         };
         const [total, records] = await Promise.all([

@@ -284,6 +284,7 @@ export async function createContentRecord(
         severity,
         checksum,
         compensationPosture,
+        compensationType:    compensationStructure?.compensationType ?? null,
         hasAffiliateLink,
         hasReferralCode,
         // Phase 4 — campaign conformance
@@ -387,6 +388,7 @@ export async function listContentRecords(
       capturedTo,
       requiresPrincipalReview,
       exposureLevel,
+      compensationType: compTypeFilter,
       compensationMismatchWithCampaign,
       page     = 1,
       pageSize = 25,
@@ -406,6 +408,7 @@ export async function listContentRecords(
       ...(Object.keys(capturedAt).length ? { capturedAt } : {}),
       ...(requiresPrincipalReview != null ? { requiresPrincipalReview } : {}),
       ...(exposureLevel ? { exposureLevel } : {}),
+      ...(compTypeFilter ? { compensationType: compTypeFilter } : {}),
       ...(compensationMismatchWithCampaign != null ? { compensationMismatchWithCampaign } : {}),
     };
 

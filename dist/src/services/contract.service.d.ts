@@ -15,10 +15,10 @@ export declare function listContracts(tenantId: string, ambassadorId?: string): 
     tenantId: string;
     id: string;
     status: string;
+    compensationType: string | null;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
-    compensationType: string | null;
     notes: string | null;
     agreementType: string;
     contractId: string;
@@ -48,10 +48,10 @@ export declare function getContract(tenantId: string, id: string): Promise<({
     tenantId: string;
     id: string;
     status: string;
+    compensationType: string | null;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
-    compensationType: string | null;
     notes: string | null;
     agreementType: string;
     contractId: string;
@@ -97,10 +97,10 @@ export declare function createContract(tenantId: string, input: CreateContractIn
     tenantId: string;
     id: string;
     status: string;
+    compensationType: string | null;
     createdAt: Date;
     updatedAt: Date;
     ambassadorId: string;
-    compensationType: string | null;
     notes: string | null;
     agreementType: string;
     contractId: string;

@@ -429,6 +429,7 @@ model ContentRecord {
   compensationPosture  String?       // LOW | MEDIUM | HIGH | CRITICAL
   hasAffiliateLink     Boolean       @default(false)
   hasReferralCode      Boolean       @default(false)
+  compensationType     String?       // Snapshot from CompensationStructure at ingestion
 
   // Phase 4 — Campaign conformance (additive, nullable)
   compensationMismatchWithCampaign Boolean?  // true if promoter comp type is not in campaign's allowed list

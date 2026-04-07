@@ -132,6 +132,7 @@ export function parseContentRecordFilters(
 
   // Phase 5 — exposure level + campaign mismatch filters
   if (isNonEmptyString(query.exposureLevel)) filters.exposureLevel = query.exposureLevel;
+  if (isNonEmptyString(query.compensationType)) filters.compensationType = query.compensationType;
   if (query.compensationMismatchWithCampaign === 'true')  filters.compensationMismatchWithCampaign = true;
   if (query.compensationMismatchWithCampaign === 'false') filters.compensationMismatchWithCampaign = false;
 

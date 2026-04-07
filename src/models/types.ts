@@ -82,6 +82,7 @@ export interface ContentRecordFilters {
   capturedTo?:              string;
   requiresPrincipalReview?:          boolean;   // Phase 3
   exposureLevel?:                    string;    // Phase 5
+  compensationType?:                 string;    // Compensation type filter
   compensationMismatchWithCampaign?: boolean;   // Phase 5
   page?:                             number;
   pageSize?:                         number;
