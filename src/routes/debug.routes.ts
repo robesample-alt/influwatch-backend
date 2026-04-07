@@ -273,7 +273,8 @@ import * as ContentRecordService from '../services/contentRecord.service';
 import { detectRuleHits, computeSeverityFromHits } from '../lib/ruleRegistry';
 import { runLlmDetection } from '../lib/llmDetection';
 import { groupDetections } from '../constants/findingCopy';
-import { transcribeFile } from '../services/transcription.service';
+import { transcribeFile, transcribeUrl } from '../services/transcription.service';
+import Anthropic from '@anthropic-ai/sdk';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -616,6 +617,209 @@ router.post('/compliance-scan-video',
       return res.json({
         transcript,
         wordCount: transcript.split(/\s+/).filter(Boolean).length,
+        severity,
+        findingCount: grouped.length,
+        findings: grouped,
+        note: 'Compensation context not available — exposure analysis requires onboarding.',
+        disclaimer: 'This scan was performed without compensation structure context. Exposure level, principal routing, referral code detection, and campaign conformance are only available after the promoter is onboarded into InfluWatch.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * POST /compliance-scan-url
+ *
+ * Accepts a video URL, downloads + transcribes via Whisper,
+ * then runs compliance analysis. No records created.
+ *
+ * Body: { url: string }
+ */
+router.post('/compliance-scan-url', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'url is required' });
+
+    // Transcribe from URL
+    const transcript = await transcribeUrl(url);
+    if (!transcript) {
+      return res.status(422).json({ error: 'Could not download or transcribe the video. The URL may be inaccessible or the format unsupported.' });
+    }
+
+    // Run detection
+    const phraseHits = detectRuleHits(transcript);
+    let llmFindings: any[] = [];
+    try {
+      const llmResult = await runLlmDetection({
+        bodyText: transcript,
+        supervisionPosture: 'UNKNOWN',
+        compensationForm: 'UNKNOWN',
+        isTransactionBased: false,
+        isSecurityLinked: false,
+      });
+      llmFindings = llmResult.findings || [];
+    } catch { /* LLM failure */ }
+
+    const allHits = [
+      ...phraseHits.map(h => ({ ruleCode: h.ruleCode, severity: h.severity, matchedPhrase: h.matchedPhrase, source: 'phrase' })),
+      ...llmFindings.map((f: any) => ({ ruleCode: f.ruleCode, severity: f.severity, matchedPhrase: f.matchedPhrase, explanation: f.explanation, source: 'llm' })),
+    ];
+
+    const severity = allHits.length > 0
+      ? computeSeverityFromHits(allHits.map(h => ({ ...h, ruleName: '', detectionMethod: 'PHRASE_MATCH' as any })))
+      : 'LOW';
+
+    const grouped = groupDetections(allHits.map(h => ({
+      ruleCode: h.ruleCode, severity: h.severity, matchedPhrase: h.matchedPhrase,
+    })));
+
+    return res.json({
+      sourceUrl: url,
+      transcript,
+      wordCount: transcript.split(/\s+/).filter(Boolean).length,
+      severity,
+      findingCount: grouped.length,
+      findings: grouped,
+      note: 'Compensation context not available — exposure analysis requires onboarding.',
+      disclaimer: 'This scan was performed without compensation structure context. Exposure level, principal routing, referral code detection, and campaign conformance are only available after the promoter is onboarded into InfluWatch.',
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /compliance-scan-image
+ *
+ * Accepts a screenshot image upload. Sends it to Claude's vision
+ * API to extract visible text + assess compliance. No records created.
+ */
+const imageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, os.tmpdir()),
+    filename: (_req, file, cb) => cb(null, 'scan-img-' + Date.now() + path.extname(file.originalname)),
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB for images
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files accepted'));
+    }
+    cb(null, true);
+  },
+});
+
+router.post('/compliance-scan-image',
+  (req: Request, res: Response, next: NextFunction) => {
+    imageUpload.single('file')(req, res, (err: any) => {
+      if (err) return res.status(400).json({ error: err.message });
+      next();
+    });
+  },
+  async (req: Request, res: Response, next: NextFunction) => {
+    const filePath = req.file?.path;
+    if (!filePath) return res.status(400).json({ error: 'Image file is required' });
+
+    try {
+      // Read image as base64
+      const imageBuffer = fs.readFileSync(filePath);
+      const base64Image = imageBuffer.toString('base64');
+      const mimeType = req.file!.mimetype as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+
+      // Clean up file immediately
+      try { fs.unlinkSync(filePath); } catch { /* cleanup */ }
+
+      // Send to Claude vision for compliance analysis
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured — image analysis unavailable' });
+      }
+
+      const client = new Anthropic({ apiKey });
+      const visionResponse = await client.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 2000,
+        temperature: 0,
+        system: [
+          'You are a FINRA compliance analyst reviewing a screenshot of a social media post from a compensated external promoter.',
+          'The compensation structure is unknown — analyze based on content only.',
+          '',
+          'First, extract all visible text from the image (caption, hashtags, comments, bio text, overlaid text, etc.).',
+          '',
+          'Then analyze the extracted text for:',
+          '(a) Solicitation language directing someone toward a specific investment transaction',
+          '(b) Missing or inadequate compensation disclosure',
+          '(c) Performance claims or guarantees',
+          '(d) Urgency or pressure tactics',
+          '(e) Misleading or unbalanced statements about risk or returns',
+          '',
+          'Return a JSON object with these fields:',
+          '  extractedText: the full text extracted from the image',
+          '  platform: the social media platform visible in the screenshot (TikTok, Instagram, YouTube, Twitter/X, or Unknown)',
+          '  findings: array of { ruleCode (LLM-001 through LLM-005), severity (CRITICAL/HIGH/MEDIUM/LOW), matchedPhrase (verbatim from extracted text), explanation (one sentence for a CCO) }',
+          '',
+          'Return ONLY valid JSON. No markdown, no preamble.',
+        ].join('\n'),
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Image } },
+            { type: 'text', text: 'Analyze this social media post screenshot for compliance violations.' },
+          ],
+        }],
+      });
+
+      // Parse Claude's response
+      const textBlocks = visionResponse.content
+        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+        .map(b => b.text);
+      const rawText = textBlocks.join('\n').trim();
+
+      let parsed: any;
+      try {
+        let jsonText = rawText;
+        if (jsonText.startsWith('```')) {
+          jsonText = jsonText.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+        }
+        parsed = JSON.parse(jsonText);
+      } catch {
+        return res.json({
+          extractedText: rawText,
+          platform: 'Unknown',
+          severity: 'MEDIUM',
+          findingCount: 0,
+          findings: [],
+          rawResponse: rawText,
+          note: 'Claude returned a response but it could not be parsed as JSON. The extracted text is shown above.',
+          disclaimer: 'This scan was performed without compensation structure context.',
+        });
+      }
+
+      const extractedText = parsed.extractedText || '';
+      const platform = parsed.platform || 'Unknown';
+      const rawFindings = Array.isArray(parsed.findings) ? parsed.findings : [];
+
+      // Group findings using the standard findingCopy pipeline
+      const grouped = groupDetections(rawFindings.map((f: any) => ({
+        ruleCode: f.ruleCode || 'LLM-005',
+        severity: f.severity || 'MEDIUM',
+        matchedPhrase: f.matchedPhrase || '',
+      })));
+
+      const severity = rawFindings.length > 0
+        ? computeSeverityFromHits(rawFindings.map((f: any) => ({
+            ruleCode: f.ruleCode || 'LLM-005',
+            severity: f.severity || 'MEDIUM',
+            matchedPhrase: f.matchedPhrase || '',
+            ruleName: '',
+            detectionMethod: 'LLM_ANALYSIS' as any,
+          })))
+        : 'LOW';
+
+      return res.json({
+        extractedText,
+        platform,
         severity,
         findingCount: grouped.length,
         findings: grouped,
