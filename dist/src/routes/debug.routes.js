@@ -282,6 +282,9 @@ router.get('/principal-dashboard', async (req, res, next) => {
 // ════════════════════════════════════════════════════════════════
 const demoSimulator_1 = require("../lib/demoSimulator");
 const ContentRecordService = __importStar(require("../services/contentRecord.service"));
+const ruleRegistry_1 = require("../lib/ruleRegistry");
+const llmDetection_1 = require("../lib/llmDetection");
+const findingCopy_1 = require("../constants/findingCopy");
 let _autoIngestInterval = null;
 let _autoIngestTenantId = null;
 let _autoIngestToken = null;
@@ -441,6 +444,91 @@ router.post('/simulate-stop', async (_req, res) => {
  */
 router.get('/simulate-status', async (_req, res) => {
     return res.json({ running: !!_autoIngestInterval });
+});
+// ════════════════════════════════════════════════════════════════
+// COMPLIANCE SCAN — analyze content without creating records
+// ════════════════════════════════════════════════════════════════
+/**
+ * POST /compliance-scan
+ *
+ * Accepts an array of content items (plain text), runs each through
+ * the full detection pipeline (phrase + LLM), and returns findings
+ * without creating any database records. No compensation context —
+ * pure content analysis.
+ *
+ * Body: { items: [{ text: string, label?: string }] }
+ * Max 10 items per request.
+ */
+router.post('/compliance-scan', async (req, res, next) => {
+    try {
+        const items = req.body.items || [];
+        if (!items.length)
+            return res.status(400).json({ error: 'items array is required' });
+        if (items.length > 10)
+            return res.status(400).json({ error: 'Maximum 10 items per scan' });
+        const results = [];
+        let totalFindings = 0;
+        const severityCounts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const text = (item.text || '').trim();
+            if (!text) {
+                results.push({ index: i, label: item.label || 'Item ' + (i + 1), skipped: true, reason: 'empty text' });
+                continue;
+            }
+            // Phrase detection (no compensation context — content-only scan)
+            const phraseHits = (0, ruleRegistry_1.detectRuleHits)(text);
+            // LLM detection — always run for compliance scan (no posture gate)
+            let llmFindings = [];
+            try {
+                const llmResult = await (0, llmDetection_1.runLlmDetection)({
+                    bodyText: text,
+                    supervisionPosture: 'UNKNOWN',
+                    compensationForm: 'UNKNOWN',
+                    isTransactionBased: false,
+                    isSecurityLinked: false,
+                });
+                llmFindings = llmResult.findings || [];
+            }
+            catch { /* LLM failure — continue with phrase-only */ }
+            // Combine all hits
+            const allHits = [
+                ...phraseHits.map(h => ({ ruleCode: h.ruleCode, severity: h.severity, matchedPhrase: h.matchedPhrase, source: 'phrase' })),
+                ...llmFindings.map((f) => ({ ruleCode: f.ruleCode, severity: f.severity, matchedPhrase: f.matchedPhrase, explanation: f.explanation, source: 'llm' })),
+            ];
+            // Compute severity from all hits
+            const severity = allHits.length > 0
+                ? (0, ruleRegistry_1.computeSeverityFromHits)(allHits.map(h => ({ ...h, ruleName: '', detectionMethod: 'PHRASE_MATCH' })))
+                : 'LOW';
+            // Group findings into plain-English categories
+            const grouped = (0, findingCopy_1.groupDetections)(allHits.map(h => ({
+                ruleCode: h.ruleCode,
+                severity: h.severity,
+                matchedPhrase: h.matchedPhrase,
+            })));
+            severityCounts[severity] = (severityCounts[severity] || 0) + 1;
+            totalFindings += grouped.length;
+            results.push({
+                index: i,
+                label: item.label || 'Item ' + (i + 1),
+                textPreview: text.length > 200 ? text.slice(0, 197) + '...' : text,
+                severity,
+                findingCount: grouped.length,
+                findings: grouped,
+                note: 'Compensation context not available — exposure analysis requires onboarding.',
+            });
+        }
+        return res.json({
+            scanned: results.length,
+            totalFindings,
+            severityCounts,
+            results,
+            disclaimer: 'This scan was performed without compensation structure context. Exposure level, principal routing, referral code detection, and campaign conformance are only available after the promoter is onboarded into InfluWatch.',
+        });
+    }
+    catch (err) {
+        next(err);
+    }
 });
 function safeParseJson(val) {
     if (!val)
