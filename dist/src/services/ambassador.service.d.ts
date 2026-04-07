@@ -18,6 +18,7 @@ export declare function getAmbassadorById(tenantId: string, id: string): Promise
     handle: string;
     primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
+    supervisoryRelationship: string | null;
     assignedSupervisorId: string | null;
     phylloUserId: string | null;
     phylloAccountId: string | null;
@@ -41,6 +42,7 @@ export declare function listAmbassadors(tenantId: string, status?: AmbassadorSta
     handle: string;
     primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
+    supervisoryRelationship: string | null;
     assignedSupervisorId: string | null;
     phylloUserId: string | null;
     phylloAccountId: string | null;
@@ -69,6 +71,7 @@ export declare function getAmbassadorDetail(tenantId: string, id: string): Promi
         handle: string;
         primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
         riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
+        supervisoryRelationship: string | null;
         assignedSupervisorId: string | null;
         phylloUserId: string | null;
         phylloAccountId: string | null;
@@ -103,6 +106,7 @@ export declare function createAmbassador(tenantId: string, input: {
     primaryPlatform: string;
     riskTier?: string;
     assignedSupervisorId?: string;
+    supervisoryRelationship?: string;
 }): Promise<{
     assignedSupervisor: {
         id: string;
@@ -122,6 +126,7 @@ export declare function createAmbassador(tenantId: string, input: {
     handle: string;
     primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
+    supervisoryRelationship: string | null;
     assignedSupervisorId: string | null;
     phylloUserId: string | null;
     phylloAccountId: string | null;
@@ -145,6 +150,7 @@ export declare function assignSupervisor(tenantId: string, id: string, superviso
     handle: string;
     primaryPlatform: import(".prisma/client").$Enums.SourcePlatform;
     riskTier: import(".prisma/client").$Enums.PromoterRiskTier | null;
+    supervisoryRelationship: string | null;
     assignedSupervisorId: string | null;
     phylloUserId: string | null;
     phylloAccountId: string | null;

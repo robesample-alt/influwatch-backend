@@ -122,6 +122,7 @@ async function createAmbassador(tenantId, input) {
                 riskTier: input.riskTier ?? null,
                 status: client_1.AmbassadorStatus.ACTIVE,
                 assignedSupervisorId: input.assignedSupervisorId ?? null,
+                supervisoryRelationship: input.supervisoryRelationship ?? 'SUPERVISED',
             },
             include: { assignedSupervisor: SUPERVISOR_INCLUDE },
         });

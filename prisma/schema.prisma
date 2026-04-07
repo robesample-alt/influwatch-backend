@@ -266,7 +266,8 @@ model AmbassadorProfile {
   updatedAt       DateTime          @updatedAt
 
   // Risk classification — set at onboarding, updated by compliance staff
-  riskTier        PromoterRiskTier?
+  riskTier                PromoterRiskTier?
+  supervisoryRelationship String?           // SUPERVISED | PENDING | INDEPENDENT | TAIL_PERIOD
 
   // Supervisory assignment
   assignedSupervisorId  String?

@@ -102,11 +102,12 @@ export async function getAmbassadorDetail(tenantId: string, id: string) {
 }
 
 export async function createAmbassador(tenantId: string, input: {
-  displayName:           string;
-  handle:                string;
-  primaryPlatform:       string;
-  riskTier?:             string;
-  assignedSupervisorId?: string;
+  displayName:              string;
+  handle:                   string;
+  primaryPlatform:          string;
+  riskTier?:                string;
+  assignedSupervisorId?:    string;
+  supervisoryRelationship?: string;
 }) {
   const { valid, errors } = validateCreateAmbassador(input);
   if (!valid) {
@@ -124,7 +125,8 @@ export async function createAmbassador(tenantId: string, input: {
         primaryPlatform:      input.primaryPlatform as SourcePlatform,
         riskTier:             (input.riskTier as PromoterRiskTier) ?? null,
         status:               AmbassadorStatus.ACTIVE,
-        assignedSupervisorId: input.assignedSupervisorId ?? null,
+        assignedSupervisorId:    input.assignedSupervisorId ?? null,
+        supervisoryRelationship: input.supervisoryRelationship ?? 'SUPERVISED',
       },
       include: { assignedSupervisor: SUPERVISOR_INCLUDE },
     });
