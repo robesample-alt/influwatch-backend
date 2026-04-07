@@ -33,11 +33,17 @@ const DEFAULT_CONFIG = {
  */
 export async function getConfig(tenantId: string) {
   return withTenantContext({ tenantId }, async (tx) => {
-    return tx.tenantConfig.upsert({
+    const config = await tx.tenantConfig.upsert({
       where:  { tenantId },
       create: { tenantId, ...DEFAULT_CONFIG },
       update: {},
     });
+    // Include tenant-level fields (tenantType) alongside config
+    const tenant = await tx.tenant.findFirst({
+      where: { id: tenantId },
+      select: { tenantType: true },
+    });
+    return { ...config, tenantType: tenant?.tenantType ?? 'BD' };
   });
 }
 
@@ -69,6 +75,22 @@ export async function updateConfig(tenantId: string, input: UpdateConfigInput) {
     return tx.tenantConfig.update({
       where: { tenantId },
       data:  input,
+    });
+  });
+}
+
+// ─────────────────────────────────────────
+// TENANT TYPE
+// ─────────────────────────────────────────
+
+export const VALID_TENANT_TYPES = new Set(['BD', 'ISSUER', 'REG_CF', 'FINTECH', 'RIA']);
+
+export async function updateTenantType(tenantId: string, tenantType: string) {
+  return withTenantContext({ tenantId }, async (tx) => {
+    return tx.tenant.update({
+      where: { id: tenantId },
+      data:  { tenantType },
+      select: { id: true, firmName: true, tenantType: true },
     });
   });
 }

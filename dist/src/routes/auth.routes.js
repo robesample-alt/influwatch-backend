@@ -33,7 +33,7 @@ async function login(req, res) {
     const slug = tenantSlug || 'default';
     const tenant = await prisma_1.default.tenant.findUnique({
         where: { slug },
-        select: { id: true, firmName: true, status: true },
+        select: { id: true, firmName: true, status: true, tenantType: true },
     });
     if (!tenant) {
         res.status(401).json({ error: 'Invalid credentials' });
@@ -75,6 +75,7 @@ async function login(req, res) {
         tenant: {
             id: tenant.id,
             firmName: tenant.firmName,
+            tenantType: tenant.tenantType ?? 'BD',
         },
     });
 }

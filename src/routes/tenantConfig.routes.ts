@@ -9,6 +9,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { InternalActorRole } from '@prisma/client';
 import * as TenantConfigService from '../services/tenantConfig.service';
+import { VALID_TENANT_TYPES } from '../services/tenantConfig.service';
 import { requireRole } from '../middleware/requireRole';
 
 const router = Router();
@@ -103,8 +104,26 @@ router.patch('/', requireRole(InternalActorRole.TENANT_ADMIN), async (req: Reque
       ...(objectLockMode          !== undefined ? { objectLockMode }          : {}),
     };
 
-    const updated = await TenantConfigService.updateConfig(tenantId, input);
-    return res.status(200).json(updated);
+    // Handle tenantType separately — lives on Tenant, not TenantConfig
+    const { tenantType } = req.body;
+    if (tenantType !== undefined) {
+      if (!VALID_TENANT_TYPES.has(tenantType)) {
+        return res.status(400).json({
+          error: 'Invalid tenantType. Must be one of: BD, ISSUER, REG_CF, FINTECH, RIA',
+          received: tenantType,
+        });
+      }
+      await TenantConfigService.updateTenantType(tenantId, tenantType);
+    }
+
+    // Update TenantConfig fields (if any non-tenantType fields were provided)
+    if (Object.keys(input).length > 0) {
+      await TenantConfigService.updateConfig(tenantId, input);
+    }
+
+    // Return the full config (includes tenantType)
+    const fullConfig = await TenantConfigService.getConfig(tenantId);
+    return res.status(200).json(fullConfig);
   } catch (err) {
     next(err);
   }

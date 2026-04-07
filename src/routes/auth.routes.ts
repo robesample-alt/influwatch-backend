@@ -33,7 +33,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   const slug = tenantSlug || 'default';
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
-    select: { id: true, firmName: true, status: true },
+    select: { id: true, firmName: true, status: true, tenantType: true },
   });
 
   if (!tenant) {
@@ -81,8 +81,9 @@ export async function login(req: Request, res: Response): Promise<void> {
       tenantId:    actor.tenantId,
     },
     tenant: {
-      id:       tenant.id,
-      firmName: tenant.firmName,
+      id:         tenant.id,
+      firmName:   tenant.firmName,
+      tenantType: tenant.tenantType ?? 'BD',
     },
   });
 }

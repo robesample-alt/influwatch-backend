@@ -176,6 +176,7 @@ model Tenant {
   secRegistration String?               // SEC registration number
   status          TenantStatus @default(ACTIVE)
   plan            String?               // Subscription tier
+  tenantType      String?               // BD | ISSUER | REG_CF | FINTECH | RIA
 
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt

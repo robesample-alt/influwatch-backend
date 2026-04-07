@@ -4,6 +4,7 @@
  * app always has a valid config to read.
  */
 export declare function getConfig(tenantId: string): Promise<{
+    tenantType: string;
     tenantId: string;
     id: string;
     updatedAt: Date;
@@ -52,5 +53,11 @@ export declare function updateConfig(tenantId: string, input: UpdateConfigInput)
     slaThresholdLow: number;
     retentionYears: number;
     objectLockMode: string;
+}>;
+export declare const VALID_TENANT_TYPES: Set<string>;
+export declare function updateTenantType(tenantId: string, tenantType: string): Promise<{
+    id: string;
+    firmName: string;
+    tenantType: string | null;
 }>;
 //# sourceMappingURL=tenantConfig.service.d.ts.map

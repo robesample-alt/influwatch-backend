@@ -7,8 +7,10 @@
 // updateConfig(tenantId, input) — updates config with provided fields
 // ============================================================
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.VALID_TENANT_TYPES = void 0;
 exports.getConfig = getConfig;
 exports.updateConfig = updateConfig;
+exports.updateTenantType = updateTenantType;
 const tenantContext_1 = require("../utils/tenantContext");
 const DEFAULT_CONFIG = {
     pollIntervalMinutes: 60,
@@ -33,11 +35,17 @@ const DEFAULT_CONFIG = {
  */
 async function getConfig(tenantId) {
     return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
-        return tx.tenantConfig.upsert({
+        const config = await tx.tenantConfig.upsert({
             where: { tenantId },
             create: { tenantId, ...DEFAULT_CONFIG },
             update: {},
         });
+        // Include tenant-level fields (tenantType) alongside config
+        const tenant = await tx.tenant.findFirst({
+            where: { id: tenantId },
+            select: { tenantType: true },
+        });
+        return { ...config, tenantType: tenant?.tenantType ?? 'BD' };
     });
 }
 /**
@@ -50,6 +58,19 @@ async function updateConfig(tenantId, input) {
         return tx.tenantConfig.update({
             where: { tenantId },
             data: input,
+        });
+    });
+}
+// ─────────────────────────────────────────
+// TENANT TYPE
+// ─────────────────────────────────────────
+exports.VALID_TENANT_TYPES = new Set(['BD', 'ISSUER', 'REG_CF', 'FINTECH', 'RIA']);
+async function updateTenantType(tenantId, tenantType) {
+    return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+        return tx.tenant.update({
+            where: { id: tenantId },
+            data: { tenantType },
+            select: { id: true, firmName: true, tenantType: true },
         });
     });
 }

@@ -43,6 +43,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const TenantConfigService = __importStar(require("../services/tenantConfig.service"));
+const tenantConfig_service_1 = require("../services/tenantConfig.service");
 const requireRole_1 = require("../middleware/requireRole");
 const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
@@ -112,8 +113,24 @@ router.patch('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.TENA
             ...(retentionYears !== undefined ? { retentionYears } : {}),
             ...(objectLockMode !== undefined ? { objectLockMode } : {}),
         };
-        const updated = await TenantConfigService.updateConfig(tenantId, input);
-        return res.status(200).json(updated);
+        // Handle tenantType separately — lives on Tenant, not TenantConfig
+        const { tenantType } = req.body;
+        if (tenantType !== undefined) {
+            if (!tenantConfig_service_1.VALID_TENANT_TYPES.has(tenantType)) {
+                return res.status(400).json({
+                    error: 'Invalid tenantType. Must be one of: BD, ISSUER, REG_CF, FINTECH, RIA',
+                    received: tenantType,
+                });
+            }
+            await TenantConfigService.updateTenantType(tenantId, tenantType);
+        }
+        // Update TenantConfig fields (if any non-tenantType fields were provided)
+        if (Object.keys(input).length > 0) {
+            await TenantConfigService.updateConfig(tenantId, input);
+        }
+        // Return the full config (includes tenantType)
+        const fullConfig = await TenantConfigService.getConfig(tenantId);
+        return res.status(200).json(fullConfig);
     }
     catch (err) {
         next(err);
