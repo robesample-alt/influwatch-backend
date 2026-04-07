@@ -42,6 +42,9 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const tenantContext_1 = require("../utils/tenantContext");
@@ -285,6 +288,25 @@ const ContentRecordService = __importStar(require("../services/contentRecord.ser
 const ruleRegistry_1 = require("../lib/ruleRegistry");
 const llmDetection_1 = require("../lib/llmDetection");
 const findingCopy_1 = require("../constants/findingCopy");
+const transcription_service_1 = require("../services/transcription.service");
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
+const os_1 = __importDefault(require("os"));
+// Multer for scan video uploads — temp storage, cleaned up after transcription
+const scanUpload = (0, multer_1.default)({
+    storage: multer_1.default.diskStorage({
+        destination: (_req, _file, cb) => cb(null, os_1.default.tmpdir()),
+        filename: (_req, file, cb) => cb(null, 'scan-' + Date.now() + path_1.default.extname(file.originalname)),
+    }),
+    limits: { fileSize: 25 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (!file.mimetype.startsWith('video/') && !file.mimetype.startsWith('audio/')) {
+            return cb(new Error('Only video/audio files accepted'));
+        }
+        cb(null, true);
+    },
+});
 let _autoIngestInterval = null;
 let _autoIngestTenantId = null;
 let _autoIngestToken = null;
@@ -523,6 +545,79 @@ router.post('/compliance-scan', async (req, res, next) => {
             totalFindings,
             severityCounts,
             results,
+            disclaimer: 'This scan was performed without compensation structure context. Exposure level, principal routing, referral code detection, and campaign conformance are only available after the promoter is onboarded into InfluWatch.',
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+/**
+ * POST /compliance-scan-video
+ *
+ * Accepts a video/audio file upload, transcribes via Whisper,
+ * then runs the same compliance scan. No records created.
+ * File is deleted after transcription.
+ */
+router.post('/compliance-scan-video', (req, res, next) => {
+    scanUpload.single('file')(req, res, (err) => {
+        if (err)
+            return res.status(400).json({ error: err.message });
+        next();
+    });
+}, async (req, res, next) => {
+    const filePath = req.file?.path;
+    if (!filePath)
+        return res.status(400).json({ error: 'Video file is required' });
+    try {
+        // Transcribe
+        let transcript;
+        try {
+            transcript = await (0, transcription_service_1.transcribeFile)(filePath);
+        }
+        catch (err) {
+            return res.status(422).json({ error: 'Transcription failed: ' + (err.message || 'unknown') });
+        }
+        finally {
+            try {
+                fs_1.default.unlinkSync(filePath);
+            }
+            catch { /* cleanup */ }
+        }
+        if (!transcript || !transcript.trim()) {
+            return res.status(422).json({ error: 'No speech detected in video' });
+        }
+        // Run the same scan logic as the text endpoint
+        const phraseHits = (0, ruleRegistry_1.detectRuleHits)(transcript);
+        let llmFindings = [];
+        try {
+            const llmResult = await (0, llmDetection_1.runLlmDetection)({
+                bodyText: transcript,
+                supervisionPosture: 'UNKNOWN',
+                compensationForm: 'UNKNOWN',
+                isTransactionBased: false,
+                isSecurityLinked: false,
+            });
+            llmFindings = llmResult.findings || [];
+        }
+        catch { /* LLM failure */ }
+        const allHits = [
+            ...phraseHits.map(h => ({ ruleCode: h.ruleCode, severity: h.severity, matchedPhrase: h.matchedPhrase, source: 'phrase' })),
+            ...llmFindings.map((f) => ({ ruleCode: f.ruleCode, severity: f.severity, matchedPhrase: f.matchedPhrase, explanation: f.explanation, source: 'llm' })),
+        ];
+        const severity = allHits.length > 0
+            ? (0, ruleRegistry_1.computeSeverityFromHits)(allHits.map(h => ({ ...h, ruleName: '', detectionMethod: 'PHRASE_MATCH' })))
+            : 'LOW';
+        const grouped = (0, findingCopy_1.groupDetections)(allHits.map(h => ({
+            ruleCode: h.ruleCode, severity: h.severity, matchedPhrase: h.matchedPhrase,
+        })));
+        return res.json({
+            transcript,
+            wordCount: transcript.split(/\s+/).filter(Boolean).length,
+            severity,
+            findingCount: grouped.length,
+            findings: grouped,
+            note: 'Compensation context not available — exposure analysis requires onboarding.',
             disclaimer: 'This scan was performed without compensation structure context. Exposure level, principal routing, referral code detection, and campaign conformance are only available after the promoter is onboarded into InfluWatch.',
         });
     }
