@@ -9,6 +9,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { InternalActorRole } from '@prisma/client';
 import * as TenantConfigService from '../services/tenantConfig.service';
+import { withTenantContext } from '../utils/tenantContext';
 import { VALID_TENANT_TYPES } from '../services/tenantConfig.service';
 import { requireRole } from '../middleware/requireRole';
 
@@ -85,11 +86,20 @@ router.patch('/', requireRole(InternalActorRole.TENANT_ADMIN, InternalActorRole.
       }
     }
 
-    // Build update payload from only the supplied fields
+    // Handle Tenant-level fields (firmName, crdNumber, secRegistration)
+    // These live on the Tenant model, not TenantConfig.
+    const tenantFields: Record<string, string> = {};
+    if (firmName        !== undefined) tenantFields.firmName        = firmName;
+    if (crdNumber       !== undefined) tenantFields.crdNumber       = crdNumber;
+    if (secRegistration !== undefined) tenantFields.secRegistration = secRegistration;
+    if (Object.keys(tenantFields).length > 0) {
+      await withTenantContext({ tenantId }, async (tx) => {
+        await tx.tenant.update({ where: { id: tenantId }, data: tenantFields });
+      });
+    }
+
+    // Build update payload from only the TenantConfig fields
     const input: TenantConfigService.UpdateConfigInput = {
-      ...(firmName                !== undefined ? { firmName }                : {}),
-      ...(crdNumber               !== undefined ? { crdNumber }               : {}),
-      ...(secRegistration         !== undefined ? { secRegistration }         : {}),
       ...(primaryContact          !== undefined ? { primaryContact }          : {}),
       ...(pollIntervalMinutes     !== undefined ? { pollIntervalMinutes }     : {}),
       ...(historicalBackfillDays  !== undefined ? { historicalBackfillDays }  : {}),

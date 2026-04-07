@@ -41,9 +41,15 @@ export async function getConfig(tenantId: string) {
     // Include tenant-level fields (tenantType) alongside config
     const tenant = await tx.tenant.findFirst({
       where: { id: tenantId },
-      select: { tenantType: true },
+      select: { firmName: true, crdNumber: true, secRegistration: true, tenantType: true },
     });
-    return { ...config, tenantType: tenant?.tenantType ?? 'BD' };
+    return {
+      ...config,
+      firmName:        tenant?.firmName ?? null,
+      crdNumber:       tenant?.crdNumber ?? null,
+      secRegistration: tenant?.secRegistration ?? null,
+      tenantType:      tenant?.tenantType ?? 'BD',
+    };
   });
 }
 

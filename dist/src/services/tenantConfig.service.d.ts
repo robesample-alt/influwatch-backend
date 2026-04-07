@@ -4,6 +4,9 @@
  * app always has a valid config to read.
  */
 export declare function getConfig(tenantId: string): Promise<{
+    firmName: string | null;
+    crdNumber: string | null;
+    secRegistration: string | null;
     tenantType: string;
     tenantId: string;
     id: string;

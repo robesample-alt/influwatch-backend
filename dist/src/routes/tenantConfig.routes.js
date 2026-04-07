@@ -43,6 +43,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const TenantConfigService = __importStar(require("../services/tenantConfig.service"));
+const tenantContext_1 = require("../utils/tenantContext");
 const tenantConfig_service_1 = require("../services/tenantConfig.service");
 const requireRole_1 = require("../middleware/requireRole");
 const router = (0, express_1.Router)();
@@ -95,11 +96,22 @@ router.patch('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.TENA
                 return res.status(400).json({ error: `${field} must be a positive integer` });
             }
         }
-        // Build update payload from only the supplied fields
+        // Handle Tenant-level fields (firmName, crdNumber, secRegistration)
+        // These live on the Tenant model, not TenantConfig.
+        const tenantFields = {};
+        if (firmName !== undefined)
+            tenantFields.firmName = firmName;
+        if (crdNumber !== undefined)
+            tenantFields.crdNumber = crdNumber;
+        if (secRegistration !== undefined)
+            tenantFields.secRegistration = secRegistration;
+        if (Object.keys(tenantFields).length > 0) {
+            await (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+                await tx.tenant.update({ where: { id: tenantId }, data: tenantFields });
+            });
+        }
+        // Build update payload from only the TenantConfig fields
         const input = {
-            ...(firmName !== undefined ? { firmName } : {}),
-            ...(crdNumber !== undefined ? { crdNumber } : {}),
-            ...(secRegistration !== undefined ? { secRegistration } : {}),
             ...(primaryContact !== undefined ? { primaryContact } : {}),
             ...(pollIntervalMinutes !== undefined ? { pollIntervalMinutes } : {}),
             ...(historicalBackfillDays !== undefined ? { historicalBackfillDays } : {}),
