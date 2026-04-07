@@ -46,7 +46,7 @@ router.patch('/', requireRole(InternalActorRole.TENANT_ADMIN, InternalActorRole.
       firmName,
       crdNumber,
       secRegistration,
-      primaryContact,
+      // primaryContact is a frontend-only field — not in any schema
       pollIntervalMinutes,
       historicalBackfillDays,
       authErrorAlertThreshold,
@@ -99,8 +99,8 @@ router.patch('/', requireRole(InternalActorRole.TENANT_ADMIN, InternalActorRole.
     }
 
     // Build update payload from only the TenantConfig fields
+    // primaryContact is a frontend-only field (not in schema) — excluded
     const input: TenantConfigService.UpdateConfigInput = {
-      ...(primaryContact          !== undefined ? { primaryContact }          : {}),
       ...(pollIntervalMinutes     !== undefined ? { pollIntervalMinutes }     : {}),
       ...(historicalBackfillDays  !== undefined ? { historicalBackfillDays }  : {}),
       ...(authErrorAlertThreshold !== undefined ? { authErrorAlertThreshold } : {}),

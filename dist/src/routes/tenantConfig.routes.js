@@ -72,7 +72,9 @@ router.get('/', async (req, res, next) => {
 // ─────────────────────────────────────────
 router.patch('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.TENANT_ADMIN, client_1.InternalActorRole.REGISTERED_PRINCIPAL), async (req, res, next) => {
     try {
-        const { firmName, crdNumber, secRegistration, primaryContact, pollIntervalMinutes, historicalBackfillDays, authErrorAlertThreshold, gapReportThreshold, postContractTailDays, slaThresholdCritical, slaThresholdHigh, slaThresholdMedium, slaThresholdLow, retentionYears, objectLockMode, } = req.body;
+        const { firmName, crdNumber, secRegistration, 
+        // primaryContact is a frontend-only field — not in any schema
+        pollIntervalMinutes, historicalBackfillDays, authErrorAlertThreshold, gapReportThreshold, postContractTailDays, slaThresholdCritical, slaThresholdHigh, slaThresholdMedium, slaThresholdLow, retentionYears, objectLockMode, } = req.body;
         const tenantId = req.user.tenantId;
         // Reject empty PATCH
         if (Object.keys(req.body).length === 0) {
@@ -111,8 +113,8 @@ router.patch('/', (0, requireRole_1.requireRole)(client_1.InternalActorRole.TENA
             });
         }
         // Build update payload from only the TenantConfig fields
+        // primaryContact is a frontend-only field (not in schema) — excluded
         const input = {
-            ...(primaryContact !== undefined ? { primaryContact } : {}),
             ...(pollIntervalMinutes !== undefined ? { pollIntervalMinutes } : {}),
             ...(historicalBackfillDays !== undefined ? { historicalBackfillDays } : {}),
             ...(authErrorAlertThreshold !== undefined ? { authErrorAlertThreshold } : {}),
