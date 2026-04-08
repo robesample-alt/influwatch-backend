@@ -3540,6 +3540,25 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
           <tr><td colspan="8" style="text-align:center;padding:20px 0;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px">SELECT A CAMPAIGN ABOVE</td></tr>
         </tbody>
       </table>
+      <!-- Add promoter form -->
+      <div id="campaign-add-promoter" style="display:none;margin-top:10px;padding:10px 14px;background:var(--bg-panel);border:1px solid var(--border)">
+        <div style="font-size:9px;font-weight:600;color:var(--amber);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Assign Promoter to Campaign</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div>
+            <label style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:3px">Promoter</label>
+            <select id="camp-add-promoter-sel" class="fi" style="width:200px;font-size:11px"><option value="">Select…</option></select>
+          </div>
+          <div>
+            <label style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:3px">Comp Structure</label>
+            <select id="camp-add-comp-sel" class="fi" style="width:200px;font-size:11px"><option value="">Select…</option></select>
+          </div>
+          <div>
+            <label style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:3px">Agreement Ref</label>
+            <input id="camp-add-agreement" class="fi" style="width:140px;font-size:11px" placeholder="e.g. AGR-2026-001">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="addCampaignPromoter()">+ Assign</button>
+        </div>
+      </div>
       <!-- Setup checklist -->
       <div id="campaign-setup-checklist" style="display:none;margin-top:12px;padding:10px 14px;background:var(--bg-panel);border:1px solid var(--border)">
         <div style="font-size:9px;font-weight:600;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Activation Checklist</div>
@@ -9762,6 +9781,8 @@ async function loadCampaignSetup() {
   if (!campaignId) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px 0;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace;font-size:11px">SELECT A CAMPAIGN ABOVE</td></tr>';
     if (checklist) checklist.style.display = 'none';
+    var addForm0 = document.getElementById('campaign-add-promoter');
+    if (addForm0) addForm0.style.display = 'none';
     if (badge) badge.textContent = '';
     return;
   }
@@ -9845,8 +9866,96 @@ async function loadCampaignSetup() {
       }
     }
 
+    // Show add-promoter form and populate dropdowns
+    var addForm = document.getElementById('campaign-add-promoter');
+    if (addForm) {
+      addForm.style.display = 'block';
+      populateAddPromoterDropdowns();
+    }
+
   } catch (err) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px 0;color:var(--red);font-family:\'IBM Plex Mono\',monospace;font-size:11px">ERROR: ' + esc(err.message) + '</td></tr>';
+  }
+}
+
+async function populateAddPromoterDropdowns() {
+  var promoSel = document.getElementById('camp-add-promoter-sel');
+  var compSel = document.getElementById('camp-add-comp-sel');
+  if (!promoSel || !compSel) return;
+
+  // Only populate once
+  if (promoSel.options.length > 1) return;
+
+  try {
+    var [ambRes, compRes] = await Promise.all([
+      fetch('https://influwatch-backend.onrender.com/api/influwatch/ambassadors', {
+        headers: { 'Authorization': 'Bearer ' + authToken },
+      }),
+      fetch('https://influwatch-backend.onrender.com/api/influwatch/compensation-structures', {
+        headers: { 'Authorization': 'Bearer ' + authToken },
+      }),
+    ]);
+
+    if (ambRes.ok) {
+      var ambData = await ambRes.json();
+      var ambassadors = ambData.ambassadors || ambData || [];
+      if (Array.isArray(ambassadors)) {
+        ambassadors.forEach(function(a) {
+          var opt = document.createElement('option');
+          opt.value = a.id;
+          opt.textContent = a.displayName + ' (' + a.handle + ')';
+          promoSel.appendChild(opt);
+        });
+      }
+    }
+
+    if (compRes.ok) {
+      var compData = await compRes.json();
+      var structures = compData.structures || compData || [];
+      if (Array.isArray(structures)) {
+        structures.forEach(function(s) {
+          var opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = (s.compensationForm || s.compensationType || 'Unknown') + ' — ' + (s.promoter?.displayName || s.promoterId || '');
+          compSel.appendChild(opt);
+        });
+      }
+    }
+  } catch (_) {}
+}
+
+async function addCampaignPromoter() {
+  var sel = document.getElementById('campaign-setup-selector');
+  var campaignId = sel ? sel.value : '';
+  if (!campaignId) return;
+
+  var promoterId = document.getElementById('camp-add-promoter-sel')?.value;
+  var compId = document.getElementById('camp-add-comp-sel')?.value;
+  var agreementRef = document.getElementById('camp-add-agreement')?.value || null;
+
+  if (!promoterId || !compId) {
+    showToast('Select a promoter and compensation structure');
+    return;
+  }
+
+  try {
+    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/campaigns/' + encodeURIComponent(campaignId) + '/promoters', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ promoterId: promoterId, compensationStructureId: compId, agreementReference: agreementRef }),
+    });
+    if (!res.ok) {
+      var data = await res.json().catch(function() { return {}; });
+      throw new Error(data.error || 'HTTP ' + res.status);
+    }
+    showToast('Promoter assigned to campaign');
+    // Reset selectors
+    document.getElementById('camp-add-promoter-sel').value = '';
+    document.getElementById('camp-add-comp-sel').value = '';
+    document.getElementById('camp-add-agreement').value = '';
+    loadCampaignSetup();
+  } catch (err) {
+    showToast('Failed: ' + err.message);
   }
 }
 
