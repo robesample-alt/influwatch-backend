@@ -583,8 +583,8 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
     <div class="nav-item" id="nav-supstatus" onclick="go('supstatus')" data-roles="compliance principal admin"><div class="nav-icon">&#128737;</div>Supervision Status</div>
     <div class="nav-item" id="nav-promoters" onclick="go('promoters')" data-roles="issuer compliance principal admin"><div class="nav-icon">&#128100;</div>Promoter Registry</div>
     <div class="nav-item" id="nav-promoter-detail" onclick="go('promoter-detail')" style="display:none"><div class="nav-icon" style="font-size:9px">&#9492;</div>&nbsp;Detail</div>
-    <div class="nav-item" id="nav-regcf" onclick="go('regcf')" data-roles="compliance principal admin" data-tenant-types="BD REG_CF"><div class="nav-icon">&#128196;</div>Reg CF Monitor</div>
-    <div class="nav-item" id="nav-referral" onclick="go('referral')" data-roles="compliance principal admin" data-tenant-types="BD FINTECH RIA REG_CF"><div class="nav-icon">&#128279;</div>Referral &amp; Affiliate Tracker</div>
+    <div class="nav-item" id="nav-regcf" onclick="go('regcf')" data-roles="compliance principal admin" data-tenant-types="BD REG_CF RIA FINTECH ISSUER"><div class="nav-icon">&#128196;</div>Reg CF Monitor</div>
+    <div class="nav-item" id="nav-referral" onclick="go('referral')" data-roles="compliance principal admin" data-tenant-types="BD FINTECH RIA REG_CF ISSUER"><div class="nav-icon">&#128279;</div>Referral &amp; Affiliate Tracker</div>
   </div>
   <div class="nav-div"></div>
 
@@ -612,7 +612,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
   <div class="nav-sec nav-sec-governance">
     <div class="nav-sec-lbl">Governance</div>
     <div class="nav-item" id="nav-certify" onclick="go('certify')"><div class="nav-icon">&#9989;</div>Certifications <div class="nav-badge blue">2</div></div>
-    <div class="nav-item" id="nav-progcert" onclick="go('progcert')" data-tenant-types="BD REG_CF RIA"><div class="nav-icon">&#128220;</div>Program Certification</div>
+    <div class="nav-item" id="nav-progcert" onclick="go('progcert')" data-tenant-types="BD REG_CF RIA FINTECH ISSUER"><div class="nav-icon">&#128220;</div>Program Certification</div>
     <div class="nav-item" id="nav-principal" onclick="go('principal')"><div class="nav-icon">&#127894;</div>Desk Oversight</div>
   </div>
   <div class="nav-div"></div>
@@ -639,7 +639,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
   <!-- EXTERNAL — role-gated, surfaced by applyRoleVisibility() -->
   <div class="nav-sec nav-sec-external">
     <div class="nav-sec-lbl">External</div>
-    <div class="nav-item" id="nav-marketing" onclick="go('marketing')" data-roles="issuer compliance principal admin" data-tenant-types="BD"><div class="nav-icon">&#128200;</div>Issuer Program Dashboard</div>
+    <div class="nav-item" id="nav-marketing" onclick="go('marketing')" data-roles="issuer compliance principal admin" data-tenant-types="BD RIA FINTECH REG_CF ISSUER"><div class="nav-icon">&#128200;</div>Issuer Program Dashboard</div>
     <div class="nav-item" id="nav-promoter-portal" onclick="go('promoter-portal')" data-roles="promoter"><div class="nav-icon">&#128084;</div>My Compliance Portal</div>
   </div>
   <div class="nav-div"></div>
@@ -647,15 +647,15 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
   <!-- HIDDEN — routable via go(), not visible in nav -->
   <div style="display:none">
     <div class="nav-item" id="nav-disclosure" onclick="go('disclosure')"></div>
-    <div class="nav-item" id="nav-crypto" onclick="go('crypto')" data-tenant-types="BD FINTECH"></div>
-    <div class="nav-item" id="nav-products" onclick="go('products')" data-tenant-types="BD"></div>
-    <div class="nav-item" id="nav-platform" onclick="go('platform')" data-tenant-types="BD FINTECH"></div>
-    <div class="nav-item" id="nav-network" onclick="go('network')" data-tenant-types="BD"></div>
-    <div class="nav-item" id="nav-network-onboard" onclick="go('network-onboard')" data-tenant-types="BD"></div>
-    <div class="nav-item" id="nav-network-analytics" onclick="go('network-analytics')" data-tenant-types="BD"></div>
-    <div class="nav-item" id="nav-if-tiers" onclick="go('if-tiers')" data-tenant-types="BD"></div>
-    <div class="nav-item" id="nav-affiliate-perf" onclick="go('affiliate-perf')" data-tenant-types="BD FINTECH"></div>
-    <div class="nav-item" id="nav-education" onclick="go('education')" data-tenant-types="BD FINTECH"></div>
+    <div class="nav-item" id="nav-crypto" onclick="go('crypto')" data-tenant-types="BD FINTECH RIA REG_CF ISSUER"></div>
+    <div class="nav-item" id="nav-products" onclick="go('products')" data-tenant-types="BD RIA FINTECH REG_CF ISSUER"></div>
+    <div class="nav-item" id="nav-platform" onclick="go('platform')" data-tenant-types="BD FINTECH RIA REG_CF ISSUER"></div>
+    <div class="nav-item" id="nav-network" onclick="go('network')" data-tenant-types="BD RIA FINTECH REG_CF ISSUER"></div>
+    <div class="nav-item" id="nav-network-onboard" onclick="go('network-onboard')" data-tenant-types="BD RIA FINTECH REG_CF ISSUER"></div>
+    <div class="nav-item" id="nav-network-analytics" onclick="go('network-analytics')" data-tenant-types="BD RIA FINTECH REG_CF ISSUER"></div>
+    <div class="nav-item" id="nav-if-tiers" onclick="go('if-tiers')" data-tenant-types="BD RIA FINTECH REG_CF ISSUER"></div>
+    <div class="nav-item" id="nav-affiliate-perf" onclick="go('affiliate-perf')" data-tenant-types="BD FINTECH RIA REG_CF ISSUER"></div>
+    <div class="nav-item" id="nav-education" onclick="go('education')" data-tenant-types="BD FINTECH RIA REG_CF ISSUER"></div>
     <div class="nav-item" id="nav-fundurex-briefings" onclick="go('fundurex-briefings')"></div>
     <div class="nav-item" id="nav-fundurex-nominations" onclick="go('fundurex-nominations')"></div>
     <div class="nav-item" id="nav-iw-reports" onclick="go('iw-reports')"></div>
