@@ -3532,10 +3532,37 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
   <!-- Campaign Supervision Setup — Promoter-Campaign Assignments -->
   <div style="margin:16px 18px;background:var(--bg-surface);border:1px solid var(--amber-bdr)">
     <div style="padding:10px 14px;background:var(--amber-dim);border-bottom:1px solid var(--amber-bdr);display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:10px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--amber);text-transform:uppercase;letter-spacing:0.1em">Campaign Supervision Setup — Promoter Assignments</div>
-      <span style="font-size:10px;color:var(--amber);font-family:'IBM Plex Mono',monospace">Principal sign-off required before campaign goes LIVE</span>
+      <div style="font-size:10px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--amber);text-transform:uppercase;letter-spacing:0.1em">Campaign Supervision Setup</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:10px;color:var(--amber);font-family:'IBM Plex Mono',monospace">Principal sign-off required before campaign goes LIVE</span>
+        <button class="btn btn-primary btn-sm" style="font-size:9px" onclick="toggleNewCampaignForm()">+ New Campaign</button>
+      </div>
     </div>
     <div style="padding:14px">
+      <!-- New campaign form (hidden by default) -->
+      <div id="new-campaign-form" style="display:none;margin-bottom:14px;padding:12px 14px;background:var(--bg-panel);border:1px solid var(--amber-bdr);border-radius:3px">
+        <div style="font-size:9px;font-weight:600;color:var(--amber);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Create New Campaign</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:3px">Campaign Name *</label>
+            <input id="new-camp-name" class="fi" style="width:100%;font-size:11px" placeholder="e.g. Apex Growth I — Q2 2026">
+          </div>
+          <div>
+            <label style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:3px">Campaign Type *</label>
+            <select id="new-camp-type" class="fi" style="width:100%;font-size:11px">
+              <option value="INVESTMENT">Investment</option>
+              <option value="FINTECH">Fintech</option>
+              <option value="FINANCIAL_PRODUCT">Financial Product</option>
+              <option value="PLATFORM_LAUNCH">Platform Launch</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="createCampaign()">Create Campaign</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleNewCampaignForm()">Cancel</button>
+        </div>
+      </div>
+
       <div style="font-size:11px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;padding:8px 12px;background:var(--amber-dim);border:1px solid var(--amber-bdr)">
         Each campaign must have at least one assigned promoter with a linked compensation structure and a campaign policy before the principal can activate it. This is a structural supervisory determination — once activated, individual record review workload is reduced because the framework was pre-approved.
       </div>
@@ -3570,6 +3597,54 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
             <input id="camp-add-agreement" class="fi" style="width:140px;font-size:11px" placeholder="e.g. AGR-2026-001">
           </div>
           <button class="btn btn-primary btn-sm" onclick="addCampaignPromoter()">+ Assign</button>
+        </div>
+      </div>
+      <!-- Campaign Policy -->
+      <div id="campaign-policy-section" style="display:none;margin-top:10px;padding:10px 14px;background:var(--bg-panel);border:1px solid var(--border)">
+        <div style="font-size:9px;font-weight:600;color:var(--blue);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Campaign Policy</div>
+        <!-- Read-only view -->
+        <div id="camp-policy-readonly" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 12px;font-size:11px;margin-bottom:8px">
+            <div><span style="color:var(--text-muted);font-size:9px">Assigned Principal</span><div id="camp-pol-principal-name" style="font-weight:600">—</div></div>
+            <div><span style="color:var(--text-muted);font-size:9px">Transactionality Tolerance</span><div id="camp-pol-tolerance">—</div></div>
+            <div><span style="color:var(--text-muted);font-size:9px">Principal Required For All</span><div id="camp-pol-principal-req">—</div></div>
+          </div>
+          <div style="font-size:10.5px;color:var(--text-secondary);margin-bottom:8px" id="camp-pol-allowed-types">—</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPolicyForm()">Edit Policy</button>
+        </div>
+        <!-- Edit form -->
+        <div id="camp-policy-form" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div>
+              <label style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:3px">Transactionality Tolerance</label>
+              <select id="camp-pol-tolerance-sel" class="fi" style="width:100%;font-size:11px">
+                <option value="ALLOW_ALL">Allow All</option>
+                <option value="NON_TRANSACTIONAL_ONLY">Non-Transactional Only</option>
+                <option value="ALLOW_POTENTIAL">Allow Potential</option>
+                <option value="PRINCIPAL_REQUIRED_ALL">Principal Required All</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:3px">Principal Required For All Content</label>
+              <select id="camp-pol-principal-req-sel" class="fi" style="width:100%;font-size:11px">
+                <option value="false">No — only flagged content</option>
+                <option value="true">Yes — all content requires principal review</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:8px">
+            <label style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:3px">Allowed Compensation Types (comma-separated)</label>
+            <input id="camp-pol-allowed-input" class="fi" style="width:100%;font-size:11px" placeholder="e.g. FLAT_FEE_PER_POST, PER_LEAD, MONTHLY_RETAINER">
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="saveCampaignPolicy()">Save Policy</button>
+            <button class="btn btn-ghost btn-sm" onclick="cancelPolicyEdit()">Cancel</button>
+          </div>
+        </div>
+        <!-- No policy message -->
+        <div id="camp-policy-empty">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">No policy defined for this campaign yet.</div>
+          <button class="btn btn-secondary btn-sm" onclick="showPolicyForm()">+ Define Policy</button>
         </div>
       </div>
       <!-- Setup checklist -->
@@ -9755,30 +9830,17 @@ async function populateCampaignSelector() {
   var sel = document.getElementById('campaign-setup-selector');
   if (!sel || sel.options.length > 1) return; // already populated
   try {
-    // Fetch all campaigns via the debug endpoint which returns them
-    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/content-records?limit=1', {
+    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/campaigns', {
       headers: { 'Authorization': 'Bearer ' + authToken },
     });
-    // Use a simpler approach — fetch campaigns from the ambassador endpoint campaign list
-    // Actually let's use a direct query approach: fetch setup-status for known campaigns
-    var campIds = ['CAMP-AGI', 'CAMP-MTL', 'CAMP-HCD'];
-    var campaigns = [];
-    for (var i = 0; i < campIds.length; i++) {
-      try {
-        var r = await fetch('https://influwatch-backend.onrender.com/api/influwatch/campaigns/' + campIds[i] + '/setup-status', {
-          headers: { 'Authorization': 'Bearer ' + authToken },
-        });
-        if (r.ok) {
-          var data = await r.json();
-          if (data.campaign) campaigns.push(data);
-        }
-      } catch (_) {}
-    }
+    if (!res.ok) return;
+    var data = await res.json();
+    var campaigns = data.campaigns || [];
     _campaignSetupCache = campaigns;
     campaigns.forEach(function(c) {
       var opt = document.createElement('option');
-      opt.value = c.campaign.id;
-      opt.textContent = c.campaign.name + ' (' + c.campaign.status + ')';
+      opt.value = c.id;
+      opt.textContent = c.campaignName + ' (' + c.status + ')';
       sel.appendChild(opt);
     });
   } catch (_) {}
@@ -9796,6 +9858,8 @@ async function loadCampaignSetup() {
     if (checklist) checklist.style.display = 'none';
     var addForm0 = document.getElementById('campaign-add-promoter');
     if (addForm0) addForm0.style.display = 'none';
+    var polSection0 = document.getElementById('campaign-policy-section');
+    if (polSection0) polSection0.style.display = 'none';
     if (badge) badge.textContent = '';
     return;
   }
@@ -9861,11 +9925,21 @@ async function loadCampaignSetup() {
       var cl = statusData.checklist || {};
       var items = document.getElementById('campaign-checklist-items');
       if (items) {
-        var check = function(ok) { return ok ? '<span style="color:var(--green)">&#10003;</span>' : '<span style="color:var(--red)">&#10007;</span>'; };
-        items.innerHTML = check(cl.hasPromoters) + ' At least one promoter assigned (' + (cl.promoterCount || 0) + ')<br>'
-          + check(cl.hasPolicy) + ' Campaign policy defined<br>'
-          + check(cl.policyActivated) + ' Campaign activated by principal'
-          + (cl.activatedAt ? ' <span style="font-size:10px;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace">(' + new Date(cl.activatedAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) + ')</span>' : '');
+        var row = function(ok, pass, fail) {
+          return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
+            + (ok ? '<span style="color:var(--green);font-weight:600">&#10003;</span><span style="color:var(--green)">' + pass + '</span>'
+                  : '<span style="color:var(--red);font-weight:600">&#10007;</span><span style="color:var(--red)">' + fail + '</span>')
+            + '</div>';
+        };
+        items.innerHTML = row(cl.hasPromoters,
+          'Promoters assigned (' + (cl.promoterCount || 0) + ')',
+          'No active promoters assigned — add at least one above')
+          + row(cl.hasPolicy,
+            'Campaign policy defined',
+            'No campaign policy — define one below')
+          + row(cl.policyActivated,
+            'Activated by principal' + (cl.activatedAt ? ' <span style="font-size:10px;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace">(' + new Date(cl.activatedAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) + ')</span>' : ''),
+            'Not yet activated — principal sign-off required');
       }
 
       var activateBtn = document.getElementById('campaign-activate-btn');
@@ -9884,6 +9958,51 @@ async function loadCampaignSetup() {
     if (addForm) {
       addForm.style.display = 'block';
       populateAddPromoterDropdowns();
+    }
+
+    // Campaign policy section
+    var polSection = document.getElementById('campaign-policy-section');
+    if (polSection) {
+      polSection.style.display = 'block';
+      var polReadonly = document.getElementById('camp-policy-readonly');
+      var polForm = document.getElementById('camp-policy-form');
+      var polEmpty = document.getElementById('camp-policy-empty');
+      try {
+        var polRes = await fetch('https://influwatch-backend.onrender.com/api/influwatch/campaigns/' + encodeURIComponent(campaignId) + '/policy', {
+          headers: { 'Authorization': 'Bearer ' + authToken },
+        });
+        if (polRes.ok) {
+          var pol = await polRes.json();
+          // Show read-only view
+          if (polReadonly) polReadonly.style.display = 'block';
+          if (polForm) polForm.style.display = 'none';
+          if (polEmpty) polEmpty.style.display = 'none';
+          var _ps = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v || '—'; };
+          _ps('camp-pol-principal-name', pol.activatedByPrincipal?.displayName || (pol.activatedByPrincipalId || 'Not assigned'));
+          _ps('camp-pol-tolerance', (pol.transactionalityTolerance || '').replace(/_/g, ' '));
+          var prEl = document.getElementById('camp-pol-principal-req');
+          if (prEl) { prEl.textContent = pol.requiresPrincipalForAll ? 'Yes' : 'No'; prEl.style.color = pol.requiresPrincipalForAll ? 'var(--amber)' : 'var(--green)'; }
+          var allowedTypes = [];
+          try { allowedTypes = JSON.parse(pol.allowedCompensationTypes || '[]'); } catch (_) {}
+          _ps('camp-pol-allowed-types', 'Allowed types: ' + (allowedTypes.length ? allowedTypes.join(', ') : 'None specified'));
+          // Pre-fill edit form
+          var tolSel = document.getElementById('camp-pol-tolerance-sel');
+          if (tolSel) tolSel.value = pol.transactionalityTolerance || 'ALLOW_ALL';
+          var prSel = document.getElementById('camp-pol-principal-req-sel');
+          if (prSel) prSel.value = pol.requiresPrincipalForAll ? 'true' : 'false';
+          var aiEl = document.getElementById('camp-pol-allowed-input');
+          if (aiEl) aiEl.value = allowedTypes.join(', ');
+        } else {
+          // No policy — show empty state
+          if (polReadonly) polReadonly.style.display = 'none';
+          if (polForm) polForm.style.display = 'none';
+          if (polEmpty) polEmpty.style.display = 'block';
+        }
+      } catch (_) {
+        if (polReadonly) polReadonly.style.display = 'none';
+        if (polForm) polForm.style.display = 'none';
+        if (polEmpty) polEmpty.style.display = 'block';
+      }
     }
 
   } catch (err) {
@@ -9966,6 +10085,94 @@ async function addCampaignPromoter() {
     document.getElementById('camp-add-promoter-sel').value = '';
     document.getElementById('camp-add-comp-sel').value = '';
     document.getElementById('camp-add-agreement').value = '';
+    loadCampaignSetup();
+  } catch (err) {
+    showToast('Failed: ' + err.message);
+  }
+}
+
+function toggleNewCampaignForm() {
+  var f = document.getElementById('new-campaign-form');
+  if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function createCampaign() {
+  var name = document.getElementById('new-camp-name')?.value?.trim();
+  var type = document.getElementById('new-camp-type')?.value;
+  if (!name) { showToast('Campaign name is required'); return; }
+
+  try {
+    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/campaigns', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaignName: name, campaignType: type }),
+    });
+    if (!res.ok) {
+      var data = await res.json().catch(function() { return {}; });
+      throw new Error(data.error || 'HTTP ' + res.status);
+    }
+    var created = await res.json();
+    showToast('Campaign created: ' + created.campaignName);
+    // Reset form and hide
+    document.getElementById('new-camp-name').value = '';
+    toggleNewCampaignForm();
+    // Reset selector cache and re-populate, then auto-select new campaign
+    _campaignSetupCache = null;
+    var sel = document.getElementById('campaign-setup-selector');
+    if (sel) {
+      sel.innerHTML = '<option value="">Select a campaign…</option>';
+      await populateCampaignSelector();
+      sel.value = created.id;
+      loadCampaignSetup();
+    }
+  } catch (err) {
+    showToast('Failed: ' + err.message);
+  }
+}
+
+function showPolicyForm() {
+  var form = document.getElementById('camp-policy-form');
+  var readonly = document.getElementById('camp-policy-readonly');
+  var empty = document.getElementById('camp-policy-empty');
+  if (form) form.style.display = 'block';
+  if (readonly) readonly.style.display = 'none';
+  if (empty) empty.style.display = 'none';
+}
+
+function cancelPolicyEdit() {
+  var form = document.getElementById('camp-policy-form');
+  if (form) form.style.display = 'none';
+  // Re-show the appropriate view
+  loadCampaignSetup();
+}
+
+async function saveCampaignPolicy() {
+  var sel = document.getElementById('campaign-setup-selector');
+  var campaignId = sel ? sel.value : '';
+  if (!campaignId) return;
+
+  var tolerance = document.getElementById('camp-pol-tolerance-sel')?.value || 'ALLOW_ALL';
+  var principalReq = document.getElementById('camp-pol-principal-req-sel')?.value === 'true';
+  var allowedRaw = document.getElementById('camp-pol-allowed-input')?.value || '';
+  var allowedTypes = allowedRaw.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+
+  if (allowedTypes.length === 0) {
+    showToast('Enter at least one allowed compensation type');
+    return;
+  }
+
+  try {
+    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/campaigns/' + encodeURIComponent(campaignId) + '/policy', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        allowedCompensationTypes: allowedTypes,
+        transactionalityTolerance: tolerance,
+        requiresPrincipalForAll: principalReq,
+      }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('Campaign policy saved');
     loadCampaignSetup();
   } catch (err) {
     showToast('Failed: ' + err.message);
@@ -10192,23 +10399,15 @@ async function loadPreApprovalCampaignBanner() {
   banner.style.display = 'none';
 
   try {
-    var campIds = ['CAMP-AGI', 'CAMP-MTL', 'CAMP-HCD'];
-    var drafts = [];
-    for (var i = 0; i < campIds.length; i++) {
-      try {
-        var r = await fetch('https://influwatch-backend.onrender.com/api/influwatch/campaigns/' + campIds[i] + '/setup-status', {
-          headers: { 'Authorization': 'Bearer ' + authToken },
-        });
-        if (r.ok) {
-          var data = await r.json();
-          if (data.campaign && (data.campaign.status === 'DRAFT' || data.campaign.status === 'PAUSED')) {
-            drafts.push(data.campaign);
-          }
-        }
-      } catch (_) {}
-    }
+    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/campaigns', {
+      headers: { 'Authorization': 'Bearer ' + authToken },
+    });
+    if (!res.ok) return;
+    var data = await res.json();
+    var allCamps = data.campaigns || [];
+    var drafts = allCamps.filter(function(c) { return c.status === 'DRAFT' || c.status === 'PAUSED'; });
     if (drafts.length > 0) {
-      var names = drafts.map(function(c) { return '<strong>' + esc(c.name) + '</strong> (' + c.status + ')'; }).join(', ');
+      var names = drafts.map(function(c) { return '<strong>' + esc(c.campaignName) + '</strong> (' + c.status + ')'; }).join(', ');
       banner.innerHTML = '<strong style="color:var(--amber)">&#9888; Campaigns pending activation:</strong> ' + names + '. Content ingested under these campaigns will require mandatory principal review until activated. <a href="javascript:go(\'contracts\')" style="color:var(--amber);text-decoration:underline">Go to Campaign Setup →</a>';
       banner.style.display = 'block';
     }

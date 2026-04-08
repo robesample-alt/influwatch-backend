@@ -19,6 +19,51 @@ const requireRole_1 = require("../middleware/requireRole");
 const client_1 = require("@prisma/client");
 const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
+// POST /campaigns — create new campaign
+// ─────────────────────────────────────────
+router.post('/', async (req, res, next) => {
+    try {
+        const tenantId = req.user.tenantId;
+        const { campaignName, campaignType } = req.body;
+        if (!campaignName || !campaignType) {
+            return res.status(400).json({ error: 'campaignName and campaignType are required' });
+        }
+        const result = await (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+            return tx.campaign.create({
+                data: {
+                    tenantId,
+                    campaignName,
+                    campaignType,
+                    status: 'DRAFT',
+                },
+            });
+        });
+        return res.status(201).json(result);
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// ─────────────────────────────────────────
+// GET /campaigns — list all campaigns
+// ─────────────────────────────────────────
+router.get('/', async (req, res, next) => {
+    try {
+        const tenantId = req.user.tenantId;
+        const result = await (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
+            return tx.campaign.findMany({
+                where: { tenantId },
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, campaignName: true, campaignType: true, status: true, createdAt: true },
+            });
+        });
+        return res.json({ campaigns: result });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// ─────────────────────────────────────────
 // POST /campaigns/:id/promoters
 // ─────────────────────────────────────────
 router.post('/:id/promoters', async (req, res, next) => {

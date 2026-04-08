@@ -20,6 +20,52 @@ import { InternalActorRole } from '@prisma/client';
 const router = Router();
 
 // ─────────────────────────────────────────
+// POST /campaigns — create new campaign
+// ─────────────────────────────────────────
+
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const { campaignName, campaignType } = req.body;
+
+    if (!campaignName || !campaignType) {
+      return res.status(400).json({ error: 'campaignName and campaignType are required' });
+    }
+
+    const result = await withTenantContext({ tenantId }, async (tx) => {
+      return tx.campaign.create({
+        data: {
+          tenantId,
+          campaignName,
+          campaignType,
+          status: 'DRAFT',
+        },
+      });
+    });
+
+    return res.status(201).json(result);
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────
+// GET /campaigns — list all campaigns
+// ─────────────────────────────────────────
+
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const result = await withTenantContext({ tenantId }, async (tx) => {
+      return tx.campaign.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, campaignName: true, campaignType: true, status: true, createdAt: true },
+      });
+    });
+    return res.json({ campaigns: result });
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────
 // POST /campaigns/:id/promoters
 // ─────────────────────────────────────────
 
