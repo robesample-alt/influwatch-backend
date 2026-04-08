@@ -570,7 +570,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
   <div class="nav-sec nav-sec-setup">
     <div class="nav-sec-lbl">Setup</div>
     <div class="nav-item" id="nav-register" onclick="go('register')"><div class="nav-icon">&#43;</div>Register Promoter</div>
-    <div class="nav-item" id="nav-compensation-config" onclick="go('compensation-config')" data-tenant-types="BD"><div class="nav-icon">&#9881;</div>Compensation Structure</div>
+    <div class="nav-item" id="nav-compensation-config" onclick="go('compensation-config')" data-tenant-types="BD RIA FINTECH REG_CF ISSUER"><div class="nav-icon">&#9881;</div>Compensation Structure</div>
     <div class="nav-item" id="nav-contracts" onclick="go('contracts')"><div class="nav-icon">&#128221;</div>Agreements &amp; Contracts <div class="nav-badge amber">2</div></div>
     <div class="nav-item" id="nav-preapproval" onclick="go('preapproval')"><div class="nav-icon">&#9997;</div>Pre-Approval Workflow <div class="nav-badge amber">4</div></div>
   </div>
@@ -584,7 +584,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
     <div class="nav-item" id="nav-promoters" onclick="go('promoters')" data-roles="issuer compliance principal admin"><div class="nav-icon">&#128100;</div>Promoter Registry</div>
     <div class="nav-item" id="nav-promoter-detail" onclick="go('promoter-detail')" style="display:none"><div class="nav-icon" style="font-size:9px">&#9492;</div>&nbsp;Detail</div>
     <div class="nav-item" id="nav-regcf" onclick="go('regcf')" data-roles="compliance principal admin" data-tenant-types="BD REG_CF"><div class="nav-icon">&#128196;</div>Reg CF Monitor</div>
-    <div class="nav-item" id="nav-referral" onclick="go('referral')" data-roles="compliance principal admin" data-tenant-types="BD FINTECH"><div class="nav-icon">&#128279;</div>Referral &amp; Affiliate Tracker</div>
+    <div class="nav-item" id="nav-referral" onclick="go('referral')" data-roles="compliance principal admin" data-tenant-types="BD FINTECH RIA REG_CF"><div class="nav-icon">&#128279;</div>Referral &amp; Affiliate Tracker</div>
   </div>
   <div class="nav-div"></div>
 
@@ -612,7 +612,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
   <div class="nav-sec nav-sec-governance">
     <div class="nav-sec-lbl">Governance</div>
     <div class="nav-item" id="nav-certify" onclick="go('certify')"><div class="nav-icon">&#9989;</div>Certifications <div class="nav-badge blue">2</div></div>
-    <div class="nav-item" id="nav-progcert" onclick="go('progcert')" data-tenant-types="BD REG_CF"><div class="nav-icon">&#128220;</div>Program Certification</div>
+    <div class="nav-item" id="nav-progcert" onclick="go('progcert')" data-tenant-types="BD REG_CF RIA"><div class="nav-icon">&#128220;</div>Program Certification</div>
     <div class="nav-item" id="nav-principal" onclick="go('principal')"><div class="nav-icon">&#127894;</div>Desk Oversight</div>
   </div>
   <div class="nav-div"></div>
@@ -632,7 +632,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
     <div class="nav-sec-lbl">Admin</div>
     <div class="nav-item" id="nav-users" onclick="go('users')"><div class="nav-icon">&#128101;</div>User Management</div>
     <div class="nav-item" id="nav-tenant" onclick="go('tenant')"><div class="nav-icon">&#127970;</div>Tenant Config</div>
-    <div class="nav-item" id="nav-rules" onclick="go('rules')" data-tenant-types="BD REG_CF"><div class="nav-icon">&#9881;</div>Rule Engine</div>
+    <div class="nav-item" id="nav-rules" onclick="go('rules')" data-tenant-types="BD REG_CF RIA FINTECH ISSUER"><div class="nav-icon">&#9881;</div>Rule Engine</div>
   </div>
   <div class="nav-div"></div>
 
@@ -6070,7 +6070,7 @@ async function submitLogin() {
   document.getElementById('main-shell').style.display   = 'grid';
   // Restore role + tenant type visibility
   if (currentRole) {
-    applyRoleVisibility(currentRole);
+    try { applyRoleVisibility(currentRole); } catch (_) {}
     var roleSel = document.getElementById('role-switcher');
     if (roleSel) roleSel.value = currentRole;
   }
