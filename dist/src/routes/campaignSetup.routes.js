@@ -180,16 +180,28 @@ router.post('/:id/activate', (0, requireRole_1.requireRole)(client_1.InternalAct
         const campaignId = req.params.id;
         const { activationNote } = req.body;
         const result = await (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
-            // Validate prerequisites
-            const promoterCount = await tx.campaignPromoter.count({
+            // ── Readiness gate ──────────────────────────────────────
+            const issues = [];
+            const activePromoters = await tx.campaignPromoter.findMany({
                 where: { campaignId, tenantId, status: 'ACTIVE' },
+                include: { compensationStructure: { select: { id: true } } },
             });
-            if (promoterCount === 0) {
-                throw Object.assign(new Error('Cannot activate — no promoters assigned'), { status: 400 });
+            if (activePromoters.length === 0) {
+                issues.push('No active promoters assigned to this campaign');
+            }
+            const missingComp = activePromoters.filter(p => !p.compensationStructureId);
+            if (missingComp.length > 0) {
+                issues.push(`${missingComp.length} promoter(s) missing compensation structure`);
             }
             const policy = await tx.campaignPolicy.findFirst({ where: { campaignId, tenantId } });
             if (!policy) {
-                throw Object.assign(new Error('Cannot activate — no campaign policy defined'), { status: 400 });
+                issues.push('No campaign policy defined');
+            }
+            if (policy && !policy.activatedByPrincipalId && !actorId) {
+                issues.push('Campaign policy has no assigned principal');
+            }
+            if (issues.length > 0) {
+                throw Object.assign(new Error('Campaign not ready to activate'), { status: 400, issues });
             }
             // Record activation on policy
             await tx.campaignPolicy.update({
@@ -209,8 +221,12 @@ router.post('/:id/activate', (0, requireRole_1.requireRole)(client_1.InternalAct
         return res.json(result);
     }
     catch (err) {
-        if (err.status === 400)
-            return res.status(400).json({ error: err.message });
+        if (err.status === 400) {
+            return res.status(400).json({
+                error: err.message,
+                issues: err.issues || [err.message],
+            });
+        }
         next(err);
     }
 });

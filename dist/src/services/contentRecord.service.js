@@ -243,6 +243,23 @@ async function createContentRecord(tenantId, input) {
                 }
             }
         }
+        // ── Campaign promoter roster check (EXP-015) ──────────────────────────
+        // If the record has a campaignId, verify the promoter is on the approved
+        // roster. Unauthorized promoters trigger mandatory principal review.
+        let unauthorizedPromoter = false;
+        if (input.campaignId) {
+            const rosterEntry = await tx.campaignPromoter.findFirst({
+                where: {
+                    campaignId: input.campaignId,
+                    promoterId: input.ambassadorId,
+                    tenantId,
+                    status: 'ACTIVE',
+                },
+            });
+            if (!rosterEntry) {
+                unauthorizedPromoter = true;
+            }
+        }
         // ── Exposure classification (Phase 2 + Phase 3 routing + Phase 4 drift) ─
         const exposure = (0, exposureEngine_1.computeExposure)({
             compensationType: compensationStructure?.compensationType ?? null,
@@ -255,6 +272,7 @@ async function createContentRecord(tenantId, input) {
             hasAffiliateLink,
             hasReferralCode,
             campaignNotActivated,
+            unauthorizedPromoter,
         });
         const record = await tx.contentRecord.create({
             data: {

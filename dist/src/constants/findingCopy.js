@@ -124,6 +124,11 @@ exports.FINDING_COPY = {
         description: 'Content was ingested for a campaign that has not yet been activated by a principal. All content under unactivated campaigns requires principal review until the supervisory framework is signed off.',
         category: 'COMPENSATION_STRUCTURE',
     },
+    'EXP-015': {
+        title: 'Unauthorized Campaign Promoter',
+        description: 'Promoter is not on the approved roster for this campaign. Content from unapproved promoters requires mandatory principal review.',
+        category: 'COMPENSATION_STRUCTURE',
+    },
 };
 /**
  * Return the plain-English copy for a rule code, falling back

@@ -1025,6 +1025,19 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
         </div>
       </div>
 
+      <!-- 8. CAMPAIGN CONTEXT (shown only when record has campaignId) -->
+      <div id="rev-campaign-context" style="display:none;background:var(--bg-panel);border:1px solid var(--border);padding:12px 14px;margin-top:14px;border-radius:4px">
+        <div style="font-size:9px;font-weight:600;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;color:var(--amber);margin-bottom:8px">Campaign Context</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:11px">
+          <div><span style="color:var(--text-muted);font-size:9.5px">Campaign</span><div id="rev-camp-name" style="font-weight:600">—</div></div>
+          <div><span style="color:var(--text-muted);font-size:9.5px">Status</span><div id="rev-camp-status">—</div></div>
+          <div><span style="color:var(--text-muted);font-size:9.5px">Promoter Authorized</span><div id="rev-camp-authorized">—</div></div>
+          <div><span style="color:var(--text-muted);font-size:9.5px">Declared Comp Type</span><div id="rev-camp-comp-type" style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">—</div></div>
+          <div><span style="color:var(--text-muted);font-size:9.5px">Campaign Principal</span><div id="rev-camp-principal">—</div></div>
+          <div id="rev-camp-exp-flags" style="display:none"><span style="color:var(--text-muted);font-size:9.5px">Exposure Flags</span><div id="rev-camp-exp-codes" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--amber)">—</div></div>
+        </div>
+      </div>
+
       </div><!-- /rev-left -->
 
     <!-- ═══════════════════════════════════
@@ -9973,7 +9986,13 @@ async function activateCampaign() {
     });
     if (!res.ok) {
       var data = await res.json().catch(function() { return {}; });
-      throw new Error(data.error || 'HTTP ' + res.status);
+      if (data.issues && data.issues.length) {
+        var issueList = data.issues.map(function(i) { return '• ' + i; }).join('\n');
+        alert('Campaign not ready to activate:\n\n' + issueList);
+      } else {
+        showToast('Activation failed: ' + (data.error || 'HTTP ' + res.status));
+      }
+      return;
     }
     showToast('Campaign activated successfully');
     loadCampaignSetup();
@@ -11617,6 +11636,69 @@ async function loadReviewRecord() {
       }
     } else {
       _expDebug.style.display = 'none';
+    }
+  }
+
+  // ── Campaign Context panel ─────────────────────────────────────────
+  var campCtx = document.getElementById('rev-campaign-context');
+  if (campCtx) {
+    if (rec.campaignId && rec.campaign) {
+      campCtx.style.display = 'block';
+      _s('rev-camp-name', rec.campaign.campaignName || rec.campaign.name || '—');
+      var cStatus = rec.campaign.status || '—';
+      var cStatusEl = document.getElementById('rev-camp-status');
+      if (cStatusEl) {
+        cStatusEl.textContent = cStatus;
+        cStatusEl.style.color = cStatus === 'LIVE' ? 'var(--green)' : cStatus === 'PAUSED' ? 'var(--amber)' : 'var(--text-muted)';
+      }
+      // Check promoter authorization via exposure reason codes
+      var expCodes = [];
+      try { expCodes = JSON.parse(rec.exposureReasonCodes || '[]'); } catch (_) {}
+      var isUnauthorized = expCodes.indexOf('EXP-015_UNAUTHORIZED_PROMOTER') !== -1;
+      var authEl = document.getElementById('rev-camp-authorized');
+      if (authEl) {
+        authEl.textContent = isUnauthorized ? 'NO' : 'YES';
+        authEl.style.color = isUnauthorized ? 'var(--red)' : 'var(--green)';
+        authEl.style.fontWeight = '600';
+      }
+      _s('rev-camp-comp-type', rec.compensationType || (comp && comp.compensationType) || '—');
+      // Campaign principal — fetch from setup-status
+      (async function() {
+        try {
+          var sr = await fetch('https://influwatch-backend.onrender.com/api/influwatch/campaigns/' + encodeURIComponent(rec.campaignId) + '/setup-status', { headers: hdrs });
+          if (sr.ok) {
+            var sd = await sr.json();
+            if (sd.checklist && sd.checklist.activatedBy) {
+              // Fetch principal name
+              try {
+                var pr = await fetch('https://influwatch-backend.onrender.com/api/influwatch/internal-actors', { headers: hdrs });
+                if (pr.ok) {
+                  var actors = await pr.json();
+                  var actorList = actors.actors || actors || [];
+                  var principal = actorList.find(function(a) { return a.id === sd.checklist.activatedBy; });
+                  _s('rev-camp-principal', principal ? principal.displayName : sd.checklist.activatedBy);
+                }
+              } catch (_) { _s('rev-camp-principal', sd.checklist.activatedBy || '—'); }
+            } else {
+              _s('rev-camp-principal', 'Not yet activated');
+            }
+          }
+        } catch (_) {}
+      })();
+      // Show EXP-014/015 flags if present
+      var campExpFlags = expCodes.filter(function(c) { return c.indexOf('EXP-014') === 0 || c.indexOf('EXP-015') === 0; });
+      var flagsContainer = document.getElementById('rev-camp-exp-flags');
+      var flagsCodes = document.getElementById('rev-camp-exp-codes');
+      if (flagsContainer && flagsCodes) {
+        if (campExpFlags.length > 0) {
+          flagsContainer.style.display = 'block';
+          flagsCodes.textContent = campExpFlags.join(', ');
+        } else {
+          flagsContainer.style.display = 'none';
+        }
+      }
+    } else {
+      campCtx.style.display = 'none';
     }
   }
 

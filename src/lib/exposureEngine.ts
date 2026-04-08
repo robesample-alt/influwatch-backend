@@ -60,7 +60,8 @@ export type ExposureReasonCode =
   | 'EXP-011_CAMPAIGN_COMP_DRIFT'
   | 'EXP-012_MANUAL_POLICY_TRIGGER'
   | 'EXP-013_COMPENSATED_SOLICITATION'
-  | 'EXP-014_CAMPAIGN_NOT_ACTIVATED';
+  | 'EXP-014_CAMPAIGN_NOT_ACTIVATED'
+  | 'EXP-015_UNAUTHORIZED_PROMOTER';
 
 export const VALID_EXPOSURE_REASON_CODES: ReadonlySet<string> = new Set<ExposureReasonCode>([
   'EXP-001_TRANSACTION_BASED_COMP',
@@ -77,6 +78,7 @@ export const VALID_EXPOSURE_REASON_CODES: ReadonlySet<string> = new Set<Exposure
   'EXP-012_MANUAL_POLICY_TRIGGER',
   'EXP-013_COMPENSATED_SOLICITATION',
   'EXP-014_CAMPAIGN_NOT_ACTIVATED',
+  'EXP-015_UNAUTHORIZED_PROMOTER',
 ]);
 
 // Human-readable labels for audit summaries
@@ -95,6 +97,7 @@ const REASON_LABEL: Record<ExposureReasonCode, string> = {
   'EXP-012_MANUAL_POLICY_TRIGGER':   'Manual policy override applied',
   'EXP-013_COMPENSATED_SOLICITATION':'Solicitation detected with active affiliate link or referral code',
   'EXP-014_CAMPAIGN_NOT_ACTIVATED':'Content ingested for campaign not yet activated by principal',
+  'EXP-015_UNAUTHORIZED_PROMOTER':'Promoter is not on the approved roster for this campaign',
 };
 
 // ── Input / Output ────────────────────────────────────────────
@@ -121,6 +124,9 @@ export interface ExposureInput {
 
   // Campaign activation gate
   campaignNotActivated?: boolean;
+
+  // Campaign promoter roster check
+  unauthorizedPromoter?: boolean;
 
   // Future expansion inputs — currently optional, left as TODO stubs
   promoterPriorViolationCount?: number | null;   // TODO: query promoter history
@@ -248,6 +254,14 @@ export function computeExposure(input: ExposureInput): ExposureOutput {
     reasons.push('EXP-014_CAMPAIGN_NOT_ACTIVATED');
   }
 
+  // EXP-015: Unauthorized promoter — content ingested for a promoter
+  // who is not on the approved CampaignPromoter roster for the
+  // campaign. Principal must review because the promoter was never
+  // signed off as part of the campaign's supervisory framework.
+  if (input.unauthorizedPromoter === true) {
+    reasons.push('EXP-015_UNAUTHORIZED_PROMOTER');
+  }
+
   // ── Level derivation ───────────────────────────────────────
 
   // A. PRINCIPAL_REQUIRED: transaction-based compensation types
@@ -283,7 +297,12 @@ export function computeExposure(input: ExposureInput): ExposureOutput {
     level = 'PRINCIPAL_REQUIRED';
   }
 
-  // A5. PRINCIPAL_REQUIRED: compensated solicitation with transaction-based
+  // A5. PRINCIPAL_REQUIRED: unauthorized promoter — not on campaign roster
+  if (level !== 'PRINCIPAL_REQUIRED' && input.unauthorizedPromoter === true) {
+    level = 'PRINCIPAL_REQUIRED';
+  }
+
+  // A6. PRINCIPAL_REQUIRED: compensated solicitation with transaction-based
   // or security-linked compensation. The full triangle:
   // solicitation behavior + tracked distribution + transactional comp.
   if (

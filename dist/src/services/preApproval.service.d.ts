@@ -30,11 +30,11 @@ export declare function listRequests(tenantId: string, status?: string): Promise
     updatedAt: Date;
     ambassadorId: string;
     decision: string | null;
+    assignedPrincipalId: string | null;
     submittedBy: string;
     platform: string;
     contentPreview: string;
     requiredBy: Date | null;
-    assignedPrincipalId: string | null;
     decidedBy: string | null;
     decidedAt: Date | null;
     slaHours: number;
@@ -75,11 +75,11 @@ export declare function createRequest(tenantId: string, input: CreateRequestInpu
     updatedAt: Date;
     ambassadorId: string;
     decision: string | null;
+    assignedPrincipalId: string | null;
     submittedBy: string;
     platform: string;
     contentPreview: string;
     requiredBy: Date | null;
-    assignedPrincipalId: string | null;
     decidedBy: string | null;
     decidedAt: Date | null;
     slaHours: number;
@@ -111,11 +111,11 @@ export declare function decideRequest(tenantId: string, id: string, decision: st
     updatedAt: Date;
     ambassadorId: string;
     decision: string | null;
+    assignedPrincipalId: string | null;
     submittedBy: string;
     platform: string;
     contentPreview: string;
     requiredBy: Date | null;
-    assignedPrincipalId: string | null;
     decidedBy: string | null;
     decidedAt: Date | null;
     slaHours: number;
