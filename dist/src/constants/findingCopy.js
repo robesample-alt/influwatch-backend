@@ -118,6 +118,12 @@ exports.FINDING_COPY = {
         description: 'Content presents returns or outcomes without corresponding risk disclosure in a manner that may mislead a reasonable investor about the nature of the investment.',
         category: 'UNBALANCED_RISK',
     },
+    // ── EXP family — exposure-level structural flags ──
+    'EXP-014': {
+        title: 'Campaign Not Activated',
+        description: 'Content was ingested for a campaign that has not yet been activated by a principal. All content under unactivated campaigns requires principal review until the supervisory framework is signed off.',
+        category: 'COMPENSATION_STRUCTURE',
+    },
 };
 /**
  * Return the plain-English copy for a rule code, falling back

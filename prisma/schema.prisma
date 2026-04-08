@@ -79,6 +79,8 @@ enum CampaignStatus {
   LIVE
   CLOSED
   CANCELLED
+  DRAFT
+  PAUSED
 }
 
 enum CampaignType {
@@ -200,6 +202,8 @@ model Tenant {
   compensationStructures  CompensationStructure[]
   affiliateLinks          AffiliateLink[]
   compensationEvents      CompensationEvent[]
+  campaignPromoters       CampaignPromoter[]
+  campaignPolicies        CampaignPolicy[]
 
   @@map("tenants")
 }
@@ -240,6 +244,8 @@ model InternalActor {
   attestations           SupervisoryAttestation[]
   programCertifications  ProgramCertification[]
   assignedPreApprovals   PreApprovalRequest[]     @relation("AssignedPrincipal")
+  campaignPrincipalAssignments CampaignPromoter[]  @relation("CampaignPrincipal")
+  activatedPolicies      CampaignPolicy[]          @relation("PolicyActivator")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -286,6 +292,7 @@ model AmbassadorProfile {
   contracts           PromoterContract[]
   tailPeriods         TailPeriod[]
   preApprovalRequests PreApprovalRequest[]
+  campaignAssignments CampaignPromoter[]
 
   @@index([tenantId])
   @@index([handle])
@@ -374,12 +381,76 @@ model Campaign {
   tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relations
-  contentRecords ContentRecord[]
+  contentRecords   ContentRecord[]
+  campaignPromoters CampaignPromoter[]
+  campaignPolicy   CampaignPolicy?
 
   @@index([tenantId])
   @@index([status])
   @@index([campaignType])
   @@map("campaigns")
+}
+
+// ─────────────────────────────────────────
+// CAMPAIGN PROMOTER
+//
+// Explicit assignment of a promoter to a campaign with a
+// specific compensation structure. Enforced before campaign
+// activation — the principal signs off on the complete set.
+// ─────────────────────────────────────────
+
+model CampaignPromoter {
+  id                      String   @id @default(cuid())
+  tenantId                String
+  campaignId              String
+  promoterId              String
+  compensationStructureId String
+  status                  String   @default("ACTIVE") // ACTIVE | REMOVED
+  assignedPrincipalId     String?
+  agreementExecutedAt     DateTime?
+  agreementReference      String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  tenant                  Tenant                @relation(fields: [tenantId], references: [id])
+  campaign                Campaign              @relation(fields: [campaignId], references: [id])
+  promoter                AmbassadorProfile     @relation(fields: [promoterId], references: [id])
+  compensationStructure   CompensationStructure @relation(fields: [compensationStructureId], references: [id])
+  assignedPrincipal       InternalActor?        @relation("CampaignPrincipal", fields: [assignedPrincipalId], references: [id])
+
+  @@unique([campaignId, promoterId])
+  @@index([tenantId])
+  @@index([campaignId])
+  @@map("campaign_promoters")
+}
+
+// ─────────────────────────────────────────
+// CAMPAIGN POLICY
+//
+// Defines the compensation and transactionality constraints
+// for a campaign. Must be defined before a campaign can be
+// activated. Principal signs off at activation.
+// ─────────────────────────────────────────
+
+model CampaignPolicy {
+  id                        String   @id @default(cuid())
+  tenantId                  String
+  campaignId                String   @unique
+  allowedCompensationTypes  String   // JSON array of canonical compensation types
+  transactionalityTolerance String   @default("ALLOW_ALL") // NON_TRANSACTIONAL_ONLY | ALLOW_POTENTIAL | ALLOW_ALL | PRINCIPAL_REQUIRED_ALL
+  requiresPrincipalForAll   Boolean  @default(false)
+  activatedAt               DateTime?
+  activatedByPrincipalId    String?
+  activationNote            String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  tenant                    Tenant        @relation(fields: [tenantId], references: [id])
+  campaign                  Campaign      @relation(fields: [campaignId], references: [id])
+  activatedByPrincipal      InternalActor? @relation("PolicyActivator", fields: [activatedByPrincipalId], references: [id])
+
+  @@index([tenantId])
+  @@map("campaign_policies")
 }
 
 // ─────────────────────────────────────────
@@ -904,6 +975,8 @@ model CompensationStructure {
   // Tenant
   tenantId                  String
   tenant                    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  campaignPromoters         CampaignPromoter[]
 
   @@index([tenantId])
   @@index([promoterId])

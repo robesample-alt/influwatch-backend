@@ -47,6 +47,7 @@ exports.VALID_EXPOSURE_REASON_CODES = new Set([
     'EXP-011_CAMPAIGN_COMP_DRIFT',
     'EXP-012_MANUAL_POLICY_TRIGGER',
     'EXP-013_COMPENSATED_SOLICITATION',
+    'EXP-014_CAMPAIGN_NOT_ACTIVATED',
 ]);
 // Human-readable labels for audit summaries
 const REASON_LABEL = {
@@ -63,6 +64,7 @@ const REASON_LABEL = {
     'EXP-011_CAMPAIGN_COMP_DRIFT': 'Compensation terms changed mid-campaign',
     'EXP-012_MANUAL_POLICY_TRIGGER': 'Manual policy override applied',
     'EXP-013_COMPENSATED_SOLICITATION': 'Solicitation detected with active affiliate link or referral code',
+    'EXP-014_CAMPAIGN_NOT_ACTIVATED': 'Content ingested for campaign not yet activated by principal',
 };
 // ── Derivation ────────────────────────────────────────────────
 /**
@@ -151,6 +153,13 @@ function computeExposure(input) {
     if (hasSolicitation && hasDistributionMechanism) {
         reasons.push('EXP-013_COMPENSATED_SOLICITATION');
     }
+    // EXP-014: Campaign not activated — content ingested for a campaign
+    // that has not been activated by a principal. The principal hasn't
+    // signed off on the supervisory framework yet, so all content under
+    // this campaign requires principal attention.
+    if (input.campaignNotActivated === true) {
+        reasons.push('EXP-014_CAMPAIGN_NOT_ACTIVATED');
+    }
     // ── Level derivation ───────────────────────────────────────
     // A. PRINCIPAL_REQUIRED: transaction-based compensation types
     //    that inherently create broker-dealer-like liability
@@ -173,7 +182,13 @@ function computeExposure(input) {
     if (level !== 'PRINCIPAL_REQUIRED' && input.compensationMismatchWithCampaign === true) {
         level = 'PRINCIPAL_REQUIRED';
     }
-    // A4. PRINCIPAL_REQUIRED: compensated solicitation with transaction-based
+    // A4. PRINCIPAL_REQUIRED: campaign not activated by principal — no
+    // structural supervisory sign-off exists, so every record must go
+    // through principal review until the campaign is activated.
+    if (level !== 'PRINCIPAL_REQUIRED' && input.campaignNotActivated === true) {
+        level = 'PRINCIPAL_REQUIRED';
+    }
+    // A5. PRINCIPAL_REQUIRED: compensated solicitation with transaction-based
     // or security-linked compensation. The full triangle:
     // solicitation behavior + tracked distribution + transactional comp.
     if (level !== 'PRINCIPAL_REQUIRED' &&

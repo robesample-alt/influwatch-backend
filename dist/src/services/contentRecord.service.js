@@ -214,16 +214,18 @@ async function createContentRecord(tenantId, input) {
         if (severity !== 'LOW' && archiveStatus === client_2.ArchiveStatus.CAPTURED) {
             archiveStatus = client_2.ArchiveStatus.PENDING_REVIEW;
         }
-        // ── Campaign conformance (Phase 4) ─────────────────────────────────────
+        // ── Campaign conformance (Phase 4) + activation gate ────────────────────
         // If the record is linked to a campaign, check whether the promoter's
-        // compensation type is in the campaign's allowed list. Fetch the campaign
-        // only when a campaignId is present — no extra queries otherwise.
+        // compensation type is in the campaign's allowed list. Also check whether
+        // the campaign has been activated by a principal — content for unactivated
+        // campaigns triggers EXP-014 so the principal must review.
         let campaignConformanceMismatch = null;
         let campaignConformanceSummary = null;
+        let campaignNotActivated = false;
         if (input.campaignId) {
             const campaign = await tx.campaign.findFirst({
                 where: { id: input.campaignId, tenantId },
-                select: { campaignName: true, allowedCompensationTypes: true, campaignRiskMode: true },
+                select: { campaignName: true, allowedCompensationTypes: true, campaignRiskMode: true, status: true },
             });
             if (campaign) {
                 const conformance = (0, campaignConformance_1.checkCampaignConformance)({
@@ -234,6 +236,11 @@ async function createContentRecord(tenantId, input) {
                 });
                 campaignConformanceMismatch = conformance.mismatch;
                 campaignConformanceSummary = conformance.summary;
+                // Campaign activation gate: DRAFT or PAUSED campaigns haven't been
+                // signed off by a principal, so flag for mandatory principal review.
+                if (campaign.status === 'DRAFT' || campaign.status === 'PAUSED') {
+                    campaignNotActivated = true;
+                }
             }
         }
         // ── Exposure classification (Phase 2 + Phase 3 routing + Phase 4 drift) ─
@@ -247,6 +254,7 @@ async function createContentRecord(tenantId, input) {
             compensationMismatchWithCampaign: campaignConformanceMismatch,
             hasAffiliateLink,
             hasReferralCode,
+            campaignNotActivated,
         });
         const record = await tx.contentRecord.create({
             data: {

@@ -2,7 +2,7 @@ import type { Severity } from '@prisma/client';
 import type { CompensationType, TransactionalityClass } from './compensationPrecision';
 export type ExposureLevel = 'NONE' | 'REVIEWER' | 'REVIEWER_PLUS_SUPERVISOR' | 'PRINCIPAL_EXCEPTION' | 'PRINCIPAL_REQUIRED';
 export declare const VALID_EXPOSURE_LEVELS: ReadonlySet<string>;
-export type ExposureReasonCode = 'EXP-001_TRANSACTION_BASED_COMP' | 'EXP-002_FUNDED_ACCOUNT_TRIGGER' | 'EXP-003_PER_DOLLAR_INVESTED' | 'EXP-004_REVENUE_SHARE_SECURITIES' | 'EXP-005_REPEAT_OFFENDER' | 'EXP-006_CAMPAIGN_PATTERN' | 'EXP-007_OFF_TEMPLATE_CLAIM' | 'EXP-008_UNDISCLOSED_COMPENSATION' | 'EXP-009_GUARANTEE_OR_FRAUD_SIGNAL' | 'EXP-010_REVIEWER_ESCALATION' | 'EXP-011_CAMPAIGN_COMP_DRIFT' | 'EXP-012_MANUAL_POLICY_TRIGGER' | 'EXP-013_COMPENSATED_SOLICITATION';
+export type ExposureReasonCode = 'EXP-001_TRANSACTION_BASED_COMP' | 'EXP-002_FUNDED_ACCOUNT_TRIGGER' | 'EXP-003_PER_DOLLAR_INVESTED' | 'EXP-004_REVENUE_SHARE_SECURITIES' | 'EXP-005_REPEAT_OFFENDER' | 'EXP-006_CAMPAIGN_PATTERN' | 'EXP-007_OFF_TEMPLATE_CLAIM' | 'EXP-008_UNDISCLOSED_COMPENSATION' | 'EXP-009_GUARANTEE_OR_FRAUD_SIGNAL' | 'EXP-010_REVIEWER_ESCALATION' | 'EXP-011_CAMPAIGN_COMP_DRIFT' | 'EXP-012_MANUAL_POLICY_TRIGGER' | 'EXP-013_COMPENSATED_SOLICITATION' | 'EXP-014_CAMPAIGN_NOT_ACTIVATED';
 export declare const VALID_EXPOSURE_REASON_CODES: ReadonlySet<string>;
 export interface ExposureInput {
     compensationType: CompensationType | string | null | undefined;
@@ -14,6 +14,7 @@ export interface ExposureInput {
     compensationMismatchWithCampaign?: boolean | null;
     hasAffiliateLink?: boolean;
     hasReferralCode?: boolean;
+    campaignNotActivated?: boolean;
     promoterPriorViolationCount?: number | null;
     isReviewerEscalation?: boolean;
     campaignViolationCount?: number | null;

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:push": "cross-env DATABASE_URL=$DATABASE_URL_ADMIN prisma db push",

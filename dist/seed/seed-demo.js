@@ -17,6 +17,8 @@ const prisma = new client_1.PrismaClient();
 const T = 'DEFAULT_TENANT';
 async function main() {
     console.log('🌱 Seeding InfluWatch demo dataset...\n');
+    // Set RLS tenant context so upserts pass row-level security policies
+    await prisma.$executeRawUnsafe(`SET app.tenant_id = '${T}'`);
     // ─── Additional Promoters ──────────────────────────────────
     const promoters = [
         // Per-conversion (highest risk)
@@ -344,6 +346,85 @@ async function main() {
         });
     }
     console.log(`✓ ${compStructures.length} compensation structures seeded`);
+    // ─── Campaign Promoter Assignments ────────────────────────
+    // Assigns demo promoters to their respective campaigns with
+    // compensation structures and principal assignments.
+    const campaignPromoters = [
+        // CAMP-AGI — Apex Growth I (LIVE): Marcus Venn + Priya Sharma
+        { id: 'CP-DEMO-01', campaignId: 'CAMP-AGI', promoterId: 'AMB-DEMO-01', compStructureId: 'CS-DEMO-01', principalId: 'IA-001', agreementRef: 'AGR-2025-0019' },
+        { id: 'CP-DEMO-02', campaignId: 'CAMP-AGI', promoterId: 'AMB-DEMO-05', compStructureId: 'CS-DEMO-05', principalId: 'IA-001', agreementRef: 'AGR-2025-0031' },
+        // CAMP-HCD — Horizon Capital Distribution (LIVE): Jordan Blake + Nina Castillo
+        { id: 'CP-DEMO-03', campaignId: 'CAMP-HCD', promoterId: 'AMB-DEMO-02', compStructureId: 'CS-DEMO-02', principalId: 'IA-001', agreementRef: 'AGR-2025-0021' },
+        { id: 'CP-DEMO-04', campaignId: 'CAMP-HCD', promoterId: 'AMB-DEMO-03', compStructureId: 'CS-DEMO-03', principalId: 'IA-002', agreementRef: 'AGR-2025-0028' },
+        // CAMP-MTL — Meridian Tech L/S (DSS_EVALUATION): Derek Tao
+        { id: 'CP-DEMO-05', campaignId: 'CAMP-MTL', promoterId: 'AMB-DEMO-04', compStructureId: 'CS-DEMO-04', principalId: null, agreementRef: null },
+    ];
+    for (const cp of campaignPromoters) {
+        await prisma.campaignPromoter.upsert({
+            where: { id: cp.id },
+            update: {},
+            create: {
+                id: cp.id, tenantId: T,
+                campaignId: cp.campaignId,
+                promoterId: cp.promoterId,
+                compensationStructureId: cp.compStructureId,
+                assignedPrincipalId: cp.principalId,
+                agreementReference: cp.agreementRef,
+                status: 'ACTIVE',
+                updatedAt: new Date(),
+            },
+        });
+    }
+    console.log(`✓ ${campaignPromoters.length} campaign promoter assignments seeded`);
+    // ─── Campaign Policies ────────────────────────────────────
+    // Defines allowed compensation types and activation state per campaign.
+    const campaignPolicies = [
+        {
+            id: 'CPOL-DEMO-01', campaignId: 'CAMP-AGI',
+            allowedTypes: ['PER_CONVERSION', 'REVENUE_SHARE_SECURITIES', 'PER_LEAD_CONVERTED_TO_INVESTOR'],
+            tolerance: 'STRICT',
+            requiresPrincipal: true,
+            activatedAt: new Date('2026-01-15T10:00:00Z'),
+            activatedBy: 'IA-001',
+            activationNote: 'Apex Growth I campaign reviewed and approved. All promoter compensation structures verified. Principal supervision framework in place.',
+        },
+        {
+            id: 'CPOL-DEMO-02', campaignId: 'CAMP-HCD',
+            allowedTypes: ['PER_ACCOUNT_OPENED_AND_FUNDED', 'FLAT_FEE_PER_POST', 'PER_LEAD'],
+            tolerance: 'ALLOW_ALL',
+            requiresPrincipal: false,
+            activatedAt: new Date('2026-02-01T14:00:00Z'),
+            activatedBy: 'IA-001',
+            activationNote: 'Horizon Capital fintech campaign activated. Flat-fee and funded-account comp structures approved.',
+        },
+        {
+            id: 'CPOL-DEMO-03', campaignId: 'CAMP-MTL',
+            allowedTypes: ['FLAT_FEE_PER_POST', 'PER_LEAD'],
+            tolerance: 'STRICT',
+            requiresPrincipal: true,
+            activatedAt: null,
+            activatedBy: null,
+            activationNote: null,
+        },
+    ];
+    for (const pol of campaignPolicies) {
+        await prisma.campaignPolicy.upsert({
+            where: { campaignId: pol.campaignId },
+            update: {},
+            create: {
+                id: pol.id, tenantId: T,
+                campaignId: pol.campaignId,
+                allowedCompensationTypes: JSON.stringify(pol.allowedTypes),
+                transactionalityTolerance: pol.tolerance,
+                requiresPrincipalForAll: pol.requiresPrincipal,
+                activatedAt: pol.activatedAt,
+                activatedByPrincipalId: pol.activatedBy,
+                activationNote: pol.activationNote,
+                updatedAt: new Date(),
+            },
+        });
+    }
+    console.log(`✓ ${campaignPolicies.length} campaign policies seeded`);
     console.log('\n✅ Demo seed complete.\n');
 }
 main()

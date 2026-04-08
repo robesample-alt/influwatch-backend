@@ -27,6 +27,7 @@ import ingestRouter                  from './routes/ingest.routes';
 import compensationStructureRouter   from './routes/compensationStructure.routes';
 import affiliateLinksRouter          from './routes/affiliateLinks.routes';
 import phylloRouter, { phylloWebhookHandler } from './routes/phyllo.routes';
+import campaignSetupRouter from './routes/campaignSetup.routes';
 import debugRouter         from './routes/debug.routes';
 import { authenticate }    from './middleware/authenticate';
 import { tenantGuard }     from './middleware/tenantGuard';
@@ -92,6 +93,7 @@ app.use('/api/influwatch/ingest',                 authenticate, tenantGuard, ing
 app.use('/api/influwatch/compensation-structures', authenticate, tenantGuard, writeLimiter, compensationStructureRouter);
 app.use('/api/influwatch/affiliate-links',         authenticate, tenantGuard, writeLimiter, affiliateLinksRouter);
 app.use('/api/influwatch/phyllo',                  authenticate, tenantGuard, phylloRouter);
+app.use('/api/influwatch/campaigns',               authenticate, tenantGuard, writeLimiter, campaignSetupRouter);
 app.use('/api/influwatch/debug',                   authenticate, tenantGuard, debugRouter);
 
 // ── Error handler (must be last) ──────────
