@@ -6063,7 +6063,7 @@ async function submitLogin() {
 }
 
 // ── Auto-restore session from localStorage ────────────────────────────
-setTimeout(function autoRestore() {
+(function autoRestore() {
   if (!authToken) return; // no stored token — show login
   // We have a stored token — try to use it by hiding login and restoring the shell
   document.getElementById('login-screen').style.display = 'none';
@@ -6093,7 +6093,7 @@ setTimeout(function autoRestore() {
   checkSimStatus();
   setInterval(function() { updateNotificationBell(); if (typeof loadDashboardMetrics === 'function') loadDashboardMetrics(); }, 30000);
   go('dashboard');
-}, 0);
+})();
 
 // ── Role-based visibility ─────────────────────────────────────────────────
 // Normalises InternalActorRole enum strings to a local category, then
@@ -6223,6 +6223,7 @@ var ROLE_DISPLAY_LABELS = {
 };
 
 function applyRoleSwitcherLabels() {
+  if (!ROLE_DISPLAY_LABELS) return; // not yet initialized — skip
   var labels = ROLE_DISPLAY_LABELS[currentTenantType] || ROLE_DISPLAY_LABELS['BD'];
   var sel = document.getElementById('role-switcher');
   if (sel) {
