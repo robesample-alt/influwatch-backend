@@ -18,9 +18,9 @@ exports.fetchPhylloContent = fetchPhylloContent;
 exports.findAmbassadorByPhylloAccount = findAmbassadorByPhylloAccount;
 const tenantContext_1 = require("../utils/tenantContext");
 const logger_1 = __importDefault(require("../utils/logger"));
-const PHYLLO_BASE_URL = process.env.PHYLLO_BASE_URL || 'https://api.staging.getphyllo.com/v1';
-const PHYLLO_CLIENT_ID = process.env.PHYLLO_CLIENT_ID || '';
-const PHYLLO_CLIENT_SECRET = process.env.PHYLLO_CLIENT_SECRET || '';
+const PHYLLO_BASE_URL = process.env.INSIGHTIQ_BASE_URL || process.env.PHYLLO_BASE_URL || 'https://api.sandbox.insightiq.ai/v1';
+const PHYLLO_CLIENT_ID = process.env.INSIGHTIQ_CLIENT_ID || process.env.PHYLLO_CLIENT_ID || '';
+const PHYLLO_CLIENT_SECRET = process.env.INSIGHTIQ_CLIENT_SECRET || process.env.PHYLLO_CLIENT_SECRET || '';
 function getAuthHeader() {
     return 'Basic ' + Buffer.from(`${PHYLLO_CLIENT_ID}:${PHYLLO_CLIENT_SECRET}`).toString('base64');
 }
