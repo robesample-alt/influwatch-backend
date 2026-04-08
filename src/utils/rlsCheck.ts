@@ -32,6 +32,8 @@ const RLS_REQUIRED_TABLES = [
   'compensation_structures',
   'affiliate_links',
   'compensation_events',
+  'campaign_promoters',
+  'campaign_policies',
 ];
 
 interface RlsStatus {
