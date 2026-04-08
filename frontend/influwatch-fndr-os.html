@@ -6075,8 +6075,10 @@ async function submitLogin() {
     if (roleSel) roleSel.value = currentRole;
   }
   if (currentTenantType) {
-    applyTenantTypeVisibility();
-    applyTenantLabelsToScreens();
+    try {
+      applyTenantTypeVisibility();
+      applyTenantLabelsToScreens();
+    } catch (_) {}
     var ttBadge = document.getElementById('tenant-type-badge');
     if (ttBadge) ttBadge.textContent = getTenantLabel('badgeLabel');
   }
