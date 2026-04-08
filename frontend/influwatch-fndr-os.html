@@ -6063,7 +6063,7 @@ async function submitLogin() {
 }
 
 // ── Auto-restore session from localStorage ────────────────────────────
-(function autoRestore() {
+setTimeout(function autoRestore() {
   if (!authToken) return; // no stored token — show login
   // We have a stored token — try to use it by hiding login and restoring the shell
   document.getElementById('login-screen').style.display = 'none';
@@ -6093,7 +6093,7 @@ async function submitLogin() {
   checkSimStatus();
   setInterval(function() { updateNotificationBell(); if (typeof loadDashboardMetrics === 'function') loadDashboardMetrics(); }, 30000);
   go('dashboard');
-})();
+}, 0);
 
 // ── Role-based visibility ─────────────────────────────────────────────────
 // Normalises InternalActorRole enum strings to a local category, then
