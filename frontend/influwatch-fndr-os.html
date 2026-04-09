@@ -2123,7 +2123,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
         <div style="padding:14px;display:flex;flex-direction:column;gap:12px">
           <div>
             <label class="fl req">Compensation Type</label>
-            <select id="reg-comp-type" class="fi">
+            <select id="reg-comp-type" class="fi" onchange="updateCompDerived()">
               <option value="UNCOMPENSATED">Uncompensated</option>
               <option value="FLAT_FEE_PER_POST">Flat Fee Per Post</option>
               <option value="FLAT_FEE_PER_CAMPAIGN">Flat Fee Per Campaign</option>
@@ -2141,8 +2141,19 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
             </select>
             <div style="margin-top:4px;font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace">The system automatically derives supervisory posture, transactionality class, and exposure routing from this selection.</div>
           </div>
+          <!-- Derived classification badges -->
+          <div id="reg-comp-derived" style="display:flex;gap:8px;flex-wrap:wrap;padding:8px 10px;background:var(--bg-base);border:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;width:100%;margin-bottom:2px">AUTO-DERIVED FROM SELECTION</div>
+            <span id="reg-derived-txn" style="font-size:9px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:2px">—</span>
+            <span id="reg-derived-posture" style="font-size:9px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:2px">—</span>
+            <span id="reg-derived-class" style="font-size:9px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:2px">—</span>
+          </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div><label class="fl">Product Type</label><select id="reg-product-type" class="fi"><option value="REG_D">Reg D</option><option value="REG_A">Reg A</option><option value="REG_CF">Reg CF</option><option value="FUND">Fund</option><option value="ADVISORY_SERVICE">Advisory Service</option><option value="FINTECH">Fintech</option><option value="OTHER">Other</option></select></div>
+            <div><label class="fl">Product Type</label><select id="reg-product-type" class="fi" onchange="updateCompDerived()"><option value="REG_D">Reg D</option><option value="REG_A">Reg A</option><option value="REG_CF">Reg CF</option><option value="FUND">Fund</option><option value="ADVISORY_SERVICE">Advisory Service</option><option value="FINTECH">Fintech</option><option value="OTHER">Other</option></select></div>
+            <div><label class="fl">Is Security Linked</label><select id="reg-security-linked" class="fi" onchange="updateCompDerived()"><option value="auto" selected>Auto-derive</option><option value="true">Yes</option><option value="false">No</option></select></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div><label class="fl">Rate or Amount</label><input id="reg-comp-rate" class="fi" placeholder="e.g. $25/signup or 0.5% AUM"></div>
             <div><label class="fl">Payment Frequency</label><select class="fi"><option>Monthly</option><option>Quarterly</option><option>Annually</option><option>Per Event</option></select></div>
           </div>
           <div><label class="fl">Agreement Effective Date</label><input class="fi fi-mono" type="date" value="2026-02-01"></div>
@@ -4843,17 +4854,26 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
 <div id="screen-compensation-config" class="screen">
   <div class="ph">
     <div>
-      <div class="ph-bc">InfluWatch / IF Programs / Compensation Config Engine</div>
-      <div class="ph-title">BD Compensation Configuration Engine</div>
-      <div class="ph-sub">BD-configurable affiliate compensation structure · 4-dimension config · Locked on BD approval · Immutable record</div>
+      <div class="ph-bc">InfluWatch / Setup / Compensation Structures</div>
+      <div class="ph-title">Compensation Structures — Reference</div>
+      <div class="ph-sub">Read-only view of all compensation structures on file</div>
     </div>
     <div class="ph-actions">
-      <button class="btn btn-primary btn-sm">＋ New Configuration</button>
+      <button class="btn btn-secondary btn-sm" onclick="go('register')">+ Register Promoter →</button>
     </div>
   </div>
+  <div style="margin:14px 18px 0;background:var(--blue-dim);border:1px solid var(--blue-bdr);padding:11px 14px;font-size:11px;color:var(--text-secondary)">
+    <strong style="color:var(--blue)">Compensation structures are now managed through Promoter Registration.</strong> This screen shows existing structures for reference. To create a new one, <a href="javascript:go('register')" style="color:var(--blue);text-decoration:underline">register a promoter</a>.
+  </div>
+  <table style="margin:14px 18px">
+    <thead><tr><th>Promoter</th><th>Comp Type</th><th>Product</th><th>Transaction Based</th><th>Security Linked</th><th>Posture</th><th>Created</th></tr></thead>
+    <tbody id="comp-config-tbody">
+      <tr><td colspan="7" style="text-align:center;padding:20px 0;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px">LOADING…</td></tr>
+    </tbody>
+  </table>
 
-  <!-- Locked config list -->
-  <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+  <!-- Old static content hidden -->
+  <div style="display:none;padding:16px 20px;display:flex;flex-direction:column;gap:14px">
 
     <div class="panel">
       <div class="panel-hdr">
@@ -7223,6 +7243,39 @@ function platformIcon(platform) {
 }
 
 // ── Rule Engine — live from API ───────────────────────────────────────
+async function loadCompStructures() {
+  var tbody = document.getElementById('comp-config-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px 0;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace;font-size:11px">LOADING…</td></tr>';
+  try {
+    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/compensation-structures', {
+      headers: { 'Authorization': 'Bearer ' + authToken },
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    var structures = data.structures || data || [];
+    if (!Array.isArray(structures) || !structures.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px 0;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace;font-size:11px">NO COMPENSATION STRUCTURES ON FILE</td></tr>';
+      return;
+    }
+    var postureColor = { CRITICAL: 'var(--red)', HIGH: 'var(--orange)', MEDIUM: 'var(--amber)', LOW: 'var(--green)' };
+    tbody.innerHTML = structures.map(function(s) {
+      var pColor = postureColor[s.supervisionPosture] || 'var(--text-muted)';
+      return '<tr>'
+        + '<td style="font-weight:600">' + esc(s.promoter?.displayName || s.promoterId || '—') + '</td>'
+        + '<td style="font-size:10.5px">' + esc(s.compensationType || s.compensationForm || '—') + '</td>'
+        + '<td style="font-size:10.5px">' + esc(s.productType || '—') + '</td>'
+        + '<td style="text-align:center">' + (s.isTransactionBased ? '<span style="color:var(--red)">Yes</span>' : '<span style="color:var(--green)">No</span>') + '</td>'
+        + '<td style="text-align:center">' + (s.isSecurityLinked ? '<span style="color:var(--red)">Yes</span>' : '<span style="color:var(--green)">No</span>') + '</td>'
+        + '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:10.5px;color:' + pColor + '">' + esc(s.supervisionPosture || '—') + '</td>'
+        + '<td style="font-size:10px;color:var(--text-muted)">' + (s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : '—') + '</td>'
+        + '</tr>';
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px 0;color:var(--red);font-family:\'IBM Plex Mono\',monospace;font-size:11px">ERROR: ' + esc(err.message) + '</td></tr>';
+  }
+}
+
 async function loadRuleEngine() {
   var body = document.getElementById('rules-live-body');
   var sub = document.getElementById('rules-sub');
@@ -8431,6 +8484,55 @@ async function loadSupervisorDropdown() {
 }
 
 // ── Register Promoter — form submission ────────────────────────────────
+// ── Compensation classification — live-derived badges ─────────────────
+var COMP_TYPE_CLASSIFICATION = {
+  UNCOMPENSATED:                    { txn: false, posture: 'LOW',      cls: 'NON_TRANSACTIONAL' },
+  FLAT_FEE_PER_POST:               { txn: false, posture: 'LOW',      cls: 'NON_TRANSACTIONAL' },
+  FLAT_FEE_PER_CAMPAIGN:           { txn: false, posture: 'LOW',      cls: 'NON_TRANSACTIONAL' },
+  MONTHLY_RETAINER:                { txn: false, posture: 'LOW',      cls: 'NON_TRANSACTIONAL' },
+  CONTENT_PRODUCTION_FEE:          { txn: false, posture: 'LOW',      cls: 'NON_TRANSACTIONAL' },
+  AFFILIATE_NON_SECURITIES:        { txn: false, posture: 'LOW',      cls: 'ELEVATED_NON_TRANSACTIONAL' },
+  LEAD_GEN_NON_FUNDED:             { txn: false, posture: 'MEDIUM',   cls: 'ELEVATED_NON_TRANSACTIONAL' },
+  PER_ACCOUNT_OPENED:              { txn: false, posture: 'MEDIUM',   cls: 'POTENTIALLY_TRANSACTIONAL' },
+  PER_ACCOUNT_OPENED_AND_FUNDED:   { txn: true,  posture: 'HIGH',     cls: 'TRANSACTION_BASED' },
+  PER_LEAD_CONVERTED_TO_INVESTOR:  { txn: true,  posture: 'CRITICAL', cls: 'TRANSACTION_BASED' },
+  PER_DOLLAR_INVESTED:             { txn: true,  posture: 'CRITICAL', cls: 'TRANSACTION_BASED' },
+  REVENUE_SHARE_SECURITIES:        { txn: true,  posture: 'CRITICAL', cls: 'TRANSACTION_BASED' },
+  EQUITY_OR_CARRY_NON_TRANSACTIONAL:{ txn: false, posture: 'HIGH',    cls: 'ELEVATED_NON_TRANSACTIONAL' },
+  OTHER:                           { txn: false, posture: 'MEDIUM',   cls: 'POTENTIALLY_TRANSACTIONAL' },
+};
+
+function updateCompDerived() {
+  var compType = document.getElementById('reg-comp-type')?.value || 'UNCOMPENSATED';
+  var info = COMP_TYPE_CLASSIFICATION[compType] || COMP_TYPE_CLASSIFICATION.OTHER;
+
+  var txnEl = document.getElementById('reg-derived-txn');
+  if (txnEl) {
+    txnEl.textContent = info.txn ? 'TRANSACTION-BASED' : 'NON-TRANSACTIONAL';
+    txnEl.style.background = info.txn ? 'rgba(220,53,69,0.15)' : 'rgba(34,197,94,0.15)';
+    txnEl.style.color = info.txn ? 'var(--red)' : 'var(--green)';
+    txnEl.style.border = '1px solid ' + (info.txn ? 'rgba(220,53,69,0.3)' : 'rgba(34,197,94,0.3)');
+  }
+
+  var postureEl = document.getElementById('reg-derived-posture');
+  var postureColors = { LOW: 'var(--green)', MEDIUM: 'var(--amber)', HIGH: 'var(--orange)', CRITICAL: 'var(--red)' };
+  var postureBg = { LOW: 'rgba(34,197,94,0.15)', MEDIUM: 'rgba(245,158,11,0.15)', HIGH: 'rgba(249,115,22,0.15)', CRITICAL: 'rgba(220,53,69,0.15)' };
+  if (postureEl) {
+    postureEl.textContent = 'POSTURE: ' + info.posture;
+    postureEl.style.color = postureColors[info.posture] || 'var(--text-muted)';
+    postureEl.style.background = postureBg[info.posture] || 'var(--bg-panel)';
+    postureEl.style.border = '1px solid currentColor';
+  }
+
+  var clsEl = document.getElementById('reg-derived-class');
+  if (clsEl) {
+    clsEl.textContent = info.cls.replace(/_/g, ' ');
+    clsEl.style.color = 'var(--blue)';
+    clsEl.style.background = 'rgba(59,130,246,0.12)';
+    clsEl.style.border = '1px solid rgba(59,130,246,0.3)';
+  }
+}
+
 async function registerPromoter() {
   const errEl  = document.getElementById('register-error');
   const btn    = document.getElementById('reg-submit-btn');
@@ -8481,6 +8583,23 @@ async function registerPromoter() {
   const body = { displayName, handle, primaryPlatform, riskTier: riskTierRaw, supervisoryRelationship };
   // Only include assignedSupervisorId if value looks like a real ID (not the placeholder text)
   if (supId && supId.length < 60 && !supId.includes(' ')) body.assignedSupervisorId = supId;
+
+  // Compensation structure fields
+  const regCompType = document.getElementById('reg-comp-type')?.value || '';
+  if (regCompType && regCompType !== 'UNCOMPENSATED') {
+    const compInfo = COMP_TYPE_CLASSIFICATION[regCompType] || COMP_TYPE_CLASSIFICATION.OTHER;
+    const regProductType = document.getElementById('reg-product-type')?.value || 'OTHER';
+    const regSecLinked = document.getElementById('reg-security-linked')?.value;
+    body.compensation = {
+      compensationType: regCompType,
+      productType: regProductType,
+      isTransactionBased: compInfo.txn,
+      isSecurityLinked: regSecLinked === 'auto' ? compInfo.txn || ['REG_D','REG_A','REG_CF','FUND','ADVISORY_SERVICE'].indexOf(regProductType) !== -1 : regSecLinked === 'true',
+      supervisionPosture: compInfo.posture,
+      transactionalityClass: compInfo.cls,
+      compensationRate: document.getElementById('reg-comp-rate')?.value || null,
+    };
+  }
 
   btn.disabled = true;
   btn.textContent = 'REGISTERING…';
@@ -10010,12 +10129,13 @@ async function loadCampaignSetup() {
   }
 }
 
+var _allCompStructures = [];
+
 async function populateAddPromoterDropdowns() {
   var promoSel = document.getElementById('camp-add-promoter-sel');
   var compSel = document.getElementById('camp-add-comp-sel');
   if (!promoSel || !compSel) return;
 
-  // Only populate once
   if (promoSel.options.length > 1) return;
 
   try {
@@ -10043,17 +10163,39 @@ async function populateAddPromoterDropdowns() {
 
     if (compRes.ok) {
       var compData = await compRes.json();
-      var structures = compData.structures || compData || [];
-      if (Array.isArray(structures)) {
-        structures.forEach(function(s) {
-          var opt = document.createElement('option');
-          opt.value = s.id;
-          opt.textContent = (s.compensationForm || s.compensationType || 'Unknown') + ' — ' + (s.promoter?.displayName || s.promoterId || '');
-          compSel.appendChild(opt);
-        });
-      }
+      _allCompStructures = compData.structures || compData || [];
     }
+
+    // When promoter changes, filter comp structures
+    promoSel.onchange = function() { filterCompStructures(); };
   } catch (_) {}
+}
+
+function filterCompStructures() {
+  var promoSel = document.getElementById('camp-add-promoter-sel');
+  var compSel = document.getElementById('camp-add-comp-sel');
+  if (!promoSel || !compSel) return;
+
+  var promoterId = promoSel.value;
+  compSel.innerHTML = '<option value="">Select…</option>';
+
+  if (!promoterId) return;
+
+  var filtered = _allCompStructures.filter(function(s) { return s.promoterId === promoterId; });
+
+  if (filtered.length === 0) {
+    compSel.innerHTML = '<option value="" disabled>No comp structure — register promoter first</option>';
+    return;
+  }
+
+  filtered.forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = (s.compensationType || s.compensationForm || 'Unknown') + ' — ' + (s.supervisionPosture || '');
+    compSel.appendChild(opt);
+  });
+
+  if (filtered.length === 1) compSel.value = filtered[0].id;
 }
 
 async function addCampaignPromoter() {
@@ -10720,6 +10862,7 @@ go = function(name) {
   if (name === 'preapproval')     { loadPreApprovals(); loadPreApprovalCampaignBanner(); }
   if (name === 'referral')        loadAffiliateLinks();
   if (name === 'rules')           loadRuleEngine();
+  if (name === 'compensation-config') loadCompStructures();
   if (name === 'review')          loadReviewRecord();
   if (name === 'tailmonitor')     loadTailMonitor();
 };

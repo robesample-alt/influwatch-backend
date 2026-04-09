@@ -41,7 +41,7 @@ export async function createAmbassador(
 ) {
   try {
     const tenantId = req.user!.tenantId;
-    const { displayName, handle, primaryPlatform, riskTier, assignedSupervisorId, supervisoryRelationship } = req.body;
+    const { displayName, handle, primaryPlatform, riskTier, assignedSupervisorId, supervisoryRelationship, compensation } = req.body;
 
     if (!displayName || !handle || !primaryPlatform) {
       return res.status(400).json({
@@ -56,6 +56,7 @@ export async function createAmbassador(
       riskTier:                riskTier ?? undefined,
       assignedSupervisorId:   assignedSupervisorId ?? undefined,
       supervisoryRelationship: supervisoryRelationship ?? 'SUPERVISED',
+      compensation:            compensation ?? undefined,
     });
 
     return res.status(201).json(ambassador);

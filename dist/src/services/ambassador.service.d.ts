@@ -107,6 +107,15 @@ export declare function createAmbassador(tenantId: string, input: {
     riskTier?: string;
     assignedSupervisorId?: string;
     supervisoryRelationship?: string;
+    compensation?: {
+        compensationType?: string;
+        productType?: string;
+        isTransactionBased?: boolean;
+        isSecurityLinked?: boolean;
+        supervisionPosture?: string;
+        transactionalityClass?: string;
+        compensationRate?: string;
+    };
 }): Promise<{
     assignedSupervisor: {
         id: string;

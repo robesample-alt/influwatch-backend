@@ -113,7 +113,7 @@ async function createAmbassador(tenantId, input) {
         throw err;
     }
     return (0, tenantContext_1.withTenantContext)({ tenantId }, async (tx) => {
-        return tx.ambassadorProfile.create({
+        const ambassador = await tx.ambassadorProfile.create({
             data: {
                 tenantId,
                 displayName: input.displayName,
@@ -126,6 +126,30 @@ async function createAmbassador(tenantId, input) {
             },
             include: { assignedSupervisor: SUPERVISOR_INCLUDE },
         });
+        // Create CompensationStructure if compensation data provided
+        if (input.compensation) {
+            const c = input.compensation;
+            await tx.compensationStructure.create({
+                data: {
+                    tenantId,
+                    promoterId: ambassador.id,
+                    compensationForm: c.compensationType ?? 'OTHER',
+                    compensationTrigger: 'LEAD',
+                    productType: c.productType ?? 'OTHER',
+                    isTransactionBased: c.isTransactionBased ?? false,
+                    isSecurityLinked: c.isSecurityLinked ?? false,
+                    isCompensationVariable: c.isTransactionBased ?? false,
+                    requiresDisclosure: c.isSecurityLinked || c.isTransactionBased || false,
+                    requiresPrincipalReview: c.supervisionPosture === 'CRITICAL' || c.supervisionPosture === 'HIGH',
+                    supervisionPosture: c.supervisionPosture ?? 'LOW',
+                    writtenAgreementRequired: true,
+                    compensationType: c.compensationType ?? null,
+                    transactionalityClass: c.transactionalityClass ?? null,
+                    notes: c.compensationRate ? `Rate: ${c.compensationRate}` : null,
+                },
+            });
+        }
+        return ambassador;
     });
 }
 async function assignSupervisor(tenantId, id, supervisorId) {

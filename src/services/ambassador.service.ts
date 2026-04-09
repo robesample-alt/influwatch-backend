@@ -108,6 +108,15 @@ export async function createAmbassador(tenantId: string, input: {
   riskTier?:                string;
   assignedSupervisorId?:    string;
   supervisoryRelationship?: string;
+  compensation?: {
+    compensationType?:      string;
+    productType?:           string;
+    isTransactionBased?:    boolean;
+    isSecurityLinked?:      boolean;
+    supervisionPosture?:    string;
+    transactionalityClass?: string;
+    compensationRate?:      string;
+  };
 }) {
   const { valid, errors } = validateCreateAmbassador(input);
   if (!valid) {
@@ -117,7 +126,7 @@ export async function createAmbassador(tenantId: string, input: {
   }
 
   return withTenantContext({ tenantId }, async (tx) => {
-    return tx.ambassadorProfile.create({
+    const ambassador = await tx.ambassadorProfile.create({
       data: {
         tenantId,
         displayName:          input.displayName,
@@ -130,6 +139,32 @@ export async function createAmbassador(tenantId: string, input: {
       },
       include: { assignedSupervisor: SUPERVISOR_INCLUDE },
     });
+
+    // Create CompensationStructure if compensation data provided
+    if (input.compensation) {
+      const c = input.compensation;
+      await tx.compensationStructure.create({
+        data: {
+          tenantId,
+          promoterId:           ambassador.id,
+          compensationForm:     c.compensationType ?? 'OTHER',
+          compensationTrigger:  'LEAD',
+          productType:          c.productType ?? 'OTHER',
+          isTransactionBased:   c.isTransactionBased ?? false,
+          isSecurityLinked:     c.isSecurityLinked ?? false,
+          isCompensationVariable: c.isTransactionBased ?? false,
+          requiresDisclosure:   c.isSecurityLinked || c.isTransactionBased || false,
+          requiresPrincipalReview: c.supervisionPosture === 'CRITICAL' || c.supervisionPosture === 'HIGH',
+          supervisionPosture:   c.supervisionPosture ?? 'LOW',
+          writtenAgreementRequired: true,
+          compensationType:     c.compensationType ?? null,
+          transactionalityClass: c.transactionalityClass ?? null,
+          notes:                c.compensationRate ? `Rate: ${c.compensationRate}` : null,
+        },
+      });
+    }
+
+    return ambassador;
   });
 }
 
