@@ -2146,7 +2146,6 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
             <div style="font-size:9px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;width:100%;margin-bottom:2px">AUTO-DERIVED FROM SELECTION</div>
             <span id="reg-derived-txn" style="font-size:9px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:2px">—</span>
             <span id="reg-derived-posture" style="font-size:9px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:2px">—</span>
-            <span id="reg-derived-class" style="font-size:9px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:2px">—</span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div><label class="fl">Product Type</label><select id="reg-product-type" class="fi" onchange="updateCompDerived()"><option value="REG_D">Reg D</option><option value="REG_A">Reg A</option><option value="REG_CF">Reg CF</option><option value="FUND">Fund</option><option value="ADVISORY_SERVICE">Advisory Service</option><option value="FINTECH">Fintech</option><option value="OTHER">Other</option></select></div>
@@ -8524,13 +8523,6 @@ function updateCompDerived() {
     postureEl.style.border = '1px solid currentColor';
   }
 
-  var clsEl = document.getElementById('reg-derived-class');
-  if (clsEl) {
-    clsEl.textContent = info.cls.replace(/_/g, ' ');
-    clsEl.style.color = 'var(--blue)';
-    clsEl.style.background = 'rgba(59,130,246,0.12)';
-    clsEl.style.border = '1px solid rgba(59,130,246,0.3)';
-  }
 }
 
 async function registerPromoter() {
