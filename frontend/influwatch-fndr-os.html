@@ -8511,16 +8511,26 @@ function updateCompDerived() {
     txnEl.style.background = info.txn ? 'rgba(220,53,69,0.15)' : 'rgba(34,197,94,0.15)';
     txnEl.style.color = info.txn ? 'var(--red)' : 'var(--green)';
     txnEl.style.border = '1px solid ' + (info.txn ? 'rgba(220,53,69,0.3)' : 'rgba(34,197,94,0.3)');
+    txnEl.title = info.txn
+      ? 'This compensation type creates a transaction-based relationship. Enhanced supervisory obligations apply under FINRA Rule 3110. Principal review may be required.'
+      : 'This compensation type is non-transactional. Standard supervisory procedures apply.';
   }
 
   var postureEl = document.getElementById('reg-derived-posture');
   var postureColors = { LOW: 'var(--green)', MEDIUM: 'var(--amber)', HIGH: 'var(--orange)', CRITICAL: 'var(--red)' };
   var postureBg = { LOW: 'rgba(34,197,94,0.15)', MEDIUM: 'rgba(245,158,11,0.15)', HIGH: 'rgba(249,115,22,0.15)', CRITICAL: 'rgba(220,53,69,0.15)' };
+  var postureTips = {
+    LOW: 'Standard review queue. Content reviewed by a designated supervisor.',
+    MEDIUM: 'Elevated review. Content requires supervisor attention before close.',
+    HIGH: 'High risk posture. LLM detection active. Supervisor review required.',
+    CRITICAL: 'Maximum risk posture. LLM detection active. Principal review likely required. Associated with per-account and per-funded-account compensation structures that may implicate unregistered broker activity.',
+  };
   if (postureEl) {
     postureEl.textContent = 'POSTURE: ' + info.posture;
     postureEl.style.color = postureColors[info.posture] || 'var(--text-muted)';
     postureEl.style.background = postureBg[info.posture] || 'var(--bg-panel)';
     postureEl.style.border = '1px solid currentColor';
+    postureEl.title = postureTips[info.posture] || '';
   }
 
 }
