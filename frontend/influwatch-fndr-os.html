@@ -570,7 +570,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
   <div class="nav-sec nav-sec-setup">
     <div class="nav-sec-lbl">Setup</div>
     <div class="nav-item" id="nav-register" onclick="go('register')"><div class="nav-icon">&#43;</div>Register Promoter</div>
-    <div class="nav-item" id="nav-compensation-config" onclick="go('compensation-config')" data-tenant-types="BD RIA FINTECH REG_CF ISSUER"><div class="nav-icon">&#9881;</div>Compensation Structure</div>
+    <div class="nav-item" id="nav-compensation-config" onclick="go('compensation-config')" data-tenant-types="BD RIA FINTECH REG_CF ISSUER" data-hidden="true" style="display:none"><div class="nav-icon">&#9881;</div>Compensation Structure</div>
     <div class="nav-item" id="nav-contracts" onclick="go('contracts')"><div class="nav-icon">&#128221;</div>Agreements &amp; Contracts <div class="nav-badge amber">2</div></div>
     <div class="nav-item" id="nav-preapproval" onclick="go('preapproval')"><div class="nav-icon">&#9997;</div>Pre-Approval Workflow <div class="nav-badge amber">4</div></div>
   </div>
@@ -1177,7 +1177,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
     </div>
   </div>
   <table>
-    <thead><tr><th>Promoter ID</th><th>Name / Handle</th><th>Platform(s)</th><th>Risk Tier</th><th>Cert Status</th><th>Open Flags</th><th>Reviewer</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th style="width:24px"></th><th>Promoter ID</th><th>Name / Handle</th><th>Platform(s)</th><th>Risk Tier</th><th>Cert Status</th><th>Open Flags</th><th>Reviewer</th><th>Status</th><th></th></tr></thead>
     <tbody>
       <tr onclick="go('promoter-detail')">
         <td class="mono">PR-004</td>
@@ -7981,10 +7981,13 @@ function toggleAllCaptures(master) {
 }
 
 // ── Promoter Registry — API fetch ─────────────────────────────────────
+var _expandedPromoters = {}; // cache loaded detail by ambassador ID
+
 async function loadPromoters() {
   const tbody = document.querySelector('#screen-promoters table tbody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace;letter-spacing:0.08em">LOADING…</td></tr>';
+  _expandedPromoters = {};
+  tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace;letter-spacing:0.08em">LOADING…</td></tr>';
   try {
     const res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/ambassadors/monitor', {
       headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {},
@@ -7997,7 +8000,7 @@ async function loadPromoters() {
     const platLabel   = { YOUTUBE: 'YouTube', INSTAGRAM: 'Instagram', TWITTER_X: 'Twitter/X', TIKTOK: 'TikTok', LINKEDIN: 'LinkedIn', FACEBOOK: 'Facebook', TELEGRAM: 'Telegram', EMAIL: 'Email', PODCAST: 'Podcast', BLOG: 'Blog', OTHER: 'Other' };
 
     if (!ambassadors.length) {
-      tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:var(--text-muted)">No promoters found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--text-muted)">No promoters found</td></tr>';
       return;
     }
 
@@ -8010,7 +8013,8 @@ async function loadPromoters() {
       const sup      = a.assignedSupervisor ? a.assignedSupervisor.displayName : 'Unassigned';
       const flagCount = a.flagCount ?? 0;
       const flagColor = flagCount > 5 ? 'var(--red)' : flagCount > 0 ? 'var(--amber)' : 'var(--text-muted)';
-      return `<tr onclick="selectAndViewPromoter('${esc(a.id)}')">
+      return `<tr onclick="selectAndViewPromoter('${esc(a.id)}')" style="cursor:pointer">
+        <td style="text-align:center;width:24px"><button class="btn btn-ghost" style="padding:2px 6px;font-size:10px;color:var(--text-muted)" onclick="togglePromoterExpand('${esc(a.id)}');event.stopPropagation()" id="promo-expand-btn-${esc(a.id)}">&#9654;</button></td>
         <td class="mono" style="font-size:9.5px">${esc(a.id.slice(-6).toUpperCase())}</td>
         <td><div style="font-weight:600">${esc(a.displayName)}</div><div style="font-size:9.5px;color:var(--text-muted)">@${esc(a.handle)}</div></td>
         <td><span style="font-size:9.5px;color:var(--text-secondary)">${esc(plat)}</span></td>
@@ -8020,7 +8024,8 @@ async function loadPromoters() {
         <td class="muted" style="font-size:10.5px">${esc(sup)}</td>
         <td><span class="stat ${esc(statCls)}">${esc(statLbl)}</span></td>
         <td><button class="btn btn-ghost btn-sm" onclick="selectAndViewPromoter('${esc(a.id)}');event.stopPropagation()">View →</button></td>
-      </tr>`;
+      </tr>
+      <tr id="promo-expand-${esc(a.id)}" style="display:none"><td colspan="10" style="padding:0;background:var(--bg-panel)"><div id="promo-detail-${esc(a.id)}" style="padding:12px 18px">LOADING…</div></td></tr>`;
     }).join('');
 
     const pagerInfo = document.querySelector('#screen-promoters .pg-info');
@@ -8028,7 +8033,112 @@ async function loadPromoters() {
     const sub = document.querySelector('#screen-promoters .ph-sub');
     if (sub) sub.textContent = `${ambassadors.length} supervised promoters · Phase 1 scope`;
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="9" style="padding:16px;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px">⚠ ${esc(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="padding:16px;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px">⚠ ${esc(err.message)}</td></tr>`;
+  }
+}
+
+async function togglePromoterExpand(id) {
+  var row = document.getElementById('promo-expand-' + id);
+  var btn = document.getElementById('promo-expand-btn-' + id);
+  if (!row) return;
+
+  if (row.style.display !== 'none') {
+    row.style.display = 'none';
+    if (btn) btn.innerHTML = '&#9654;';
+    return;
+  }
+
+  row.style.display = '';
+  if (btn) btn.innerHTML = '&#9660;';
+
+  // Load lazily — only fetch once
+  if (_expandedPromoters[id]) return;
+  _expandedPromoters[id] = true;
+
+  var detail = document.getElementById('promo-detail-' + id);
+  if (!detail) return;
+  detail.innerHTML = '<div style="color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace;font-size:10px">LOADING DETAILS…</div>';
+
+  var hdrs = authToken ? { 'Authorization': 'Bearer ' + authToken } : {};
+  var postureColor = { CRITICAL: 'var(--red)', HIGH: 'var(--orange)', MEDIUM: 'var(--amber)', LOW: 'var(--green)' };
+
+  try {
+    // Fetch comp structure, contracts, tail periods in parallel
+    var [compRes, contractRes, tailRes] = await Promise.all([
+      fetch('https://influwatch-backend.onrender.com/api/influwatch/compensation-structures/' + encodeURIComponent(id), { headers: hdrs }),
+      fetch('https://influwatch-backend.onrender.com/api/influwatch/contracts?ambassadorId=' + encodeURIComponent(id), { headers: hdrs }),
+      fetch('https://influwatch-backend.onrender.com/api/influwatch/tail-periods?ambassadorId=' + encodeURIComponent(id), { headers: hdrs }),
+    ]);
+
+    // Compensation
+    var compHtml = '';
+    if (compRes.ok) {
+      var comp = await compRes.json();
+      if (comp && comp.compensationType) {
+        var pc = postureColor[comp.supervisionPosture] || 'var(--text-muted)';
+        compHtml = '<div style="font-size:11px">'
+          + '<span style="color:var(--text-muted);font-size:9px">TYPE</span> <strong>' + esc(comp.compensationType || comp.compensationForm || '—') + '</strong>'
+          + ' &middot; <span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:' + pc + '">' + esc(comp.supervisionPosture || '—') + '</span>'
+          + ' &middot; TXN: ' + (comp.isTransactionBased ? '<span style="color:var(--red)">YES</span>' : '<span style="color:var(--green)">NO</span>')
+          + (comp.notes ? ' &middot; <span style="color:var(--text-muted);font-size:10px">' + esc(comp.notes) + '</span>' : '')
+          + '</div>';
+      } else {
+        compHtml = '<div style="font-size:11px;color:var(--text-muted)">No compensation structure defined</div>';
+      }
+    } else {
+      compHtml = '<div style="font-size:11px;color:var(--text-muted)">No compensation structure defined</div>';
+    }
+
+    // Contracts
+    var contractHtml = '';
+    if (contractRes.ok) {
+      var cData = await contractRes.json();
+      var contracts = cData.contracts || [];
+      if (contracts.length) {
+        contractHtml = contracts.map(function(c) {
+          var fmtD = function(d) { return d ? new Date(d).toLocaleDateString('en-US', { year:'numeric', month:'short' }) : '—'; };
+          var sCls = c.status === 'ACTIVE' ? 'color:var(--green)' : c.status === 'TERMINATED' ? 'color:var(--red)' : 'color:var(--amber)';
+          return '<div style="font-size:11px">'
+            + '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px">' + esc(c.contractId) + '</span>'
+            + ' &middot; ' + fmtD(c.effectiveDate) + ' → ' + fmtD(c.expiryDate)
+            + ' &middot; <span style="' + sCls + '">' + esc(c.status) + '</span>'
+            + '</div>';
+        }).join('');
+      } else {
+        contractHtml = '<div style="font-size:11px;color:var(--text-muted)">No contract on file</div>';
+      }
+    } else {
+      contractHtml = '<div style="font-size:11px;color:var(--text-muted)">No contract on file</div>';
+    }
+
+    // Tail period
+    var tailHtml = '';
+    if (tailRes.ok) {
+      var tData = await tailRes.json();
+      var tails = tData.tailPeriods || tData || [];
+      if (Array.isArray(tails) && tails.length) {
+        var t = tails[0];
+        tailHtml = '<div style="font-size:11px">Tail ends: <strong>' + esc(t.tailEndDate ? new Date(t.tailEndDate).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : '—') + '</strong>'
+          + ' &middot; Status: <span style="color:var(--amber)">' + esc(t.status || '—') + '</span></div>';
+      } else {
+        tailHtml = '<div style="font-size:11px;color:var(--text-muted)">No active tail period</div>';
+      }
+    } else {
+      tailHtml = '<div style="font-size:11px;color:var(--text-muted)">No active tail period</div>';
+    }
+
+    var sec = function(label, content) {
+      return '<div style="margin-bottom:8px"><div style="font-size:8px;font-weight:600;font-family:\'IBM Plex Mono\',monospace;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted);margin-bottom:3px">' + label + '</div>' + content + '</div>';
+    };
+
+    detail.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px">'
+      + sec('Compensation Structure', compHtml)
+      + sec('Contract Status', contractHtml)
+      + sec('Tail Period', tailHtml)
+      + '</div>';
+
+  } catch (err) {
+    detail.innerHTML = '<div style="color:var(--red);font-size:11px">Failed to load details: ' + esc(err.message) + '</div>';
   }
 }
 
@@ -8626,6 +8736,8 @@ async function registerPromoter() {
     // Success — toast and clear form
     showToast('Promoter registered · Monitoring activated');
     clearErr();
+    // Refresh promoter list so new promoter appears immediately
+    if (typeof loadPromoters === 'function') loadPromoters();
     document.getElementById('reg-first-name').value   = '';
     document.getElementById('reg-last-name').value    = '';
     document.getElementById('reg-display-name').value = '';
