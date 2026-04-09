@@ -382,6 +382,78 @@ async function main() {
   }
   console.log(`✓ ${compStructures.length} compensation structures seeded`);
 
+  // ─── Promoter Contracts ───────────────────────────────────
+
+  const contracts = [
+    {
+      id: 'CTR-DEMO-01', ambassadorId: 'AMB-DEMO-01', contractId: 'AGR-2025-0019',
+      agreementType: 'Promoter Agreement', compensationType: 'Revenue share', compensationRate: '0.5% AUM yr1',
+      compensationCap: 50000, signedDate: '2025-04-15', effectiveDate: '2025-04-15', expiryDate: '2026-04-15',
+      monitoringConsent: true, disclosureAck: true, status: 'ACTIVE',
+    },
+    {
+      id: 'CTR-DEMO-02', ambassadorId: 'AMB-DEMO-02', contractId: 'AGR-2025-0021',
+      agreementType: 'Promoter Agreement', compensationType: 'Per-acquisition + Fixed', compensationRate: '$25/signup + $500/mo',
+      compensationCap: 75000, signedDate: '2025-03-01', effectiveDate: '2025-03-01', expiryDate: '2027-03-01',
+      monitoringConsent: true, disclosureAck: true, status: 'ACTIVE',
+    },
+    {
+      id: 'CTR-DEMO-03', ambassadorId: 'AMB-DEMO-03', contractId: 'AGR-2025-0028',
+      agreementType: 'Promoter Agreement', compensationType: 'Flat fee', compensationRate: '$500/mo',
+      compensationCap: 6000, signedDate: '2025-06-01', effectiveDate: '2025-06-01', expiryDate: '2026-06-01',
+      monitoringConsent: true, disclosureAck: true, status: 'ACTIVE',
+    },
+    {
+      id: 'CTR-DEMO-04', ambassadorId: 'AMB-DEMO-04', contractId: 'AGR-2026-0003',
+      agreementType: 'Promoter Agreement', compensationType: 'Flat fee', compensationRate: '$500/mo',
+      compensationCap: null, signedDate: null, effectiveDate: null, expiryDate: null,
+      monitoringConsent: false, disclosureAck: false, status: 'PENDING',
+    },
+    {
+      id: 'CTR-DEMO-05', ambassadorId: 'AMB-DEMO-05', contractId: 'AGR-2025-0031',
+      agreementType: 'Promoter Agreement', compensationType: 'Revenue share', compensationRate: '1.2% capital raised',
+      compensationCap: 120000, signedDate: '2025-05-01', effectiveDate: '2025-05-01', expiryDate: '2027-05-01',
+      monitoringConsent: true, disclosureAck: true, status: 'ACTIVE',
+    },
+    {
+      id: 'CTR-DEMO-06', ambassadorId: 'AMB-DEMO-06', contractId: 'AGR-2026-0005',
+      agreementType: 'Content Creator Agreement', compensationType: 'Free stock', compensationRate: '1 share/signup',
+      compensationCap: null, signedDate: null, effectiveDate: null, expiryDate: null,
+      monitoringConsent: false, disclosureAck: false, status: 'PENDING',
+    },
+    {
+      id: 'CTR-DEMO-07', ambassadorId: 'AMB-DEMO-07', contractId: 'AGR-2025-0024',
+      agreementType: 'Promoter Agreement', compensationType: 'Per-acquisition', compensationRate: '$50/signup',
+      compensationCap: 30000, signedDate: '2025-06-01', effectiveDate: '2025-06-01', expiryDate: '2027-06-01',
+      monitoringConsent: true, disclosureAck: true, status: 'TERMINATED',
+      notes: 'Contract terminated 2026-02-28. Tail period monitoring active.',
+    },
+  ];
+
+  for (const c of contracts) {
+    await prisma.promoterContract.upsert({
+      where: { id: c.id },
+      update: {},
+      create: {
+        id: c.id, tenantId: T,
+        ambassadorId: c.ambassadorId,
+        contractId: c.contractId,
+        agreementType: c.agreementType,
+        compensationType: c.compensationType,
+        compensationRate: c.compensationRate,
+        compensationCap: c.compensationCap,
+        signedDate: c.signedDate ? new Date(c.signedDate) : new Date(),
+        effectiveDate: c.effectiveDate ? new Date(c.effectiveDate) : new Date(),
+        expiryDate: c.expiryDate ? new Date(c.expiryDate) : null,
+        monitoringConsent: c.monitoringConsent,
+        disclosureAck: c.disclosureAck,
+        status: c.status,
+        notes: (c as any).notes || null,
+      },
+    });
+  }
+  console.log(`✓ ${contracts.length} promoter contracts seeded`);
+
   // ─── Campaign Promoter Assignments ────────────────────────
   // Assigns demo promoters to their respective campaigns with
   // compensation structures and principal assignments.
