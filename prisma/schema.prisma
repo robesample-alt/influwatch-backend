@@ -269,6 +269,7 @@ model AmbassadorProfile {
   id              String            @id @default(cuid())
   displayName     String
   handle          String
+  email           String?           // Promoter contact email — used for portal magic-link login
   primaryPlatform SourcePlatform
   status          AmbassadorStatus  @default(ACTIVE)
   createdAt       DateTime          @default(now())
@@ -301,6 +302,7 @@ model AmbassadorProfile {
 
   @@index([tenantId])
   @@index([handle])
+  @@index([email])
   @@index([status])
   @@index([primaryPlatform])
   @@index([phylloAccountId])

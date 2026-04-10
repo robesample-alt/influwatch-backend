@@ -26,25 +26,25 @@ async function main() {
 
   const promoters = [
     // Per-conversion (highest risk)
-    { id: 'AMB-DEMO-01', displayName: 'Marcus Venn', handle: '@marcusvenn', platform: 'YOUTUBE' as const, risk: PromoterRiskTier.CRITICAL, supervisor: 'IA-001', status: 'ACTIVE' as const },
-    { id: 'AMB-DEMO-02', displayName: 'Jordan Blake', handle: '@jordanblake_fx', platform: 'INSTAGRAM' as const, risk: PromoterRiskTier.CRITICAL, supervisor: 'IA-001', status: 'ACTIVE' as const },
+    { id: 'AMB-DEMO-01', displayName: 'Marcus Venn', handle: '@marcusvenn', email: 'info+marcus@influwatch.com', platform: 'YOUTUBE' as const, risk: PromoterRiskTier.CRITICAL, supervisor: 'IA-001', status: 'ACTIVE' as const },
+    { id: 'AMB-DEMO-02', displayName: 'Jordan Blake', handle: '@jordanblake_fx', email: 'info+jordan@influwatch.com', platform: 'INSTAGRAM' as const, risk: PromoterRiskTier.CRITICAL, supervisor: 'IA-001', status: 'ACTIVE' as const },
     // Flat-fee
-    { id: 'AMB-DEMO-03', displayName: 'Nina Castillo', handle: '@nina.castillo', platform: 'TIKTOK' as const, risk: PromoterRiskTier.MEDIUM, supervisor: 'IA-002', status: 'ACTIVE' as const },
-    { id: 'AMB-DEMO-04', displayName: 'Derek Tao', handle: '@derektao', platform: 'TWITTER_X' as const, risk: PromoterRiskTier.LOW, supervisor: 'IA-002', status: 'ACTIVE' as const },
+    { id: 'AMB-DEMO-03', displayName: 'Nina Castillo', handle: '@nina.castillo', email: 'info+nina@influwatch.com', platform: 'TIKTOK' as const, risk: PromoterRiskTier.MEDIUM, supervisor: 'IA-002', status: 'ACTIVE' as const },
+    { id: 'AMB-DEMO-04', displayName: 'Derek Tao', handle: '@derektao', email: 'info+derek@influwatch.com', platform: 'TWITTER_X' as const, risk: PromoterRiskTier.LOW, supervisor: 'IA-002', status: 'ACTIVE' as const },
     // Revenue share
-    { id: 'AMB-DEMO-05', displayName: 'Priya Sharma', handle: '@priya.invests', platform: 'YOUTUBE' as const, risk: PromoterRiskTier.HIGH, supervisor: 'IA-001', status: 'ACTIVE' as const },
+    { id: 'AMB-DEMO-05', displayName: 'Priya Sharma', handle: '@priya.invests', email: 'info+priya@influwatch.com', platform: 'YOUTUBE' as const, risk: PromoterRiskTier.HIGH, supervisor: 'IA-001', status: 'ACTIVE' as const },
     // Uncompensated (contrast)
-    { id: 'AMB-DEMO-06', displayName: 'Ryan Michaels', handle: '@ryanmichaels', platform: 'TWITTER_X' as const, risk: PromoterRiskTier.LOW, supervisor: 'IA-003', status: 'ACTIVE' as const },
+    { id: 'AMB-DEMO-06', displayName: 'Ryan Michaels', handle: '@ryanmichaels', email: 'info+ryan@influwatch.com', platform: 'TWITTER_X' as const, risk: PromoterRiskTier.LOW, supervisor: 'IA-003', status: 'ACTIVE' as const },
     // Terminated — tail period
-    { id: 'AMB-DEMO-07', displayName: 'Leah Foster', handle: '@leah.foster', platform: 'INSTAGRAM' as const, risk: PromoterRiskTier.HIGH, supervisor: 'IA-001', status: 'INACTIVE' as const },
+    { id: 'AMB-DEMO-07', displayName: 'Leah Foster', handle: '@leah.foster', email: 'info+leah@influwatch.com', platform: 'INSTAGRAM' as const, risk: PromoterRiskTier.HIGH, supervisor: 'IA-001', status: 'INACTIVE' as const },
   ];
 
   for (const p of promoters) {
     await prisma.ambassadorProfile.upsert({
       where: { id: p.id },
-      update: { riskTier: p.risk, status: p.status },
+      update: { riskTier: p.risk, status: p.status, email: p.email },
       create: {
-        id: p.id, tenantId: T, displayName: p.displayName, handle: p.handle,
+        id: p.id, tenantId: T, displayName: p.displayName, handle: p.handle, email: p.email,
         primaryPlatform: p.platform, riskTier: p.risk, status: p.status,
         assignedSupervisorId: p.supervisor,
       },

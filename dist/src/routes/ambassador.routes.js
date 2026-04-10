@@ -68,7 +68,7 @@ async function listAmbassadors(req, res, next) {
 async function createAmbassador(req, res, next) {
     try {
         const tenantId = req.user.tenantId;
-        const { displayName, handle, primaryPlatform, riskTier, assignedSupervisorId, supervisoryRelationship, compensation } = req.body;
+        const { displayName, handle, email, primaryPlatform, riskTier, assignedSupervisorId, supervisoryRelationship, compensation } = req.body;
         if (!displayName || !handle || !primaryPlatform) {
             return res.status(400).json({
                 error: 'displayName, handle, and primaryPlatform are required',
@@ -77,6 +77,7 @@ async function createAmbassador(req, res, next) {
         const ambassador = await AmbassadorService.createAmbassador(tenantId, {
             displayName,
             handle,
+            email,
             primaryPlatform,
             riskTier: riskTier ?? undefined,
             assignedSupervisorId: assignedSupervisorId ?? undefined,

@@ -118,6 +118,7 @@ async function createAmbassador(tenantId, input) {
                 tenantId,
                 displayName: input.displayName,
                 handle: input.handle,
+                email: input.email?.trim().toLowerCase() || null,
                 primaryPlatform: input.primaryPlatform,
                 riskTier: input.riskTier ?? null,
                 status: client_1.AmbassadorStatus.ACTIVE,

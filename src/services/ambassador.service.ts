@@ -104,6 +104,7 @@ export async function getAmbassadorDetail(tenantId: string, id: string) {
 export async function createAmbassador(tenantId: string, input: {
   displayName:              string;
   handle:                   string;
+  email?:                   string;
   primaryPlatform:          string;
   riskTier?:                string;
   assignedSupervisorId?:    string;
@@ -131,6 +132,7 @@ export async function createAmbassador(tenantId: string, input: {
         tenantId,
         displayName:          input.displayName,
         handle:               input.handle,
+        email:                input.email?.trim().toLowerCase() || null,
         primaryPlatform:      input.primaryPlatform as SourcePlatform,
         riskTier:             (input.riskTier as PromoterRiskTier) ?? null,
         status:               AmbassadorStatus.ACTIVE,

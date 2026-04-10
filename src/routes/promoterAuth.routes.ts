@@ -37,16 +37,13 @@ router.post('/request-link', async (req: Request, res: Response, next: NextFunct
 
     const normalized = email.trim().toLowerCase();
 
-    // Find ambassador by email handle or recorded email
-    // (AmbassadorProfile.handle is the social handle, not email — we look
-    //  for any matching ambassadorEmail field if it exists, otherwise
-    //  fall back to handle equality)
+    // Find ambassador by stored contact email (case-insensitive).
+    // Email is captured at promoter add-time by the CCO/principal.
     const ambassador = await withSystemContext(
       'Promoter portal — magic link lookup',
       async (tx) => {
-        // Try email-like fields first
         return tx.ambassadorProfile.findFirst({
-          where: { handle: { equals: normalized, mode: 'insensitive' } },
+          where: { email: { equals: normalized, mode: 'insensitive' } },
           select: { id: true, tenantId: true, displayName: true },
         });
       },
