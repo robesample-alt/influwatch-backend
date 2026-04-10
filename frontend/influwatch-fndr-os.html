@@ -6543,6 +6543,8 @@ var ROLE_DISPLAY = {
 
 function switchRole(role) {
   currentRole = role;
+  // Persist so the role survives page refresh
+  try { localStorage.setItem('iw_role', role); } catch (_) {}
   applyRoleVisibility(role);
   applyTenantTypeVisibility();
 
