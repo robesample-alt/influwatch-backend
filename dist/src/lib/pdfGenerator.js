@@ -165,6 +165,13 @@ function generateEvidencePdf(input, output) {
         doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9).text('GENERATED', 50, y, { characterSpacing: 2 });
         y += 14;
         doc.fillColor('#000000').font('Helvetica').fontSize(10).text(fmtDateTime(input.generatedAt), 50, y);
+        y += 20;
+        // Regulatory context + enforcement precedent
+        doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9).text('REGULATORY BASIS', 50, y, { characterSpacing: 2 });
+        y += 14;
+        doc.fillColor('#555555').font('Helvetica').fontSize(8)
+            .text('This supervision system addresses obligations under FINRA Rules 2210/3110, SEC Marketing Rule 206(4)-1, FTC Endorsement Guides §255.5, and applicable securities regulations. Recent enforcement actions against firms with compensated promoter programs include Robinhood ($26M+, 2025), Webull ($1.6M, 2025), Moomoo ($750K, 2024), M1 Finance ($850K, 2024), and Public.com ($350K, 2025).', 50, y, { width: doc.page.width - 100, lineBreak: true });
+        y += 50;
         // Bottom seal bar
         const sealY = doc.page.height - 130;
         doc.rect(50, sealY, doc.page.width - 100, 60).strokeColor(C.amber).lineWidth(1).stroke();

@@ -88,6 +88,47 @@ const PHRASE_MAP = {
     'ground floor opportunity': { ruleCode: 'RISK-002', ruleName: 'Unbalanced Risk Disclosure', severity: client_1.Severity.HIGH },
     'huge opportunity': { ruleCode: 'RISK-002', ruleName: 'Unbalanced Risk Disclosure', severity: client_1.Severity.HIGH },
     'unique moment': { ruleCode: 'RISK-002', ruleName: 'Unbalanced Risk Disclosure', severity: client_1.Severity.HIGH },
+    // ── FINTECH-001 — Fee Misrepresentation ────────────────────
+    'commission-free': { ruleCode: 'FINTECH-001', ruleName: 'Fee Misrepresentation', severity: client_1.Severity.MEDIUM },
+    'no fees': { ruleCode: 'FINTECH-001', ruleName: 'Fee Misrepresentation', severity: client_1.Severity.MEDIUM },
+    'free trading': { ruleCode: 'FINTECH-001', ruleName: 'Fee Misrepresentation', severity: client_1.Severity.MEDIUM },
+    'zero commission': { ruleCode: 'FINTECH-001', ruleName: 'Fee Misrepresentation', severity: client_1.Severity.MEDIUM },
+    'no commissions': { ruleCode: 'FINTECH-001', ruleName: 'Fee Misrepresentation', severity: client_1.Severity.MEDIUM },
+    'trade for free': { ruleCode: 'FINTECH-001', ruleName: 'Fee Misrepresentation', severity: client_1.Severity.MEDIUM },
+    'no trading fees': { ruleCode: 'FINTECH-001', ruleName: 'Fee Misrepresentation', severity: client_1.Severity.MEDIUM },
+    // ── FINTECH-002 — Account Opening Solicitation ────────────
+    'open an account': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'sign up with my link': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'use my code': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'use my link': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'open and fund': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'get free stocks': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'free stock when you sign up': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'bonus when you fund': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'referral bonus': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'sign-up bonus': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    'deposit bonus': { ruleCode: 'FINTECH-002', ruleName: 'Account Opening Solicitation', severity: client_1.Severity.HIGH },
+    // ── FINTECH-003 — Performance Claims ──────────────────────
+    'my portfolio': { ruleCode: 'FINTECH-003', ruleName: 'Promoter Performance Claims', severity: client_1.Severity.HIGH },
+    'my returns': { ruleCode: 'FINTECH-003', ruleName: 'Promoter Performance Claims', severity: client_1.Severity.HIGH },
+    "i've been making": { ruleCode: 'FINTECH-003', ruleName: 'Promoter Performance Claims', severity: client_1.Severity.HIGH },
+    'earning every week': { ruleCode: 'FINTECH-003', ruleName: 'Promoter Performance Claims', severity: client_1.Severity.HIGH },
+    // ── FINTECH-004 — Promissory Language ─────────────────────
+    "you'll make money": { ruleCode: 'FINTECH-004', ruleName: 'Promissory Language', severity: client_1.Severity.CRITICAL },
+    'this works': { ruleCode: 'FINTECH-004', ruleName: 'Promissory Language', severity: client_1.Severity.CRITICAL },
+    'guaranteed': { ruleCode: 'FINTECH-004', ruleName: 'Promissory Language', severity: client_1.Severity.CRITICAL },
+    'never lost': { ruleCode: 'FINTECH-004', ruleName: 'Promissory Language', severity: client_1.Severity.CRITICAL },
+    'always profitable': { ruleCode: 'FINTECH-004', ruleName: 'Promissory Language', severity: client_1.Severity.CRITICAL },
+    'risk-free': { ruleCode: 'FINTECH-004', ruleName: 'Promissory Language', severity: client_1.Severity.CRITICAL },
+    'you will profit': { ruleCode: 'FINTECH-004', ruleName: 'Promissory Language', severity: client_1.Severity.CRITICAL },
+    'proven strategy': { ruleCode: 'FINTECH-004', ruleName: 'Promissory Language', severity: client_1.Severity.CRITICAL },
+    // ── FINTECH-005 — Urgency / Artificial Scarcity ───────────
+    'limited time': { ruleCode: 'FINTECH-005', ruleName: 'Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    'bonus expires': { ruleCode: 'FINTECH-005', ruleName: 'Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    'offer ends': { ruleCode: 'FINTECH-005', ruleName: 'Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    'only available until': { ruleCode: 'FINTECH-005', ruleName: 'Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    'act now': { ruleCode: 'FINTECH-005', ruleName: 'Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    "don't miss out": { ruleCode: 'FINTECH-005', ruleName: 'Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
     // ── RISK-003 — MEDIUM ─────────────────────────────────────
     'high yield': { ruleCode: 'RISK-003', ruleName: 'Performance Claims Without Required Disclosures', severity: client_1.Severity.MEDIUM },
     'above market returns': { ruleCode: 'RISK-003', ruleName: 'Performance Claims Without Required Disclosures', severity: client_1.Severity.MEDIUM },
@@ -107,9 +148,18 @@ const DISCLOSURE_PATTERNS = [
     '#ad',
     '#sponsored',
     '#paidpartner',
+    '#paid',
     'paid partnership',
     'not financial advice',
     'this is not financial advice',
+    'i was compensated',
+    'affiliate',
+    'referral fee',
+    'compensation disclosure',
+    'paid promotion',
+    'i am compensated',
+    'i receive compensation',
+    'sponsored content',
 ];
 // ── COMP-002 solicitation phrases (evaluated only when posture = CRITICAL) ──
 const COMP_002_PHRASES = [
@@ -213,18 +263,35 @@ function detectRuleHits(bodyText, compensationCtx) {
     // ── DISC-001 / DISC-002 — Disclosure absence checks ──────
     // fix 1: normalise patterns to lowercase before comparison
     const hasDisclosure = DISCLOSURE_PATTERNS.some(p => lower.includes(p.toLowerCase()));
-    // DISC-001: risky promotional content with no disclosure at all
-    // fix 2: guard against duplicates before pushing
-    const hasRiskyHit = hits.some(h => h.ruleCode.startsWith('RISK-'));
+    // DISC-001: no disclosure detected — fires when compensated promoter has
+    // risky content OR when compensation context exists and requires disclosure
+    const hasRiskyHit = hits.some(h => h.ruleCode.startsWith('RISK-') || h.ruleCode.startsWith('FINTECH-'));
+    const compRequiresDisclosure = compensationCtx && (compensationCtx.isTransactionBased || compensationCtx.isSecurityLinked);
     const alreadyDisc001 = hits.some(h => h.ruleCode === 'DISC-001');
-    if (hasRiskyHit && !hasDisclosure && !alreadyDisc001) {
+    if ((hasRiskyHit || compRequiresDisclosure) && !hasDisclosure && !alreadyDisc001) {
         hits.push({
             ruleCode: 'DISC-001',
-            ruleName: 'Missing Required Disclosure',
+            ruleName: 'No Paid Relationship Disclosure Detected',
             matchedPhrase: '[no disclosure detected]',
             severity: client_1.Severity.HIGH,
             detectionMethod: 'DISCLOSURE_CHECK',
         });
+    }
+    // DISC-002 (below-fold check): disclosure IS present but appears in the final 25% of text
+    if (hasDisclosure && lower.length > 100) {
+        const discIdx = DISCLOSURE_PATTERNS.reduce((earliest, p) => {
+            const idx = lower.indexOf(p.toLowerCase());
+            return (idx >= 0 && (earliest < 0 || idx < earliest)) ? idx : earliest;
+        }, -1);
+        if (discIdx >= 0 && discIdx > lower.length * 0.75) {
+            hits.push({
+                ruleCode: 'DISC-002',
+                ruleName: 'Disclosure Below Fold',
+                matchedPhrase: '[disclosure appears in final 25% of content]',
+                severity: client_1.Severity.MEDIUM,
+                detectionMethod: 'DISCLOSURE_CHECK',
+            });
+        }
     }
     // DISC-002: compensation language with no disclosure
     // fix 2: guard against duplicates
@@ -355,6 +422,11 @@ function getRuleMetadata() {
         { code: 'COMP-001', name: 'Transaction-Based Compensation Solicitation Risk', description: 'Flags content from promoters with transaction-based compensation on security-linked products who are pushing affiliate links.', severity: 'CRITICAL', category: 'Compensation Structure', active: true, patternCount: 0 },
         { code: 'COMP-002', name: 'Unregistered Solicitation Language', description: 'Detects explicit solicitation language from CRITICAL-posture promoters that may constitute unregistered broker-dealer activity.', severity: 'CRITICAL', category: 'Solicitation', active: true, patternCount: COMP_002_PHRASES.length },
         { code: 'COMP-003', name: 'Compensation Disclosure Insufficient', description: 'Fires when equity/carry/revenue-share promoters fail to include ownership-interest disclosure in their content.', severity: 'HIGH', category: 'Compensation Disclosure', active: true, patternCount: OWNERSHIP_DISCLOSURE_PATTERNS.length },
+        { code: 'FINTECH-001', name: 'Fee Misrepresentation', description: 'Detects unqualified fee claims ("commission-free", "no fees") that may mislead investors about actual costs.', severity: 'MEDIUM', category: 'Fintech Claims', active: true, patternCount: phraseCounts['FINTECH-001'] || 0 },
+        { code: 'FINTECH-002', name: 'Account Opening Solicitation', description: 'Flags language that actively solicits account opening or funding, especially with referral codes or incentive offers.', severity: 'HIGH', category: 'Solicitation', active: true, patternCount: phraseCounts['FINTECH-002'] || 0 },
+        { code: 'FINTECH-003', name: 'Promoter Performance Claims', description: 'Detects personal performance claims from promoters ("I made", "my returns") that may constitute misleading testimonials.', severity: 'HIGH', category: 'Performance Claims', active: true, patternCount: phraseCounts['FINTECH-003'] || 0 },
+        { code: 'FINTECH-004', name: 'Promissory Language', description: 'Flags promissory or guaranteed-outcome language that violates FINRA Rule 2210(d)(1) regardless of product type.', severity: 'CRITICAL', category: 'Promotional Claims', active: true, patternCount: phraseCounts['FINTECH-004'] || 0 },
+        { code: 'FINTECH-005', name: 'Urgency / Artificial Scarcity', description: 'Detects urgency or scarcity tactics ("limited time", "act now") designed to pressure account opening.', severity: 'MEDIUM', category: 'Pressure Tactics', active: true, patternCount: phraseCounts['FINTECH-005'] || 0 },
     ];
     return rules;
 }

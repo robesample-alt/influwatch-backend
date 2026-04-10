@@ -67,13 +67,13 @@ exports.FINDING_COPY = {
     },
     // ── DISC family — disclosure violations ──
     'DISC-001': {
-        title: 'Disclosure Issue',
-        description: 'No compensation disclosure detected in content that references a specific investment product. Compensated promoters must identify themselves as compensated.',
+        title: 'No Paid Relationship Disclosure',
+        description: 'No paid relationship disclosure detected. FTC Endorsement Guides require clear and conspicuous disclosure of material connections. FINRA Rule 2210 requires balanced communications.',
         category: 'DISCLOSURE',
     },
     'DISC-002': {
-        title: 'Disclosure Issue',
-        description: 'Paid-promotion context detected but the required compensation disclosure appears absent or inadequate under FTC and FINRA guidance.',
+        title: 'Disclosure Below Fold',
+        description: 'Disclosure language detected but appears late in content. FTC standard requires disclosure before the fold — visible without clicking "more" or scrolling.',
         category: 'DISCLOSURE',
     },
     // ── COMP family — compensation-structure risk ──
@@ -117,6 +117,32 @@ exports.FINDING_COPY = {
         title: 'Unbalanced Risk Portrayal',
         description: 'Content presents returns or outcomes without corresponding risk disclosure in a manner that may mislead a reasonable investor about the nature of the investment.',
         category: 'UNBALANCED_RISK',
+    },
+    // ── FINTECH family — fintech-specific violations ──
+    'FINTECH-001': {
+        title: 'Unqualified Fee Claims',
+        description: 'Content contains unqualified fee claims ("commission-free", "no fees") without mentioning other applicable costs such as spreads, payment for order flow, or account fees.',
+        category: 'PERFORMANCE_CLAIM',
+    },
+    'FINTECH-002': {
+        title: 'Account Opening Solicitation',
+        description: 'Content actively solicits account opening or funding with referral codes, signup bonuses, or incentive offers. For compensated promoters this may constitute broker-dealer-like activity.',
+        category: 'SOLICITATION',
+    },
+    'FINTECH-003': {
+        title: 'Personal Performance Claims',
+        description: 'Content contains personal trading or portfolio performance claims from a compensated promoter. Such claims may constitute misleading testimonials under SEC and FINRA rules.',
+        category: 'PERFORMANCE_CLAIM',
+    },
+    'FINTECH-004': {
+        title: 'Promissory Language',
+        description: 'Content contains promissory or guaranteed-outcome language that violates FINRA Rule 2210(d)(1) regardless of product type. No promoter may imply guaranteed positive investment outcomes.',
+        category: 'PERFORMANCE_CLAIM',
+    },
+    'FINTECH-005': {
+        title: 'Urgency Pressure Tactic',
+        description: 'Content uses urgency, time pressure, or artificial scarcity to induce immediate action on account opening or funding — a pattern that regulators consider a high-risk marketing tactic.',
+        category: 'URGENCY_PRESSURE',
     },
     // ── EXP family — exposure-level structural flags ──
     'EXP-014': {

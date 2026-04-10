@@ -448,6 +448,115 @@ export const SCENARIO_POOL: ContentScenario[] = [
       'Anyone can invest in this Reg CF offering. No accreditation required. Put in whatever amount feels right. I think this company has massive upside. Disclosure: paid content. Not financial advice.',
     ],
   },
+
+  // ══════════════════════════════════════════
+  // MOOMOO TEST — FINTECH scenarios
+  // ══════════════════════════════════════════
+
+  {
+    ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
+    expectedRisk: 'CRITICAL',
+    description: 'Fintech — account opening solicitation + urgency + referral', tenantType: 'FINTECH',
+    bodyVariants: [
+      'Open a Moomoo account with my link and get 5 free stocks — limited time! Use my code MOOMOO2026 before the offer ends. I have been using this platform for months and it is incredible.',
+      'Sign up with my link for Moomoo and get free stocks when you sign up! Bonus expires this Friday. Use my code MOOMOO2026. This is the best trading platform I have used. Act now before the promotion ends.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
+    expectedRisk: 'MEDIUM',
+    description: 'Fintech — commission-free claim without disclosure', tenantType: 'FINTECH',
+    bodyVariants: [
+      'Commission-free trading on Moomoo — I switched and never looked back. The interface is clean, execution is fast, and you do not pay any fees. Compared to my old broker this is a game changer.',
+      'I trade on Moomoo because there are no fees and no commissions. Free trading is real. I moved my whole portfolio over last month and the experience has been seamless. Zero commission means more money stays in my account.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
+    expectedRisk: 'HIGH',
+    description: 'Fintech — personal performance claims', tenantType: 'FINTECH',
+    bodyVariants: [
+      'I made $847 last week using Moomoo options tools. My portfolio is up 23% this quarter. DM me for my strategy. This platform gives you everything you need to start earning.',
+      'My returns this month are insane. I have been making consistent profits using Moomoo paper trading and now real money. Earning every week. This is what passive income looks like.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
+    expectedRisk: 'CLEAN',
+    description: 'Fintech — compliant balanced review', tenantType: 'FINTECH',
+    bodyVariants: [
+      'Moomoo is the best trading app I have used #ad #paid — here is my honest review. The platform has great charting tools and level 2 data. However, options trading carries significant risk and you can lose your entire investment. Past performance does not guarantee future results. I am compensated for this content.',
+      'Full review of Moomoo trading platform. #sponsored I am paid to create this content. The platform offers competitive pricing though investors should understand that all trading involves risk of loss. This is not financial advice. Results are not typical and individual outcomes will vary.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
+    expectedRisk: 'CRITICAL',
+    description: 'Fintech — promissory language + solicitation + referral', tenantType: 'FINTECH',
+    bodyVariants: [
+      'You will profit with this strategy. Use my code MOOMOO2026 and start making money today. This proven strategy works every time. Open an account now before the bonus expires.',
+      'This is a proven strategy that always works. Sign up with my link and start making money immediately. Use my code MOOMOO2026. You will profit from day one. Guaranteed results if you follow my system.',
+    ],
+  },
+
+  // ══════════════════════════════════════════
+  // ADDITIONAL CLEAN/LOW SCENARIOS — rebalance to ~65% clean
+  // ══════════════════════════════════════════
+
+  {
+    ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
+    expectedRisk: 'CLEAN',
+    description: 'Derek — compliant market commentary', tenantType: 'ALL',
+    bodyVariants: [
+      'Interesting day in the markets. Here is my take on what happened with tech earnings. No specific recommendations — just observations. #sponsored This is paid content. Not financial advice.',
+      'Weekly market recap. Some interesting moves in the index funds space this week. Past performance does not guarantee future results. All investments carry risk. I am compensated for this content.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-DEMO-06', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
+    expectedRisk: 'CLEAN',
+    description: 'Ryan — compliant platform mention', tenantType: 'ALL',
+    bodyVariants: [
+      'Just published a new article on the basics of index fund investing. Link in bio. Disclosure: I am not compensated for this post and have no financial interest in any products mentioned.',
+      'Sharing my latest blog post about emergency funds and why they matter. No financial products promoted. This is educational content only. All opinions are my own.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
+    expectedRisk: 'CLEAN',
+    description: 'Nina — compliant educational content', tenantType: 'ALL',
+    bodyVariants: [
+      'What is a 401k and why does it matter? Let me break it down simply. This is educational content — not financial advice. I am paid to create content for this platform. All investing involves risk.',
+      'Three things I wish I knew about investing before I started. This is general education only. #ad I am compensated for this content. Please consult a financial advisor before making any investment decisions.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-DEMO-05', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
+    expectedRisk: 'CLEAN',
+    description: 'Priya — compliant fund update with all disclosures', tenantType: 'BD',
+    bodyVariants: [
+      'Meridian Tech L/S Q1 update. The fund returned 4.2% in Q1 against a benchmark of 3.8%. Past performance does not guarantee future results. All investments carry risk of principal loss. I receive compensation for this content. This is not financial advice. Results are not typical.',
+      'Here is the quarterly update for Meridian Tech L/S. Performance data is audited and verified. I am compensated as a promoter for this fund. This is not financial advice and past results do not indicate future performance. All investments may lose value.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'TWITTER_X', contentType: 'THREAD',
+    expectedRisk: 'CLEAN',
+    description: 'Derek — compliant thread about diversification', tenantType: 'ALL',
+    bodyVariants: [
+      'Thread: Why diversification matters more than stock picking. 1/ Most retail investors underperform the market. 2/ Broad index funds historically deliver competitive returns. 3/ Concentration risk is real. This is educational — not financial advice. I receive no compensation for this thread.',
+      'Thread on asset allocation basics. 1/ No single asset class always wins. 2/ Rebalancing is important but often overlooked. 3/ Time in market beats timing the market. General education only. No products promoted. Not compensated.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
+    expectedRisk: 'CLEAN',
+    description: 'Fintech — compliant feature walkthrough', tenantType: 'FINTECH',
+    bodyVariants: [
+      'Walking through Moomoo charting features today. #ad I am compensated for this content. This is a platform review only — not investment advice. Trading involves risk and you may lose money. Results shown are for educational purposes only and are not typical.',
+      'Moomoo desktop app tour — showing you the tools I use for research. Paid promotion. I receive compensation from Moomoo. This is not financial advice. All trading carries risk of loss. Past performance is not indicative of future results.',
+    ],
+  },
 ];
 
 /**
