@@ -511,6 +511,66 @@ exports.SCENARIO_POOL = [
         ],
     },
     // ══════════════════════════════════════════
+    // ISSUER — Direct Reg A+ issuer scenarios
+    // ══════════════════════════════════════════
+    {
+        ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
+        expectedRisk: 'CRITICAL',
+        description: 'Issuer — testing the waters violation + offering term misrep', tenantType: 'ISSUER',
+        bodyVariants: [
+            'Get in early before this offering goes public — reserve your shares now at the lowest price before qualification. Anyone can invest. Get in for just $100.',
+            'Pre-offering access to this Reg A+ deal — invest before we launch. Open to all investors. Coming soon to investors at exclusive pricing.',
+        ],
+    },
+    {
+        ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
+        expectedRisk: 'HIGH',
+        description: 'Issuer — capability claim with disclosure', tenantType: 'ISSUER',
+        bodyVariants: [
+            "Their patented AI technology has no competition — this is a revolutionary product breakthrough. I receive a referral fee for this post #ad. Past performance does not guarantee future results.",
+            "Proprietary algorithm that's first of its kind in the market — exclusive technology with no competition. Sponsored content — I am compensated by the issuer. Not financial advice.",
+        ],
+    },
+    {
+        ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
+        expectedRisk: 'CRITICAL',
+        description: 'Issuer — fabricated traction + no disclosure', tenantType: 'ISSUER',
+        bodyVariants: [
+            'This company has 500,000 customers and is growing 40% per month — explosive growth. Use my link to invest. Market leader in their space.',
+            'Fastest growing company I have seen — million customers, record revenue, dominating the market. Industry leader. Use my link below.',
+        ],
+    },
+    {
+        ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
+        expectedRisk: 'CLEAN',
+        description: 'Issuer — compliant balanced post with full disclosure', tenantType: 'ISSUER',
+        bodyVariants: [
+            "Vertex Real Assets is a Reg A+ offering. I receive a referral fee for this post. Key risks include real estate market volatility, illiquidity, and potential loss of principal. Minimum investment $500. Visit the offering page for full details. Not financial advice. Past performance does not guarantee future results.",
+            "Sharing my honest review of this Reg A+ offering. #ad I am compensated by the issuer. Risks: early-stage company, illiquid investment, potential total loss of principal. Read the Form 1-A before investing. Not financial advice.",
+        ],
+    },
+    {
+        ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
+        expectedRisk: 'CRITICAL',
+        description: 'Issuer — pure upside framing (anti-fraud signal)', tenantType: 'ISSUER',
+        bodyVariants: [
+            'Safe investment opportunity — can only go up with real assets backing every dollar. Guaranteed growth in today market. No downside.',
+            'Sure thing investment — secure investment with no downside. Risk-free opportunity. Protected investment guaranteed by real assets. Can only go up.',
+        ],
+    },
+    // ══════════════════════════════════════════
+    // FINTECH — TikTok performance + urgency scenario
+    // ══════════════════════════════════════════
+    {
+        ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
+        expectedRisk: 'CRITICAL',
+        description: 'Fintech TikTok — POV performance + urgency + referral', tenantType: 'FINTECH',
+        bodyVariants: [
+            'POV: you started with $500 last month and now look at this 👀 use code MOOMOO2026 to open your account today — offer expires Friday 🔥',
+            'POV: $500 last month → look at my returns now 📈 sign up with my link MOOMOO2026 before the bonus expires 🔥 limited time offer',
+        ],
+    },
+    // ══════════════════════════════════════════
     // REG CF — Wefunder/Republic-style scenarios
     // ══════════════════════════════════════════
     {

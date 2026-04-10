@@ -50,6 +50,7 @@ exports.VALID_EXPOSURE_REASON_CODES = new Set([
     'EXP-014_CAMPAIGN_NOT_ACTIVATED',
     'EXP-015_UNAUTHORIZED_PROMOTER',
     'EXP-016_PORTAL_PROHIBITED_SOLICITATION',
+    'EXP-017_ANTI_FRAUD_SIGNAL',
 ]);
 // Human-readable labels for audit summaries
 const REASON_LABEL = {
@@ -69,6 +70,7 @@ const REASON_LABEL = {
     'EXP-014_CAMPAIGN_NOT_ACTIVATED': 'Content ingested for campaign not yet activated by principal',
     'EXP-015_UNAUTHORIZED_PROMOTER': 'Promoter is not on the approved roster for this campaign',
     'EXP-016_PORTAL_PROHIBITED_SOLICITATION': 'Reg CF Rule 402(a) violation — funding portal solicitation prohibited',
+    'EXP-017_ANTI_FRAUD_SIGNAL': 'Section 17(a) anti-fraud signal in issuer promotional content',
 };
 // ── Derivation ────────────────────────────────────────────────
 /**
@@ -177,6 +179,12 @@ function computeExposure(input) {
     if (input.portalProhibitedSolicitation === true) {
         reasons.push('EXP-016_PORTAL_PROHIBITED_SOLICITATION');
     }
+    // EXP-017: Section 17(a) anti-fraud signal — fires for ISSUER tenant
+    // when REGA-001 (testing the waters), REGA-002 with CRITICAL severity
+    // (capability claims), or REGA-005 (pure upside framing) is detected.
+    if (input.antiFraudSignal === true) {
+        reasons.push('EXP-017_ANTI_FRAUD_SIGNAL');
+    }
     // ── Level derivation ───────────────────────────────────────
     // A. PRINCIPAL_REQUIRED: transaction-based compensation types
     //    that inherently create broker-dealer-like liability
@@ -211,6 +219,10 @@ function computeExposure(input) {
     }
     // A5b. PRINCIPAL_REQUIRED: Reg CF portal-prohibited solicitation
     if (level !== 'PRINCIPAL_REQUIRED' && input.portalProhibitedSolicitation === true) {
+        level = 'PRINCIPAL_REQUIRED';
+    }
+    // A5c. PRINCIPAL_REQUIRED: ISSUER anti-fraud signal — Section 17(a)
+    if (level !== 'PRINCIPAL_REQUIRED' && input.antiFraudSignal === true) {
         level = 'PRINCIPAL_REQUIRED';
     }
     // A6. PRINCIPAL_REQUIRED: compensated solicitation with transaction-based
@@ -256,6 +268,25 @@ function computeExposure(input) {
     if (hasGuarantee &&
         EXPOSURE_RANK[level] < EXPOSURE_RANK['PRINCIPAL_EXCEPTION']) {
         level = 'PRINCIPAL_EXCEPTION';
+    }
+    // ── ISSUER threshold adjustment ─────────────────────────────
+    // Direct issuers have a single designated compliance contact, not a
+    // Series 24 principal with bandwidth for hundreds of records/day.
+    // Downgrade PRINCIPAL_REQUIRED to REVIEWER_PLUS_SUPERVISOR unless a
+    // clear anti-fraud signal is present: EXP-017, guarantee/fraud,
+    // missing disclosure on HIGH+ content, or 3+ HIGH severity findings.
+    if (input.tenantType === 'ISSUER' && level === 'PRINCIPAL_REQUIRED') {
+        const hasAntiFraudSignal = input.antiFraudSignal === true;
+        const hasGuaranteeFraud = hasGuarantee;
+        const missingDiscWithHigh = hasDisclosure && (sev === 'CRITICAL' || sev === 'HIGH');
+        const highHitCount = input.hitRuleCodes.filter(c => {
+            // Approximate HIGH+ hit count from rule codes that are typically HIGH/CRITICAL
+            return c.startsWith('RISK-') || c.startsWith('REGA-') || c.startsWith('FINTECH-004') || c.startsWith('LLM-');
+        }).length;
+        const multipleHighHits = highHitCount >= 3;
+        if (!hasAntiFraudSignal && !hasGuaranteeFraud && !missingDiscWithHigh && !multipleHighHits) {
+            level = 'REVIEWER_PLUS_SUPERVISOR';
+        }
     }
     // Boost: undisclosed compensation on a compensated promoter with
     // security-linked product warrants at least supervisor review

@@ -243,8 +243,8 @@ export function generateEvidencePdf(input: EvidencePackageInput, output: Writabl
     doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9).text('REGULATORY BASIS', 50, y, { characterSpacing: 2 });
     y += 14;
     doc.fillColor('#555555').font('Helvetica').fontSize(8)
-       .text('This supervision system addresses obligations under FINRA Rules 2210/3110, SEC Marketing Rule 206(4)-1, SEC Regulation Crowdfunding Rules 204 and 402(a), FTC Endorsement Guides §255.5, and applicable securities regulations. Recent enforcement actions against firms with compensated promoter programs include Robinhood ($26M+, 2025), Webull ($1.6M, 2025), Moomoo ($750K, 2024), M1 Finance ($850K, 2024), Public.com ($350K, 2025), Wefunder ($1.4M, August 2025 — improper promotional activities), and Republic ($950K, October 2025 — inadequate supervision of offerings).', 50, y, { width: doc.page.width - 100, lineBreak: true });
-    y += 60;
+       .text('This supervision system addresses obligations under FINRA Rules 2210/3110, SEC Marketing Rule 206(4)-1, SEC Regulation A Rule 255, Securities Act Section 17(a), SEC Regulation Crowdfunding Rules 204 and 402(a), FTC Endorsement Guides §255.5, and applicable securities regulations. Recent enforcement actions against firms with compensated promoter programs include Robinhood ($26M+, 2025), Webull ($1.6M, 2025), Moomoo ($750K, 2024), M1 Finance ($850K, 2024), Public.com ($350K, 2025), Wefunder ($1.4M, August 2025), Republic ($950K, October 2025), Unicoin Inc (SEC charged May 2025 — false statements in Reg A offering), Nate Inc (SEC charged April 2026 — $42M raised through fraudulent stock sales and misleading AI claims), and SEC microcap sweep (2025 — 10 firms fined for Reg A+ violations).', 50, y, { width: doc.page.width - 100, lineBreak: true });
+    y += 70;
 
     // Bottom seal bar
     const sealY = doc.page.height - 130;

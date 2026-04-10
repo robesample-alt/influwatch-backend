@@ -199,6 +199,38 @@ export const FINDING_COPY: Readonly<Record<string, FindingCopy>> = {
     category:    'PERFORMANCE_CLAIM',
   },
 
+  // ── REGA family — Reg A+ direct issuer violations ──
+  'REGA-001': {
+    title:       'Testing the Waters Violation',
+    description: 'Testing-the-waters violation detected. Reg A Rule 255 prohibits solicitation of investor interest before an offering is qualified with the SEC. This content may constitute prohibited pre-qualification solicitation.',
+    category:    'SOLICITATION',
+  },
+  'REGA-002': {
+    title:       'Misleading Capability Claim',
+    description: 'Potentially misleading capability claim detected. Unverifiable technology or product claims in promotional content create Securities Act Section 17(a) exposure. Verify against current offering documents before approving.',
+    category:    'PERFORMANCE_CLAIM',
+  },
+  'REGA-003': {
+    title:       'Inflated Traction Metric',
+    description: 'Potentially inflated traction metric detected. Unverifiable business performance claims create Section 17(a) exposure. Verify claimed figures against current offering disclosure before approving.',
+    category:    'PERFORMANCE_CLAIM',
+  },
+  'REGA-004': {
+    title:       'Offering Term Misrepresentation',
+    description: 'Offering term representation detected. Claims about investment minimums, accreditation requirements, or offering access must match current Form 1-A terms. Verify before approving.',
+    category:    'PERFORMANCE_CLAIM',
+  },
+  'REGA-005': {
+    title:       'Pure Upside Framing Without Risk',
+    description: 'Pure upside framing without risk disclosure. Section 17(a) prohibits misleading omission of material risk. Promotional content presenting only upside without material risk disclosure is presumptively misleading.',
+    category:    'UNBALANCED_RISK',
+  },
+  'REGA-006': {
+    title:       'Credibility Puffery',
+    description: 'Unverifiable credibility claim detected. Founder or team credential claims that cannot be verified create potential Section 17(a) exposure if false. Flag for verification against offering documents.',
+    category:    'PERFORMANCE_CLAIM',
+  },
+
   // ── EXP family — exposure-level structural flags ──
   'EXP-014': {
     title:       'Campaign Not Activated',
@@ -214,6 +246,11 @@ export const FINDING_COPY: Readonly<Record<string, FindingCopy>> = {
     title:       'Portal-Prohibited Solicitation',
     description: 'Portal-prohibited solicitation — Reg CF Rule 402(a) violation. Funding portals and their associated promoters are strictly prohibited from soliciting investment purchases.',
     category:    'SOLICITATION',
+  },
+  'EXP-017': {
+    title:       'Anti-Fraud Signal',
+    description: 'Anti-fraud signal detected in issuer promotional content. Securities Act Section 17(a) prohibits false or misleading statements in connection with a securities offering. This content contains language patterns associated with SEC enforcement actions against Reg A issuers including Unicoin (May 2025) and Nate Inc (April 2026).',
+    category:    'PERFORMANCE_CLAIM',
   },
 };
 

@@ -108,6 +108,19 @@ function buildSystemPrompt(postureDescription: string, tenantType?: string): str
     '- Does it create artificial urgency about campaign closing without factual basis?',
   ].join('\n') : '';
 
+  const issuerContext = tenantType === 'ISSUER' ? [
+    '',
+    'IMPORTANT — Direct Issuer context: This content is from a promoter for a direct Reg A+ issuer (no BD intermediary).',
+    'Primary regulatory authority: Securities Act Section 17(a) and Reg A Rule 255.',
+    'Evaluate additionally:',
+    '- Does the content make capability claims about the issuer technology, product, or business that appear unverifiable or potentially false?',
+    '- Does the content make traction or performance claims (customer counts, revenue, growth rates) without qualification?',
+    '- Does the content omit material risks while presenting purely positive framing?',
+    '- Does the content contain language that could constitute solicitation before an offering is qualified — testing-the-waters violation under Reg A Rule 255?',
+    '- Does the content misrepresent investment minimums, accreditation requirements, or offering terms?',
+    '- Is the compensation relationship between the promoter and issuer disclosed?',
+  ].join('\n') : '';
+
   return [
     'You are a FINRA compliance analyst reviewing content from a compensated external promoter.',
     `The promoter\'s compensation structure is: ${postureDescription}`,
@@ -135,7 +148,7 @@ function buildSystemPrompt(postureDescription: string, tenantType?: string): str
     '- The matchedPhrase must be a verbatim substring of the content — do not paraphrase.',
     '- If the content does not reference a specific investment product or financial service, return an empty array.',
     '- An absent compensation disclosure is itself an LLM-002 finding, even when the content seems benign, if the compensation posture above indicates disclosure is required.',
-  ].join('\n') + regCfContext;
+  ].join('\n') + regCfContext + issuerContext;
 }
 
 function buildUserContent(bodyText: string, transcriptText?: string | null): string {

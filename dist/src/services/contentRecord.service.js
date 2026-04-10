@@ -272,8 +272,24 @@ async function createContentRecord(tenantId, input) {
             effectiveTxnClass = 'POTENTIALLY_TRANSACTIONAL';
             effectiveIsTxn = false;
         }
+        // ISSUER adjustment: direct issuers paying flat fees do not create the
+        // unregistered broker-dealer exposure that BD transaction-based
+        // arrangements create. Force NON_TRANSACTIONAL for flat fee structures.
+        if (tenantType === 'ISSUER' && compensationStructure?.compensationType) {
+            const flatTypes = ['FLAT_FEE_PER_POST', 'FLAT_FEE_PER_CAMPAIGN', 'CONTENT_PRODUCTION_FEE', 'MONTHLY_RETAINER'];
+            if (flatTypes.includes(compensationStructure.compensationType)) {
+                effectiveTxnClass = 'NON_TRANSACTIONAL';
+                effectiveIsTxn = false;
+            }
+        }
         // Check for portal-prohibited solicitation (EXP-016)
         const hasPortalSolicitation = tenantType === 'REG_CF' && hits.some(h => h.ruleCode === 'REGCF-001');
+        // Check for ISSUER anti-fraud signal (EXP-017)
+        // Fires when REGA-001 (testing the waters), REGA-002 with CRITICAL severity,
+        // or REGA-005 (pure upside framing) is detected
+        const hasAntiFraudSignal = tenantType === 'ISSUER' && hits.some(h => h.ruleCode === 'REGA-001' ||
+            (h.ruleCode === 'REGA-002' && h.severity === 'CRITICAL') ||
+            h.ruleCode === 'REGA-005');
         // ── Exposure classification (Phase 2 + Phase 3 routing + Phase 4 drift) ─
         const exposure = (0, exposureEngine_1.computeExposure)({
             compensationType: compensationStructure?.compensationType ?? null,
@@ -288,6 +304,8 @@ async function createContentRecord(tenantId, input) {
             campaignNotActivated,
             unauthorizedPromoter,
             portalProhibitedSolicitation: hasPortalSolicitation,
+            antiFraudSignal: hasAntiFraudSignal,
+            tenantType,
         });
         const record = await tx.contentRecord.create({
             data: {

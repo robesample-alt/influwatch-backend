@@ -191,6 +191,70 @@ const PHRASE_MAP: Record<string, PhraseDef> = {
   'campaign ending soon':  { ruleCode: 'REGCF-004', ruleName: 'Campaign Urgency / Artificial Scarcity', severity: Severity.MEDIUM },
   'invest before it closes': { ruleCode: 'REGCF-004', ruleName: 'Campaign Urgency / Artificial Scarcity', severity: Severity.MEDIUM },
 
+  // ── REGA-001 — Testing the Waters Violation ───────────────
+  'get in early':           { ruleCode: 'REGA-001', ruleName: 'Testing the Waters Violation', severity: Severity.CRITICAL },
+  'pre-qualification investment': { ruleCode: 'REGA-001', ruleName: 'Testing the Waters Violation', severity: Severity.CRITICAL },
+  'coming soon to investors': { ruleCode: 'REGA-001', ruleName: 'Testing the Waters Violation', severity: Severity.CRITICAL },
+  'invest before we launch': { ruleCode: 'REGA-001', ruleName: 'Testing the Waters Violation', severity: Severity.CRITICAL },
+  'early investor opportunity': { ruleCode: 'REGA-001', ruleName: 'Testing the Waters Violation', severity: Severity.CRITICAL },
+  'reserve your shares':    { ruleCode: 'REGA-001', ruleName: 'Testing the Waters Violation', severity: Severity.CRITICAL },
+  'pre-offering access':    { ruleCode: 'REGA-001', ruleName: 'Testing the Waters Violation', severity: Severity.CRITICAL },
+  'before we go public':    { ruleCode: 'REGA-001', ruleName: 'Testing the Waters Violation', severity: Severity.CRITICAL },
+  'invest before qualification': { ruleCode: 'REGA-001', ruleName: 'Testing the Waters Violation', severity: Severity.CRITICAL },
+
+  // ── REGA-002 — Misleading Capability Claims ───────────────
+  'fda approved':           { ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+  'first of its kind':      { ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+  'proprietary algorithm':  { ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+  'exclusive technology':   { ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+  'no competition':         { ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+  'monopoly position':      { ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+  'revolutionary product':  { ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+  'breakthrough technology':{ ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+  "world's first":          { ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+  'proprietary ai':         { ruleCode: 'REGA-002', ruleName: 'Misleading Capability Claims', severity: Severity.HIGH },
+
+  // ── REGA-003 — Fabricated/Inflated Traction Metrics ───────
+  'million customers':      { ruleCode: 'REGA-003', ruleName: 'Fabricated Traction Metrics', severity: Severity.HIGH },
+  'million in revenue':     { ruleCode: 'REGA-003', ruleName: 'Fabricated Traction Metrics', severity: Severity.HIGH },
+  'profitable since':       { ruleCode: 'REGA-003', ruleName: 'Fabricated Traction Metrics', severity: Severity.HIGH },
+  'fastest growing':        { ruleCode: 'REGA-003', ruleName: 'Fabricated Traction Metrics', severity: Severity.HIGH },
+  'market leader':          { ruleCode: 'REGA-003', ruleName: 'Fabricated Traction Metrics', severity: Severity.HIGH },
+  'industry leader':        { ruleCode: 'REGA-003', ruleName: 'Fabricated Traction Metrics', severity: Severity.HIGH },
+  'dominating the market':  { ruleCode: 'REGA-003', ruleName: 'Fabricated Traction Metrics', severity: Severity.HIGH },
+  'record revenue':         { ruleCode: 'REGA-003', ruleName: 'Fabricated Traction Metrics', severity: Severity.HIGH },
+  'explosive growth':       { ruleCode: 'REGA-003', ruleName: 'Fabricated Traction Metrics', severity: Severity.HIGH },
+
+  // ── REGA-004 — Offering Term Misrepresentation ────────────
+  'no accreditation required': { ruleCode: 'REGA-004', ruleName: 'Offering Term Misrepresentation', severity: Severity.HIGH },
+  'anyone can invest':      { ruleCode: 'REGA-004', ruleName: 'Offering Term Misrepresentation', severity: Severity.HIGH },
+  'open to all investors':  { ruleCode: 'REGA-004', ruleName: 'Offering Term Misrepresentation', severity: Severity.HIGH },
+  'no limits on investment':{ ruleCode: 'REGA-004', ruleName: 'Offering Term Misrepresentation', severity: Severity.HIGH },
+  'get in for just':        { ruleCode: 'REGA-004', ruleName: 'Offering Term Misrepresentation', severity: Severity.HIGH },
+  'minimum investment only':{ ruleCode: 'REGA-004', ruleName: 'Offering Term Misrepresentation', severity: Severity.HIGH },
+
+  // ── REGA-005 — Pure Upside Framing Without Risk ───────────
+  'can only go up':         { ruleCode: 'REGA-005', ruleName: 'Pure Upside Framing Without Risk', severity: Severity.CRITICAL },
+  'guaranteed growth':      { ruleCode: 'REGA-005', ruleName: 'Pure Upside Framing Without Risk', severity: Severity.CRITICAL },
+  'safe investment':        { ruleCode: 'REGA-005', ruleName: 'Pure Upside Framing Without Risk', severity: Severity.CRITICAL },
+  'no downside':            { ruleCode: 'REGA-005', ruleName: 'Pure Upside Framing Without Risk', severity: Severity.CRITICAL },
+  'risk-free opportunity':  { ruleCode: 'REGA-005', ruleName: 'Pure Upside Framing Without Risk', severity: Severity.CRITICAL },
+  'secure investment':      { ruleCode: 'REGA-005', ruleName: 'Pure Upside Framing Without Risk', severity: Severity.CRITICAL },
+  'protected investment':   { ruleCode: 'REGA-005', ruleName: 'Pure Upside Framing Without Risk', severity: Severity.CRITICAL },
+  'sure thing':             { ruleCode: 'REGA-005', ruleName: 'Pure Upside Framing Without Risk', severity: Severity.CRITICAL },
+
+  // ── REGA-006 — Credibility Puffery Without Basis ──────────
+  'former google':          { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+  'former goldman':         { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+  'ex-microsoft':           { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+  'harvard graduate':       { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+  'mit team':               { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+  'world class team':       { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+  'proven founders':        { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+  'serial entrepreneurs':   { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+  'backed by top investors':{ ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+  'ivy league':             { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
+
   // ── REGCF-005 — Misleading Issuer Claims ──────────────────
   'proprietary technology': { ruleCode: 'REGCF-005', ruleName: 'Misleading Issuer Claims', severity: Severity.HIGH },
   'patented technology':   { ruleCode: 'REGCF-005', ruleName: 'Misleading Issuer Claims', severity: Severity.HIGH },
@@ -567,6 +631,12 @@ export function getRuleMetadata(): RuleMetadata[] {
     { code: 'REGCF-003', name: 'Investment Limit Misrepresentation', description: 'Detects language suggesting no investment limits — Reg CF imposes strict annual limits on non-accredited investors.', severity: 'CRITICAL', category: 'Promotional Claims', active: true, patternCount: phraseCounts['REGCF-003'] || 0 },
     { code: 'REGCF-004', name: 'Campaign Urgency / Artificial Scarcity', description: 'Detects urgency language about campaign closing or funding deadlines that must be accurate and not create artificial pressure.', severity: 'MEDIUM', category: 'Pressure Tactics', active: true, patternCount: phraseCounts['REGCF-004'] || 0 },
     { code: 'REGCF-005', name: 'Misleading Issuer Claims', description: 'Detects false or exaggerated technology and business claims in Reg CF promotional content — targeted by SEC enforcement.', severity: 'HIGH', category: 'Promotional Claims', active: true, patternCount: phraseCounts['REGCF-005'] || 0 },
+    { code: 'REGA-001', name: 'Testing the Waters Violation', description: 'Detects pre-qualification solicitation language prohibited under Reg A Rule 255 before an offering is qualified with the SEC.', severity: 'CRITICAL', category: 'Solicitation', active: true, patternCount: phraseCounts['REGA-001'] || 0 },
+    { code: 'REGA-002', name: 'Misleading Capability Claims', description: 'Detects unverifiable technology or product claims in Reg A promotional content — Section 17(a) anti-fraud exposure.', severity: 'HIGH', category: 'Promotional Claims', active: true, patternCount: phraseCounts['REGA-002'] || 0 },
+    { code: 'REGA-003', name: 'Fabricated Traction Metrics', description: 'Detects unverifiable business performance claims that create Section 17(a) anti-fraud exposure.', severity: 'HIGH', category: 'Performance Claims', active: true, patternCount: phraseCounts['REGA-003'] || 0 },
+    { code: 'REGA-004', name: 'Offering Term Misrepresentation', description: 'Detects claims about investment minimums, accreditation, or offering access that must match Form 1-A terms.', severity: 'HIGH', category: 'Promotional Claims', active: true, patternCount: phraseCounts['REGA-004'] || 0 },
+    { code: 'REGA-005', name: 'Pure Upside Framing Without Risk', description: 'Detects promotional content presenting only upside without material risk disclosure — Section 17(a) misleading omission.', severity: 'CRITICAL', category: 'Risk Disclosure', active: true, patternCount: phraseCounts['REGA-005'] || 0 },
+    { code: 'REGA-006', name: 'Credibility Puffery', description: 'Detects unverifiable founder or team credential claims that flag for verification against offering documents.', severity: 'MEDIUM', category: 'Promotional Claims', active: true, patternCount: phraseCounts['REGA-006'] || 0 },
   ];
 
   return rules;
