@@ -172,6 +172,33 @@ export const FINDING_COPY: Readonly<Record<string, FindingCopy>> = {
     category:    'URGENCY_PRESSURE',
   },
 
+  // ── REGCF family — Reg CF specific violations ──
+  'REGCF-001': {
+    title:       'Portal-Prohibited Solicitation',
+    description: 'Portal-prohibited solicitation detected. Reg CF Rule 402(a) strictly prohibits funding portals and their promoters from soliciting investment purchases. This language crosses from promotion into solicitation.',
+    category:    'SOLICITATION',
+  },
+  'REGCF-002': {
+    title:       'Equity Investment Solicitation',
+    description: 'Equity investment solicitation detected. Content is actively soliciting investment in a Reg CF offering. Requires disclosure of compensation arrangement and principal review.',
+    category:    'SOLICITATION',
+  },
+  'REGCF-003': {
+    title:       'Investment Limit Misrepresentation',
+    description: 'Investment limit misrepresentation risk. Reg CF imposes strict annual investment limits on non-accredited investors. Content suggesting unlimited investment may violate offering terms.',
+    category:    'PERFORMANCE_CLAIM',
+  },
+  'REGCF-004': {
+    title:       'Campaign Urgency Tactic',
+    description: 'Campaign urgency language detected. Claims about campaign status, funding levels, or closing deadlines must be accurate and not create artificial pressure.',
+    category:    'URGENCY_PRESSURE',
+  },
+  'REGCF-005': {
+    title:       'Misleading Issuer Claims',
+    description: 'Misleading issuer capability claims detected. SEC enforcement has specifically targeted false or exaggerated technology and business claims in Reg CF promotional content.',
+    category:    'PERFORMANCE_CLAIM',
+  },
+
   // ── EXP family — exposure-level structural flags ──
   'EXP-014': {
     title:       'Campaign Not Activated',
@@ -182,6 +209,11 @@ export const FINDING_COPY: Readonly<Record<string, FindingCopy>> = {
     title:       'Unauthorized Campaign Promoter',
     description: 'Promoter is not on the approved roster for this campaign. Content from unapproved promoters requires mandatory principal review.',
     category:    'COMPENSATION_STRUCTURE',
+  },
+  'EXP-016': {
+    title:       'Portal-Prohibited Solicitation',
+    description: 'Portal-prohibited solicitation — Reg CF Rule 402(a) violation. Funding portals and their associated promoters are strictly prohibited from soliciting investment purchases.',
+    category:    'SOLICITATION',
   },
 };
 

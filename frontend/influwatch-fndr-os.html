@@ -5912,6 +5912,12 @@ const FINDING_COPY = {
   'FINTECH-003': { category: 'PERFORMANCE_CLAIM',   title: 'Personal Performance Claims',                    description: 'Content contains personal trading or portfolio performance claims from a compensated promoter.' },
   'FINTECH-004': { category: 'PERFORMANCE_CLAIM',   title: 'Promissory Language',                             description: 'Content contains promissory or guaranteed-outcome language that violates FINRA Rule 2210(d)(1).' },
   'FINTECH-005': { category: 'URGENCY_PRESSURE',    title: 'Urgency Pressure Tactic',                        description: 'Content uses urgency or artificial scarcity to induce immediate action on account opening.' },
+  'REGCF-001': { category: 'SOLICITATION',          title: 'Portal-Prohibited Solicitation',                 description: 'Portal-prohibited solicitation detected. Reg CF Rule 402(a) prohibits funding portals from soliciting purchases.' },
+  'REGCF-002': { category: 'SOLICITATION',          title: 'Equity Investment Solicitation',                 description: 'Equity investment solicitation detected. Requires disclosure and principal review.' },
+  'REGCF-003': { category: 'PERFORMANCE_CLAIM',     title: 'Investment Limit Misrepresentation',             description: 'Reg CF imposes strict annual investment limits on non-accredited investors.' },
+  'REGCF-004': { category: 'URGENCY_PRESSURE',      title: 'Campaign Urgency Tactic',                        description: 'Campaign urgency language must be accurate and not create artificial pressure.' },
+  'REGCF-005': { category: 'PERFORMANCE_CLAIM',     title: 'Misleading Issuer Claims',                       description: 'Misleading issuer capability claims — targeted by SEC enforcement.' },
+  'EXP-016':   { category: 'SOLICITATION',          title: 'Portal-Prohibited Solicitation',                 description: 'Reg CF Rule 402(a) violation — funding portals are prohibited from soliciting purchases.' },
   'COMP-001': { category: 'COMPENSATION_STRUCTURE', title: 'Transaction-Based Compensation Risk',            description: 'Promoter receives transaction-based compensation on a security-linked product, which creates elevated supervisory obligations regardless of content.' },
   'COMP-002': { category: 'SOLICITATION',           title: 'Solicitation Concern',                           description: 'Content directs the audience toward an investment transaction. For a transaction-compensated promoter of a security, this may constitute unregistered broker-dealer activity.' },
   'COMP-003': { category: 'COMPENSATION_DISCLOSURE',title: 'Compensation Disclosure Insufficient',           description: 'Revenue-share or equity-linked compensation arrangement detected without the ownership-interest disclosure that compensation structure requires.' },
@@ -6286,6 +6292,7 @@ var SUPERVISORY_CITATIONS = {
     { value: 'OTHER',                 label: 'Other \u2014 specify below' },
   ],
   REG_CF: [
+    { value: 'REGCF_RULE402_SOLICITATION', label: 'Reg CF Rule 402(a) \u2014 Prohibited solicitation by funding portal intermediary' },
     { value: 'REGCF_RULE204_COMM',    label: 'Reg CF Rule 204 \u2014 Promotional communication requirements' },
     { value: 'FINRA_3110_ONGOING',    label: 'FINRA Rule 3110 \u2014 Ongoing supervision' },
     { value: 'FINRA_2210B_PRINCIPAL', label: 'FINRA Rule 2210(b) \u2014 Principal review' },
@@ -6316,7 +6323,7 @@ var SUPERVISORY_CITATIONS = {
 var CITATION_AUTO_SELECT = {
   BD:      { PRINCIPAL_REQUIRED: 'FINRA_2210B_PRINCIPAL', PRINCIPAL_EXCEPTION: 'FINRA_3110_ONGOING', REVIEWER_PLUS_SUPERVISOR: 'FINRA_3110_ONGOING', REVIEWER: 'FINRA_3110_ONGOING', NONE: 'FINRA_4511_RECORDS' },
   ISSUER:  { PRINCIPAL_REQUIRED: 'REGA_RULE255_COMM',     PRINCIPAL_EXCEPTION: 'REGA_RULE255_COMM',  REVIEWER_PLUS_SUPERVISOR: 'SEC_17A_ANTIFRAUD',  REVIEWER: 'SEC_17A_ANTIFRAUD',  NONE: 'REGA_RULE255_COMM' },
-  REG_CF:  { PRINCIPAL_REQUIRED: 'FINRA_2210B_PRINCIPAL', PRINCIPAL_EXCEPTION: 'FINRA_3110_ONGOING', REVIEWER_PLUS_SUPERVISOR: 'REGCF_RULE204_COMM', REVIEWER: 'REGCF_RULE204_COMM', NONE: 'REGCF_RULE204_COMM' },
+  REG_CF:  { PRINCIPAL_REQUIRED: 'REGCF_RULE402_SOLICITATION', PRINCIPAL_EXCEPTION: 'REGCF_RULE204_COMM', REVIEWER_PLUS_SUPERVISOR: 'REGCF_RULE204_COMM', REVIEWER: 'REGCF_RULE204_COMM', NONE: 'REGCF_RULE204_COMM' },
   FINTECH: { PRINCIPAL_REQUIRED: 'FINRA_2210B_PRINCIPAL', PRINCIPAL_EXCEPTION: 'FINRA_3110_ONGOING', REVIEWER_PLUS_SUPERVISOR: 'FINRA_3110_ONGOING', REVIEWER: 'FINRA_3110_ONGOING', NONE: 'FINRA_3110_ONGOING' },
   RIA:     { PRINCIPAL_REQUIRED: 'SEC_2064_7_CCO',        PRINCIPAL_EXCEPTION: 'SEC_2064_7_CCO',     REVIEWER_PLUS_SUPERVISOR: 'SEC_2064_1_MARKETING', REVIEWER: 'SEC_2064_1_MARKETING', NONE: 'SEC_2064_7_CCO' },
 };

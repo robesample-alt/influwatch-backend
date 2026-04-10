@@ -196,6 +196,10 @@ export async function createContentRecord(
       };
     }
 
+    // ── Tenant type (needed for LLM context + Reg CF adjustments) ──────────
+    const tenant = await tx.tenant.findFirst({ where: { id: tenantId }, select: { tenantType: true } });
+    const tenantType = tenant?.tenantType ?? 'BD';
+
     // ── Phrase-based detection (fast, deterministic) ─────────────────────────
     const phraseHits = detectRuleHits(bodyText, compensationCtx);
 
@@ -218,6 +222,7 @@ export async function createContentRecord(
         compensationForm:   compensationStructure.compensationForm,
         isTransactionBased: compensationStructure.isTransactionBased,
         isSecurityLinked:   compensationStructure.isSecurityLinked,
+        tenantType,
       });
     }
 
@@ -310,11 +315,23 @@ export async function createContentRecord(
       }
     }
 
+    // REG_CF adjustment: PER_LEAD_CONVERTED_TO_INVESTOR is POTENTIALLY_TRANSACTIONAL
+    // in Reg CF context (portal is the registered intermediary, not the promoter)
+    let effectiveTxnClass = compensationStructure?.transactionalityClass ?? null;
+    let effectiveIsTxn = compensationStructure?.isTransactionBased ?? false;
+    if (tenantType === 'REG_CF' && compensationStructure?.compensationType === 'PER_LEAD_CONVERTED_TO_INVESTOR') {
+      effectiveTxnClass = 'POTENTIALLY_TRANSACTIONAL';
+      effectiveIsTxn = false;
+    }
+
+    // Check for portal-prohibited solicitation (EXP-016)
+    const hasPortalSolicitation = tenantType === 'REG_CF' && hits.some(h => h.ruleCode === 'REGCF-001');
+
     // ── Exposure classification (Phase 2 + Phase 3 routing + Phase 4 drift) ─
     const exposure = computeExposure({
       compensationType:                compensationStructure?.compensationType ?? null,
-      transactionalityClass:           compensationStructure?.transactionalityClass ?? null,
-      isTransactionBased:              compensationStructure?.isTransactionBased ?? false,
+      transactionalityClass:           effectiveTxnClass,
+      isTransactionBased:              effectiveIsTxn,
       isSecurityLinked:                compensationStructure?.isSecurityLinked ?? false,
       severity,
       hitRuleCodes:                    hits.map(h => h.ruleCode),
@@ -323,6 +340,7 @@ export async function createContentRecord(
       hasReferralCode,
       campaignNotActivated,
       unauthorizedPromoter,
+      portalProhibitedSolicitation: hasPortalSolicitation,
     });
 
     const record = await tx.contentRecord.create({

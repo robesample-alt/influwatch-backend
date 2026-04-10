@@ -61,7 +61,8 @@ export type ExposureReasonCode =
   | 'EXP-012_MANUAL_POLICY_TRIGGER'
   | 'EXP-013_COMPENSATED_SOLICITATION'
   | 'EXP-014_CAMPAIGN_NOT_ACTIVATED'
-  | 'EXP-015_UNAUTHORIZED_PROMOTER';
+  | 'EXP-015_UNAUTHORIZED_PROMOTER'
+  | 'EXP-016_PORTAL_PROHIBITED_SOLICITATION';
 
 export const VALID_EXPOSURE_REASON_CODES: ReadonlySet<string> = new Set<ExposureReasonCode>([
   'EXP-001_TRANSACTION_BASED_COMP',
@@ -79,6 +80,7 @@ export const VALID_EXPOSURE_REASON_CODES: ReadonlySet<string> = new Set<Exposure
   'EXP-013_COMPENSATED_SOLICITATION',
   'EXP-014_CAMPAIGN_NOT_ACTIVATED',
   'EXP-015_UNAUTHORIZED_PROMOTER',
+  'EXP-016_PORTAL_PROHIBITED_SOLICITATION',
 ]);
 
 // Human-readable labels for audit summaries
@@ -98,6 +100,7 @@ const REASON_LABEL: Record<ExposureReasonCode, string> = {
   'EXP-013_COMPENSATED_SOLICITATION':'Solicitation detected with active affiliate link or referral code',
   'EXP-014_CAMPAIGN_NOT_ACTIVATED':'Content ingested for campaign not yet activated by principal',
   'EXP-015_UNAUTHORIZED_PROMOTER':'Promoter is not on the approved roster for this campaign',
+  'EXP-016_PORTAL_PROHIBITED_SOLICITATION':'Reg CF Rule 402(a) violation — funding portal solicitation prohibited',
 };
 
 // ── Input / Output ────────────────────────────────────────────
@@ -127,6 +130,9 @@ export interface ExposureInput {
 
   // Campaign promoter roster check
   unauthorizedPromoter?: boolean;
+
+  // Reg CF portal-prohibited solicitation
+  portalProhibitedSolicitation?: boolean;
 
   // Future expansion inputs — currently optional, left as TODO stubs
   promoterPriorViolationCount?: number | null;   // TODO: query promoter history
@@ -262,6 +268,13 @@ export function computeExposure(input: ExposureInput): ExposureOutput {
     reasons.push('EXP-015_UNAUTHORIZED_PROMOTER');
   }
 
+  // EXP-016: Portal-prohibited solicitation — Reg CF Rule 402(a)
+  // funding portals and their associated promoters are prohibited
+  // from soliciting investment purchases.
+  if (input.portalProhibitedSolicitation === true) {
+    reasons.push('EXP-016_PORTAL_PROHIBITED_SOLICITATION');
+  }
+
   // ── Level derivation ───────────────────────────────────────
 
   // A. PRINCIPAL_REQUIRED: transaction-based compensation types
@@ -299,6 +312,11 @@ export function computeExposure(input: ExposureInput): ExposureOutput {
 
   // A5. PRINCIPAL_REQUIRED: unauthorized promoter — not on campaign roster
   if (level !== 'PRINCIPAL_REQUIRED' && input.unauthorizedPromoter === true) {
+    level = 'PRINCIPAL_REQUIRED';
+  }
+
+  // A5b. PRINCIPAL_REQUIRED: Reg CF portal-prohibited solicitation
+  if (level !== 'PRINCIPAL_REQUIRED' && input.portalProhibitedSolicitation === true) {
     level = 'PRINCIPAL_REQUIRED';
   }
 

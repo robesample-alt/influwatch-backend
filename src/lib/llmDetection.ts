@@ -76,6 +76,7 @@ export interface LlmDetectionInput {
   compensationForm:   string;
   isTransactionBased: boolean;
   isSecurityLinked:   boolean;
+  tenantType?:        string;
 }
 
 export interface LlmFinding {
@@ -96,10 +97,21 @@ export interface LlmDetectionResult {
 
 // ── Prompt construction ───────────────────────────────────────
 
-function buildSystemPrompt(postureDescription: string): string {
+function buildSystemPrompt(postureDescription: string, tenantType?: string): string {
+  const regCfContext = tenantType === 'REG_CF' ? [
+    '',
+    'IMPORTANT — Reg CF context: This content is from a promoter associated with a funding portal intermediary.',
+    'Evaluate additionally:',
+    '- Does this content constitute portal-prohibited solicitation under Reg CF Rule 402(a)?',
+    '- Does it misrepresent investment limits for non-accredited investors?',
+    '- Does it make misleading claims about issuer technology or business capabilities?',
+    '- Does it create artificial urgency about campaign closing without factual basis?',
+  ].join('\n') : '';
+
   return [
     'You are a FINRA compliance analyst reviewing content from a compensated external promoter.',
     `The promoter\'s compensation structure is: ${postureDescription}`,
+    tenantType ? `Tenant regulatory context: ${tenantType}` : '',
     '',
     'Review the following content and identify any of the following concerns:',
     '(a) Solicitation language — actively directing someone toward a specific investment transaction or account opening/funding',
@@ -123,7 +135,7 @@ function buildSystemPrompt(postureDescription: string): string {
     '- The matchedPhrase must be a verbatim substring of the content — do not paraphrase.',
     '- If the content does not reference a specific investment product or financial service, return an empty array.',
     '- An absent compensation disclosure is itself an LLM-002 finding, even when the content seems benign, if the compensation posture above indicates disclosure is required.',
-  ].join('\n');
+  ].join('\n') + regCfContext;
 }
 
 function buildUserContent(bodyText: string, transcriptText?: string | null): string {
@@ -250,7 +262,7 @@ export async function runLlmDetection(input: LlmDetectionInput): Promise<LlmDete
     compensationForm:   input.compensationForm,
     isTransactionBased: input.isTransactionBased,
     isSecurityLinked:   input.isSecurityLinked,
-  }));
+  }), input.tenantType);
   const userContent = buildUserContent(input.bodyText, input.transcriptText);
 
   try {

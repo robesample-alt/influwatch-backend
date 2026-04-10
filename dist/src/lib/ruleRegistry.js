@@ -129,6 +129,41 @@ const PHRASE_MAP = {
     'only available until': { ruleCode: 'FINTECH-005', ruleName: 'Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
     'act now': { ruleCode: 'FINTECH-005', ruleName: 'Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
     "don't miss out": { ruleCode: 'FINTECH-005', ruleName: 'Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    // ── REGCF-001 — Portal-Prohibited Solicitation ─────────────
+    'you should invest': { ruleCode: 'REGCF-001', ruleName: 'Portal-Prohibited Solicitation', severity: client_1.Severity.CRITICAL },
+    'i recommend investing': { ruleCode: 'REGCF-001', ruleName: 'Portal-Prohibited Solicitation', severity: client_1.Severity.CRITICAL },
+    'this is a good investment': { ruleCode: 'REGCF-001', ruleName: 'Portal-Prohibited Solicitation', severity: client_1.Severity.CRITICAL },
+    'great investment opportunity': { ruleCode: 'REGCF-001', ruleName: 'Portal-Prohibited Solicitation', severity: client_1.Severity.CRITICAL },
+    "i'm investing in": { ruleCode: 'REGCF-001', ruleName: 'Portal-Prohibited Solicitation', severity: client_1.Severity.CRITICAL },
+    'you need to invest': { ruleCode: 'REGCF-001', ruleName: 'Portal-Prohibited Solicitation', severity: client_1.Severity.CRITICAL },
+    // ── REGCF-002 — Equity/Ownership Solicitation ─────────────
+    'own equity in': { ruleCode: 'REGCF-002', ruleName: 'Equity/Ownership Solicitation', severity: client_1.Severity.HIGH },
+    'become an investor': { ruleCode: 'REGCF-002', ruleName: 'Equity/Ownership Solicitation', severity: client_1.Severity.HIGH },
+    'get equity': { ruleCode: 'REGCF-002', ruleName: 'Equity/Ownership Solicitation', severity: client_1.Severity.HIGH },
+    'own a piece of': { ruleCode: 'REGCF-002', ruleName: 'Equity/Ownership Solicitation', severity: client_1.Severity.HIGH },
+    'invest as little as': { ruleCode: 'REGCF-002', ruleName: 'Equity/Ownership Solicitation', severity: client_1.Severity.HIGH },
+    'own shares in': { ruleCode: 'REGCF-002', ruleName: 'Equity/Ownership Solicitation', severity: client_1.Severity.HIGH },
+    'become a shareholder': { ruleCode: 'REGCF-002', ruleName: 'Equity/Ownership Solicitation', severity: client_1.Severity.HIGH },
+    'claim your equity': { ruleCode: 'REGCF-002', ruleName: 'Equity/Ownership Solicitation', severity: client_1.Severity.HIGH },
+    // ── REGCF-003 — Investment Limit Misrepresentation ────────
+    'invest as much as you want': { ruleCode: 'REGCF-003', ruleName: 'Investment Limit Misrepresentation', severity: client_1.Severity.CRITICAL },
+    'no limit on investment': { ruleCode: 'REGCF-003', ruleName: 'Investment Limit Misrepresentation', severity: client_1.Severity.CRITICAL },
+    'invest any amount': { ruleCode: 'REGCF-003', ruleName: 'Investment Limit Misrepresentation', severity: client_1.Severity.CRITICAL },
+    'unlimited investment': { ruleCode: 'REGCF-003', ruleName: 'Investment Limit Misrepresentation', severity: client_1.Severity.CRITICAL },
+    'invest whatever you want': { ruleCode: 'REGCF-003', ruleName: 'Investment Limit Misrepresentation', severity: client_1.Severity.CRITICAL },
+    // ── REGCF-004 — Campaign Urgency / Artificial Scarcity ────
+    'campaign closes': { ruleCode: 'REGCF-004', ruleName: 'Campaign Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    'funding deadline': { ruleCode: 'REGCF-004', ruleName: 'Campaign Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    'almost fully funded': { ruleCode: 'REGCF-004', ruleName: 'Campaign Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    'last chance to invest': { ruleCode: 'REGCF-004', ruleName: 'Campaign Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    'campaign ending soon': { ruleCode: 'REGCF-004', ruleName: 'Campaign Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    'invest before it closes': { ruleCode: 'REGCF-004', ruleName: 'Campaign Urgency / Artificial Scarcity', severity: client_1.Severity.MEDIUM },
+    // ── REGCF-005 — Misleading Issuer Claims ──────────────────
+    'proprietary technology': { ruleCode: 'REGCF-005', ruleName: 'Misleading Issuer Claims', severity: client_1.Severity.HIGH },
+    'patented technology': { ruleCode: 'REGCF-005', ruleName: 'Misleading Issuer Claims', severity: client_1.Severity.HIGH },
+    'only platform of its kind': { ruleCode: 'REGCF-005', ruleName: 'Misleading Issuer Claims', severity: client_1.Severity.HIGH },
+    'revolutionary technology': { ruleCode: 'REGCF-005', ruleName: 'Misleading Issuer Claims', severity: client_1.Severity.HIGH },
+    'proven business model': { ruleCode: 'REGCF-005', ruleName: 'Misleading Issuer Claims', severity: client_1.Severity.HIGH },
     // ── RISK-003 — MEDIUM ─────────────────────────────────────
     'high yield': { ruleCode: 'RISK-003', ruleName: 'Performance Claims Without Required Disclosures', severity: client_1.Severity.MEDIUM },
     'above market returns': { ruleCode: 'RISK-003', ruleName: 'Performance Claims Without Required Disclosures', severity: client_1.Severity.MEDIUM },
@@ -427,6 +462,11 @@ function getRuleMetadata() {
         { code: 'FINTECH-003', name: 'Promoter Performance Claims', description: 'Detects personal performance claims from promoters ("I made", "my returns") that may constitute misleading testimonials.', severity: 'HIGH', category: 'Performance Claims', active: true, patternCount: phraseCounts['FINTECH-003'] || 0 },
         { code: 'FINTECH-004', name: 'Promissory Language', description: 'Flags promissory or guaranteed-outcome language that violates FINRA Rule 2210(d)(1) regardless of product type.', severity: 'CRITICAL', category: 'Promotional Claims', active: true, patternCount: phraseCounts['FINTECH-004'] || 0 },
         { code: 'FINTECH-005', name: 'Urgency / Artificial Scarcity', description: 'Detects urgency or scarcity tactics ("limited time", "act now") designed to pressure account opening.', severity: 'MEDIUM', category: 'Pressure Tactics', active: true, patternCount: phraseCounts['FINTECH-005'] || 0 },
+        { code: 'REGCF-001', name: 'Portal-Prohibited Solicitation', description: 'Detects solicitation language prohibited under Reg CF Rule 402(a) for funding portals and associated promoters.', severity: 'CRITICAL', category: 'Solicitation', active: true, patternCount: phraseCounts['REGCF-001'] || 0 },
+        { code: 'REGCF-002', name: 'Equity/Ownership Solicitation', description: 'Detects language soliciting equity investment in Reg CF offerings requiring disclosure and principal review.', severity: 'HIGH', category: 'Solicitation', active: true, patternCount: phraseCounts['REGCF-002'] || 0 },
+        { code: 'REGCF-003', name: 'Investment Limit Misrepresentation', description: 'Detects language suggesting no investment limits — Reg CF imposes strict annual limits on non-accredited investors.', severity: 'CRITICAL', category: 'Promotional Claims', active: true, patternCount: phraseCounts['REGCF-003'] || 0 },
+        { code: 'REGCF-004', name: 'Campaign Urgency / Artificial Scarcity', description: 'Detects urgency language about campaign closing or funding deadlines that must be accurate and not create artificial pressure.', severity: 'MEDIUM', category: 'Pressure Tactics', active: true, patternCount: phraseCounts['REGCF-004'] || 0 },
+        { code: 'REGCF-005', name: 'Misleading Issuer Claims', description: 'Detects false or exaggerated technology and business claims in Reg CF promotional content — targeted by SEC enforcement.', severity: 'HIGH', category: 'Promotional Claims', active: true, patternCount: phraseCounts['REGCF-005'] || 0 },
     ];
     return rules;
 }

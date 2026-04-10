@@ -49,6 +49,7 @@ exports.VALID_EXPOSURE_REASON_CODES = new Set([
     'EXP-013_COMPENSATED_SOLICITATION',
     'EXP-014_CAMPAIGN_NOT_ACTIVATED',
     'EXP-015_UNAUTHORIZED_PROMOTER',
+    'EXP-016_PORTAL_PROHIBITED_SOLICITATION',
 ]);
 // Human-readable labels for audit summaries
 const REASON_LABEL = {
@@ -67,6 +68,7 @@ const REASON_LABEL = {
     'EXP-013_COMPENSATED_SOLICITATION': 'Solicitation detected with active affiliate link or referral code',
     'EXP-014_CAMPAIGN_NOT_ACTIVATED': 'Content ingested for campaign not yet activated by principal',
     'EXP-015_UNAUTHORIZED_PROMOTER': 'Promoter is not on the approved roster for this campaign',
+    'EXP-016_PORTAL_PROHIBITED_SOLICITATION': 'Reg CF Rule 402(a) violation — funding portal solicitation prohibited',
 };
 // ── Derivation ────────────────────────────────────────────────
 /**
@@ -169,6 +171,12 @@ function computeExposure(input) {
     if (input.unauthorizedPromoter === true) {
         reasons.push('EXP-015_UNAUTHORIZED_PROMOTER');
     }
+    // EXP-016: Portal-prohibited solicitation — Reg CF Rule 402(a)
+    // funding portals and their associated promoters are prohibited
+    // from soliciting investment purchases.
+    if (input.portalProhibitedSolicitation === true) {
+        reasons.push('EXP-016_PORTAL_PROHIBITED_SOLICITATION');
+    }
     // ── Level derivation ───────────────────────────────────────
     // A. PRINCIPAL_REQUIRED: transaction-based compensation types
     //    that inherently create broker-dealer-like liability
@@ -199,6 +207,10 @@ function computeExposure(input) {
     }
     // A5. PRINCIPAL_REQUIRED: unauthorized promoter — not on campaign roster
     if (level !== 'PRINCIPAL_REQUIRED' && input.unauthorizedPromoter === true) {
+        level = 'PRINCIPAL_REQUIRED';
+    }
+    // A5b. PRINCIPAL_REQUIRED: Reg CF portal-prohibited solicitation
+    if (level !== 'PRINCIPAL_REQUIRED' && input.portalProhibitedSolicitation === true) {
         level = 'PRINCIPAL_REQUIRED';
     }
     // A6. PRINCIPAL_REQUIRED: compensated solicitation with transaction-based

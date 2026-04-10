@@ -510,6 +510,54 @@ exports.SCENARIO_POOL = [
             'Thread on asset allocation basics. 1/ No single asset class always wins. 2/ Rebalancing is important but often overlooked. 3/ Time in market beats timing the market. General education only. No products promoted. Not compensated.',
         ],
     },
+    // ══════════════════════════════════════════
+    // REG CF — Wefunder/Republic-style scenarios
+    // ══════════════════════════════════════════
+    {
+        ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
+        expectedRisk: 'CRITICAL',
+        description: 'Reg CF — portal-prohibited solicitation', tenantType: 'REG_CF',
+        bodyVariants: [
+            "You should invest in this campaign — it's the best investment opportunity I've seen this year! Link in bio. I recommend investing before it closes.",
+            "I'm investing in this Reg CF offering and you need to invest too. This is a good investment. Link in my bio to the campaign.",
+        ],
+    },
+    {
+        ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
+        expectedRisk: 'CRITICAL',
+        description: 'Reg CF — equity solicitation + urgency + referral', tenantType: 'REG_CF',
+        bodyVariants: [
+            'Own equity in a real company for as little as $100 — campaign closes Friday! Use my referral link to become an investor before the campaign ending soon.',
+            'Become a shareholder in this growing startup — invest as little as $100. Last chance to invest, almost fully funded! Use my link.',
+        ],
+    },
+    {
+        ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
+        expectedRisk: 'CRITICAL',
+        description: 'Reg CF — investment limit misrepresentation', tenantType: 'REG_CF',
+        bodyVariants: [
+            'Invest as much as you want in this Reg CF offering — no limits! #ad I am compensated for this content.',
+            'No limit on investment in this campaign — invest any amount. Disclosure: paid creator. Not financial advice.',
+        ],
+    },
+    {
+        ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
+        expectedRisk: 'CLEAN',
+        description: 'Reg CF — compliant balanced post with disclosure', tenantType: 'REG_CF',
+        bodyVariants: [
+            "Check out this Reg CF campaign I'm supporting — full disclosure: I receive a referral fee. Here are the key risks: early-stage companies have high failure rates, your investment is illiquid, and you should only invest what you can afford to lose. Reg CF investment limits apply to non-accredited investors. Not financial advice.",
+            "Sharing a Reg CF offering on the Republic portal. Disclosure: paid creator. Risks include illiquidity, total loss of capital, and limited information available compared to public companies. Investment limits apply per Reg CF rules. This is educational only.",
+        ],
+    },
+    {
+        ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
+        expectedRisk: 'HIGH',
+        description: 'Reg CF — misleading issuer capability claims', tenantType: 'REG_CF',
+        bodyVariants: [
+            "Their proprietary technology is unlike anything else in the market — patented technology that's revolutionary. The only platform of its kind. Proven business model. #ad",
+            'This company has patented technology and a proven business model. Revolutionary technology in their space — only platform of its kind. Sponsored content.',
+        ],
+    },
     {
         ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
         expectedRisk: 'CLEAN',

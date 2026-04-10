@@ -7,6 +7,7 @@ export interface LlmDetectionInput {
     compensationForm: string;
     isTransactionBased: boolean;
     isSecurityLinked: boolean;
+    tenantType?: string;
 }
 export interface LlmFinding {
     ruleCode: LlmRuleCode;
