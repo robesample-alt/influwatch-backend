@@ -7620,6 +7620,24 @@ async function loadCertifications() {
 
 // ── Supervision Status — API fetch ───────────────────────────────────
 
+// Resilient fetch helper — retries on 502/503/504 (Render cold-start) up to 2x
+async function _fetchWithRetry(url, options, retries) {
+  retries = retries || 2;
+  for (var i = 0; i <= retries; i++) {
+    try {
+      var res = await fetch(url, options);
+      if (res.status >= 500 && res.status < 600 && i < retries) {
+        await new Promise(function(r) { setTimeout(r, 800 * (i + 1)); });
+        continue;
+      }
+      return res;
+    } catch (e) {
+      if (i >= retries) throw e;
+      await new Promise(function(r) { setTimeout(r, 800 * (i + 1)); });
+    }
+  }
+}
+
 async function loadSupervisionStatus() {
   const IDS = ['ss-posture','ss-captured','ss-pending','ss-escalated','ss-remediations','ss-reviewed'];
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -7627,24 +7645,37 @@ async function loadSupervisionStatus() {
   // Show loading dashes
   IDS.forEach(id => set(id, '…'));
 
+  const hdrs = { headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {} };
+
+  // Fetch each independently with retry — partial data is better than ERR everywhere
+  const safeJson = async (url) => {
+    try {
+      const r = await _fetchWithRetry(url, hdrs, 2);
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (_) {
+      return null;
+    }
+  };
+
   try {
-    // All five fetches in parallel — pageSize=1 is enough to get the total count
-    const [allRes, pendingRes, escalatedRes, reviewedRes, remRes] = await Promise.all([
-      fetch(CONTENT_RECORDS_URL + '?pageSize=1', { headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {} }),
-      fetch(CONTENT_RECORDS_URL + '?archiveStatus=PENDING_REVIEW&pageSize=1', { headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {} }),
-      fetch(CONTENT_RECORDS_URL + '?archiveStatus=ESCALATED&pageSize=1', { headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {} }),
-      fetch(CONTENT_RECORDS_URL + '?archiveStatus=REVIEWED&pageSize=1', { headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {} }),
-      fetch(CONTENT_RECORDS_URL + '/remediation', { headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {} }),
-    ]);
-
     const [allData, pendingData, escalatedData, reviewedData, remData] = await Promise.all([
-      allRes.json(), pendingRes.json(), escalatedRes.json(), reviewedRes.json(), remRes.json(),
+      safeJson(CONTENT_RECORDS_URL + '?pageSize=1'),
+      safeJson(CONTENT_RECORDS_URL + '?archiveStatus=PENDING_REVIEW&pageSize=1'),
+      safeJson(CONTENT_RECORDS_URL + '?archiveStatus=ESCALATED&pageSize=1'),
+      safeJson(CONTENT_RECORDS_URL + '?archiveStatus=REVIEWED&pageSize=1'),
+      safeJson(CONTENT_RECORDS_URL + '/remediation'),
     ]);
 
-    const total     = allData.total       ?? 0;
-    const pending   = pendingData.total   ?? 0;
-    const escalated = escalatedData.total ?? 0;
-    const reviewed  = reviewedData.total  ?? 0;
+    // Treat null as 0 — partial render is fine
+    if (!allData && !pendingData && !escalatedData && !reviewedData && !remData) {
+      throw new Error('All endpoints failed');
+    }
+
+    const total     = allData?.total       ?? 0;
+    const pending   = pendingData?.total   ?? 0;
+    const escalated = escalatedData?.total ?? 0;
+    const reviewed  = reviewedData?.total  ?? 0;
     const remCount  = Array.isArray(remData) ? remData.length : 0;
 
     // Derive overall posture from live counts
