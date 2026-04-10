@@ -201,6 +201,32 @@ exports.FINDING_COPY = {
         description: 'Unverifiable credibility claim detected. Founder or team credential claims that cannot be verified create potential Section 17(a) exposure if false. Flag for verification against offering documents.',
         category: 'PERFORMANCE_CLAIM',
     },
+    // ── RIAMR family — RIA Marketing Rule violations ──
+    'RIAMR-001': {
+        title: 'Unqualified Performance Claim',
+        description: 'Unqualified performance claim detected. SEC Marketing Rule 206(4)-1 requires that performance claims include the time period, a benchmark comparison, and disclosure of material conditions. This claim lacks required context.',
+        category: 'PERFORMANCE_CLAIM',
+    },
+    'RIAMR-002': {
+        title: 'Hypothetical Performance Without Context',
+        description: 'Hypothetical or backtested performance claim detected. Marketing Rule 206(4)-1(d) requires specific policies and disclosures before presenting hypothetical performance to retail audiences. SEC cited this pattern in the April 2024 enforcement sweep.',
+        category: 'PERFORMANCE_CLAIM',
+    },
+    'RIAMR-003': {
+        title: 'Misleading Testimonial Language',
+        description: 'Potentially misleading testimonial language detected. Marketing Rule 206(4)-1(b) requires compensated testimonials to disclose the paid relationship, material conflicts of interest, and a brief statement of investment risks.',
+        category: 'TESTIMONIAL',
+    },
+    'RIAMR-004': {
+        title: 'Cherry-Picked Results',
+        description: 'Cherry-picked or non-representative results detected. Presenting selected client results without representative performance context is a direct Marketing Rule violation. SEC September 2024 sweep of nine RIAs specifically cited this pattern.',
+        category: 'PERFORMANCE_CLAIM',
+    },
+    'RIAMR-005': {
+        title: 'Missing Compensation Disclosure in Testimonial',
+        description: 'Compensation disclosure missing in testimonial or endorsement context. All compensated testimonials and endorsements must clearly disclose the paid relationship. Written agreement required for compensation exceeding $1,000 over 12 months.',
+        category: 'DISCLOSURE',
+    },
     // ── EXP family — exposure-level structural flags ──
     'EXP-014': {
         title: 'Campaign Not Activated',
@@ -221,6 +247,11 @@ exports.FINDING_COPY = {
         title: 'Anti-Fraud Signal',
         description: 'Anti-fraud signal detected in issuer promotional content. Securities Act Section 17(a) prohibits false or misleading statements in connection with a securities offering. This content contains language patterns associated with SEC enforcement actions against Reg A issuers including Unicoin (May 2025) and Nate Inc (April 2026).',
         category: 'PERFORMANCE_CLAIM',
+    },
+    'EXP-018': {
+        title: 'Marketing Rule Violation Signal',
+        description: 'Marketing Rule violation signal detected. SEC Rule 206(4)-1 governs all testimonials and endorsements by investment advisers. This content contains language patterns associated with SEC enforcement actions in 2024-2025 including sweeps resulting in combined fines of $1.24 million across nine firms.',
+        category: 'TESTIMONIAL',
     },
 };
 /**

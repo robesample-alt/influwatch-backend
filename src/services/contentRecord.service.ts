@@ -347,6 +347,15 @@ export async function createContentRecord(
       h.ruleCode === 'REGA-005'
     );
 
+    // Check for RIA Marketing Rule violation signal (EXP-018)
+    // Fires when RIAMR-004 (cherry-picked results), RIAMR-003 without disclosure,
+    // or RIAMR-001 with CRITICAL severity is detected
+    const hasMarketingRuleViolation = tenantType === 'RIA' && hits.some(h =>
+      h.ruleCode === 'RIAMR-004' ||
+      h.ruleCode === 'RIAMR-005' ||
+      (h.ruleCode === 'RIAMR-001' && h.severity === 'CRITICAL')
+    );
+
     // ── Exposure classification (Phase 2 + Phase 3 routing + Phase 4 drift) ─
     const exposure = computeExposure({
       compensationType:                compensationStructure?.compensationType ?? null,
@@ -362,6 +371,7 @@ export async function createContentRecord(
       unauthorizedPromoter,
       portalProhibitedSolicitation: hasPortalSolicitation,
       antiFraudSignal: hasAntiFraudSignal,
+      marketingRuleViolation: hasMarketingRuleViolation,
       tenantType,
     });
 

@@ -345,43 +345,61 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
 
   // ══════════════════════════════════════════
-  // RIA SCENARIOS (4 new)
+  // RIA SCENARIOS (6 — Marketing Rule calibration)
   // ══════════════════════════════════════════
 
   {
-    ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
-    expectedRisk: 'HIGH',
-    description: 'RIA — paid testimonial without required disclosures', tenantType: 'RIA',
+    ambassadorId: 'AMB-DEMO-05', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
+    expectedRisk: 'CRITICAL',
+    description: 'RIA — unqualified performance + misleading testimonial + no disclosure', tenantType: 'RIA',
     bodyVariants: [
-      'Working with this financial advisor has completely transformed my portfolio. My returns are up 30 percent since I started. Best decision I ever made. Highly recommend if you want real results.',
-      'Shoutout to my advisor for helping me build serious wealth this year. The strategy they put me on is delivering incredible results. If you want to actually grow your money talk to them.',
-    ],
-  },
-  {
-    ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
-    expectedRisk: 'CLEAN',
-    description: 'RIA — compliant paid testimonial', tenantType: 'RIA',
-    bodyVariants: [
-      'I was compensated for this testimonial. My experience with this advisory firm has been positive. Results not typical and individual results may vary. This is not a guarantee of future performance. All investments involve risk including potential loss of principal. Past performance does not guarantee future results.',
-      'Paid testimonial. I have had a good experience working with this advisory team. Your results may vary. This is not investment advice. Compensated reviewer disclosure: I received payment for this post. All investments carry risk.',
+      'My adviser at Vertex Capital has generated 34 percent returns for me over the last 18 months — best investment decision I ever made! Link in bio.',
+      'My adviser doubled my money in less than two years. My portfolio returned 42 percent this year alone. Best decision I ever made working with them.',
     ],
   },
   {
     ambassadorId: 'AMB-DEMO-05', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
-    expectedRisk: 'CRITICAL',
-    description: 'RIA — endorsement with performance guarantees', tenantType: 'RIA',
+    expectedRisk: 'HIGH',
+    description: 'RIA — hypothetical performance without context', tenantType: 'RIA',
     bodyVariants: [
-      'This adviser guaranteed me above market returns and they delivered. My portfolio has doubled in 8 months. If you want guaranteed results just like mine talk to them. They know exactly what they are doing. Link in description.',
-      'I was told my money would grow at least 20 percent per year and they were right. This advisory firm delivers guaranteed returns that beat everything else. Stop losing money with your current adviser and switch now.',
+      'Backtested results show this strategy returned 22 percent annually over 10 years — ask me how to get started.',
+      'Our model portfolio returned 18 percent per year over the last decade. Hypothetical returns based on backtested results. If you had invested $100K back then you would have over $500K today.',
     ],
   },
   {
-    ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
-    expectedRisk: 'CLEAN',
-    description: 'RIA — flat fee educational content', tenantType: 'RIA',
+    ambassadorId: 'AMB-DEMO-05', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
+    expectedRisk: 'CRITICAL',
+    description: 'RIA — cherry-picked client results', tenantType: 'RIA',
     bodyVariants: [
-      'General thoughts on portfolio diversification in 2026. Not specific advice for any individual. I am compensated by an advisory firm to create educational content. Not a recommendation. All investments carry risk.',
-      'Quick thread on asset allocation strategies. This is general education not personalized advice. Disclosure: I am a paid content creator for a registered investment adviser. Consult your advisor before making investment decisions.',
+      'Client spotlight: John started with $50K and now has $180K after 3 years with our firm! Results like this are why we love what we do.',
+      'Client success story: this client made $230K on their initial $80K investment. One of our best performing client accounts. Some clients have seen returns like this.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-DEMO-06', sourcePlatform: 'TWITTER_X', contentType: 'THREAD',
+    expectedRisk: 'CLEAN',
+    description: 'RIA — compliant testimonial with all required disclosures', tenantType: 'RIA',
+    bodyVariants: [
+      'I was compensated to share this. Past performance does not guarantee future results. Vertex Capital Management provides personalized investment advice — see their ADV Part 2 for full disclosure. Individual results vary. All investments carry risk of principal loss.',
+      'Paid testimonial. Vertex Capital has been my adviser for two years. Compensated reviewer disclosure: I received payment for this post. Past performance does not guarantee future results. Results not typical. Your results may vary. Read their ADV Part 2 before engaging.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-DEMO-05', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
+    expectedRisk: 'CRITICAL',
+    description: 'RIA — misleading testimonial + no disclosure (Marketing Rule signal)', tenantType: 'RIA',
+    bodyVariants: [
+      'Working with this adviser is the best investment decision I ever made — I have made so much money with them and achieved financial freedom thanks to their strategy.',
+      'My adviser made me rich. Life-changing returns. Best investment decision I ever made. My portfolio exploded since I started working with them.',
+    ],
+  },
+  {
+    ambassadorId: 'AMB-DEMO-06', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
+    expectedRisk: 'CLEAN',
+    description: 'RIA — compliant flat fee educational content', tenantType: 'RIA',
+    bodyVariants: [
+      'New to investing? Here is how diversification works. Educational content only. Disclosure: I receive a flat fee for educational content from Vertex Capital. #ad This is not personalized investment advice. Consult a financial adviser before making investment decisions. All investments carry risk.',
+      'Diversification basics for new investors. Educational thread — no specific recommendations. Paid content disclosure: I am compensated by Vertex Capital Management to create educational content. Not financial advice. Past performance does not guarantee future results.',
     ],
   },
 

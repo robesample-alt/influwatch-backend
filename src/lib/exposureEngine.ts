@@ -63,7 +63,8 @@ export type ExposureReasonCode =
   | 'EXP-014_CAMPAIGN_NOT_ACTIVATED'
   | 'EXP-015_UNAUTHORIZED_PROMOTER'
   | 'EXP-016_PORTAL_PROHIBITED_SOLICITATION'
-  | 'EXP-017_ANTI_FRAUD_SIGNAL';
+  | 'EXP-017_ANTI_FRAUD_SIGNAL'
+  | 'EXP-018_MARKETING_RULE_VIOLATION';
 
 export const VALID_EXPOSURE_REASON_CODES: ReadonlySet<string> = new Set<ExposureReasonCode>([
   'EXP-001_TRANSACTION_BASED_COMP',
@@ -83,6 +84,7 @@ export const VALID_EXPOSURE_REASON_CODES: ReadonlySet<string> = new Set<Exposure
   'EXP-015_UNAUTHORIZED_PROMOTER',
   'EXP-016_PORTAL_PROHIBITED_SOLICITATION',
   'EXP-017_ANTI_FRAUD_SIGNAL',
+  'EXP-018_MARKETING_RULE_VIOLATION',
 ]);
 
 // Human-readable labels for audit summaries
@@ -104,6 +106,7 @@ const REASON_LABEL: Record<ExposureReasonCode, string> = {
   'EXP-015_UNAUTHORIZED_PROMOTER':'Promoter is not on the approved roster for this campaign',
   'EXP-016_PORTAL_PROHIBITED_SOLICITATION':'Reg CF Rule 402(a) violation — funding portal solicitation prohibited',
   'EXP-017_ANTI_FRAUD_SIGNAL':'Section 17(a) anti-fraud signal in issuer promotional content',
+  'EXP-018_MARKETING_RULE_VIOLATION':'Marketing Rule 206(4)-1 violation signal in RIA promotional content',
 };
 
 // ── Input / Output ────────────────────────────────────────────
@@ -139,6 +142,9 @@ export interface ExposureInput {
 
   // Section 17(a) anti-fraud signal (ISSUER tenant)
   antiFraudSignal?: boolean;
+
+  // Marketing Rule violation signal (RIA tenant)
+  marketingRuleViolation?: boolean;
 
   // Tenant type for context-sensitive thresholds
   tenantType?: string;
@@ -291,6 +297,13 @@ export function computeExposure(input: ExposureInput): ExposureOutput {
     reasons.push('EXP-017_ANTI_FRAUD_SIGNAL');
   }
 
+  // EXP-018: Marketing Rule violation — fires for RIA tenant when
+  // RIAMR-004 (cherry-picked results), RIAMR-003 without disclosure,
+  // or RIAMR-001 with CRITICAL severity is detected.
+  if (input.marketingRuleViolation === true) {
+    reasons.push('EXP-018_MARKETING_RULE_VIOLATION');
+  }
+
   // ── Level derivation ───────────────────────────────────────
 
   // A. PRINCIPAL_REQUIRED: transaction-based compensation types
@@ -338,6 +351,11 @@ export function computeExposure(input: ExposureInput): ExposureOutput {
 
   // A5c. PRINCIPAL_REQUIRED: ISSUER anti-fraud signal — Section 17(a)
   if (level !== 'PRINCIPAL_REQUIRED' && input.antiFraudSignal === true) {
+    level = 'PRINCIPAL_REQUIRED';
+  }
+
+  // A5d. PRINCIPAL_REQUIRED: RIA Marketing Rule violation signal
+  if (level !== 'PRINCIPAL_REQUIRED' && input.marketingRuleViolation === true) {
     level = 'PRINCIPAL_REQUIRED';
   }
 

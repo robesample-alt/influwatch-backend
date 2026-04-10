@@ -255,6 +255,52 @@ const PHRASE_MAP: Record<string, PhraseDef> = {
   'backed by top investors':{ ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
   'ivy league':             { ruleCode: 'REGA-006', ruleName: 'Credibility Puffery', severity: Severity.MEDIUM },
 
+  // ── RIAMR-001 — Unqualified Performance Claims ────────────
+  'my portfolio returned':  { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'clients averaged':       { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'outperformed the market':{ ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'beat the s&p':           { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'generated for clients':  { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'average return of':      { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'historical returns of':  { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'past performance of':    { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'my clients made':        { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'average client return':  { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+  'typical client sees':    { ruleCode: 'RIAMR-001', ruleName: 'Unqualified Performance Claims', severity: Severity.HIGH },
+
+  // ── RIAMR-002 — Hypothetical Performance Without Context ──
+  'hypothetical returns':   { ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+  'backtested results':     { ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+  'simulated performance':  { ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+  'model portfolio returned':{ ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+  'hypothetical portfolio': { ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+  'if you had invested':    { ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+  'back-test shows':        { ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+  'simulated results':      { ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+  'projected returns of':   { ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+  'modeled performance':    { ruleCode: 'RIAMR-002', ruleName: 'Hypothetical Performance Without Context', severity: Severity.HIGH },
+
+  // ── RIAMR-003 — Misleading Testimonial Language ───────────
+  'my adviser made me rich':{ ruleCode: 'RIAMR-003', ruleName: 'Misleading Testimonial Language', severity: Severity.HIGH },
+  'best investment decision i ever made': { ruleCode: 'RIAMR-003', ruleName: 'Misleading Testimonial Language', severity: Severity.HIGH },
+  "i've made so much money with": { ruleCode: 'RIAMR-003', ruleName: 'Misleading Testimonial Language', severity: Severity.HIGH },
+  'life-changing returns':  { ruleCode: 'RIAMR-003', ruleName: 'Misleading Testimonial Language', severity: Severity.HIGH },
+  'financial freedom thanks to': { ruleCode: 'RIAMR-003', ruleName: 'Misleading Testimonial Language', severity: Severity.HIGH },
+  'my adviser doubled my money': { ruleCode: 'RIAMR-003', ruleName: 'Misleading Testimonial Language', severity: Severity.HIGH },
+  'incredible returns with my adviser': { ruleCode: 'RIAMR-003', ruleName: 'Misleading Testimonial Language', severity: Severity.HIGH },
+  'my portfolio exploded':  { ruleCode: 'RIAMR-003', ruleName: 'Misleading Testimonial Language', severity: Severity.HIGH },
+
+  // ── RIAMR-004 — Cherry-Picked Results ─────────────────────
+  'this client made':       { ruleCode: 'RIAMR-004', ruleName: 'Cherry-Picked Results', severity: Severity.CRITICAL },
+  'one of my clients turned': { ruleCode: 'RIAMR-004', ruleName: 'Cherry-Picked Results', severity: Severity.CRITICAL },
+  'our best performing client': { ruleCode: 'RIAMR-004', ruleName: 'Cherry-Picked Results', severity: Severity.CRITICAL },
+  'top client returns':     { ruleCode: 'RIAMR-004', ruleName: 'Cherry-Picked Results', severity: Severity.CRITICAL },
+  'selected client results':{ ruleCode: 'RIAMR-004', ruleName: 'Cherry-Picked Results', severity: Severity.CRITICAL },
+  'some clients have seen': { ruleCode: 'RIAMR-004', ruleName: 'Cherry-Picked Results', severity: Severity.CRITICAL },
+  'our most successful client': { ruleCode: 'RIAMR-004', ruleName: 'Cherry-Picked Results', severity: Severity.CRITICAL },
+  'client success story':   { ruleCode: 'RIAMR-004', ruleName: 'Cherry-Picked Results', severity: Severity.CRITICAL },
+  'client spotlight':       { ruleCode: 'RIAMR-004', ruleName: 'Cherry-Picked Results', severity: Severity.CRITICAL },
+
   // ── REGCF-005 — Misleading Issuer Claims ──────────────────
   'proprietary technology': { ruleCode: 'REGCF-005', ruleName: 'Misleading Issuer Claims', severity: Severity.HIGH },
   'patented technology':   { ruleCode: 'REGCF-005', ruleName: 'Misleading Issuer Claims', severity: Severity.HIGH },
@@ -545,6 +591,19 @@ export function detectRuleHits(bodyText: string, compensationCtx?: CompensationC
     }
   }
 
+  // ── RIAMR-005 — Missing Compensation Disclosure in Testimonial Context ────
+  // Fires when content contains RIAMR-003 testimonial language AND no disclosure.
+  const hasRiamr003 = hits.some(h => h.ruleCode === 'RIAMR-003');
+  if (hasRiamr003 && !hasDisclosure) {
+    hits.push({
+      ruleCode:        'RIAMR-005',
+      ruleName:        'Missing Compensation Disclosure in Testimonial',
+      matchedPhrase:   '[testimonial detected with no compensation disclosure]',
+      severity:        Severity.HIGH,
+      detectionMethod: 'DISCLOSURE_CHECK',
+    });
+  }
+
   // ── RISK-005 — Testimonial Without Required Disclosures ────────────────────
   // Absence-gated: fires when a testimonial trigger phrase is detected
   // AND none of the required testimonial disclosures are present.
@@ -637,6 +696,11 @@ export function getRuleMetadata(): RuleMetadata[] {
     { code: 'REGA-004', name: 'Offering Term Misrepresentation', description: 'Detects claims about investment minimums, accreditation, or offering access that must match Form 1-A terms.', severity: 'HIGH', category: 'Promotional Claims', active: true, patternCount: phraseCounts['REGA-004'] || 0 },
     { code: 'REGA-005', name: 'Pure Upside Framing Without Risk', description: 'Detects promotional content presenting only upside without material risk disclosure — Section 17(a) misleading omission.', severity: 'CRITICAL', category: 'Risk Disclosure', active: true, patternCount: phraseCounts['REGA-005'] || 0 },
     { code: 'REGA-006', name: 'Credibility Puffery', description: 'Detects unverifiable founder or team credential claims that flag for verification against offering documents.', severity: 'MEDIUM', category: 'Promotional Claims', active: true, patternCount: phraseCounts['REGA-006'] || 0 },
+    { code: 'RIAMR-001', name: 'Unqualified Performance Claims', description: 'Detects performance claims missing required Marketing Rule context (time period, benchmark, material conditions).', severity: 'HIGH', category: 'Performance Claims', active: true, patternCount: phraseCounts['RIAMR-001'] || 0 },
+    { code: 'RIAMR-002', name: 'Hypothetical Performance Without Context', description: 'Detects hypothetical or backtested performance claims that violate Marketing Rule 206(4)-1(d) disclosure requirements.', severity: 'HIGH', category: 'Performance Claims', active: true, patternCount: phraseCounts['RIAMR-002'] || 0 },
+    { code: 'RIAMR-003', name: 'Misleading Testimonial Language', description: 'Detects testimonial language that lacks required disclosures under Marketing Rule 206(4)-1(b).', severity: 'HIGH', category: 'Testimonials', active: true, patternCount: phraseCounts['RIAMR-003'] || 0 },
+    { code: 'RIAMR-004', name: 'Cherry-Picked Results', description: 'Detects non-representative client results presented without context — direct Marketing Rule violation cited in SEC sweeps.', severity: 'CRITICAL', category: 'Performance Claims', active: true, patternCount: phraseCounts['RIAMR-004'] || 0 },
+    { code: 'RIAMR-005', name: 'Missing Compensation Disclosure in Testimonial', description: 'Fires when testimonial language present without disclosure of paid relationship — written agreement required for compensation over $1,000/12 months.', severity: 'HIGH', category: 'Disclosure', active: true, patternCount: 0 },
   ];
 
   return rules;

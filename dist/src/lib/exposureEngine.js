@@ -51,6 +51,7 @@ exports.VALID_EXPOSURE_REASON_CODES = new Set([
     'EXP-015_UNAUTHORIZED_PROMOTER',
     'EXP-016_PORTAL_PROHIBITED_SOLICITATION',
     'EXP-017_ANTI_FRAUD_SIGNAL',
+    'EXP-018_MARKETING_RULE_VIOLATION',
 ]);
 // Human-readable labels for audit summaries
 const REASON_LABEL = {
@@ -71,6 +72,7 @@ const REASON_LABEL = {
     'EXP-015_UNAUTHORIZED_PROMOTER': 'Promoter is not on the approved roster for this campaign',
     'EXP-016_PORTAL_PROHIBITED_SOLICITATION': 'Reg CF Rule 402(a) violation — funding portal solicitation prohibited',
     'EXP-017_ANTI_FRAUD_SIGNAL': 'Section 17(a) anti-fraud signal in issuer promotional content',
+    'EXP-018_MARKETING_RULE_VIOLATION': 'Marketing Rule 206(4)-1 violation signal in RIA promotional content',
 };
 // ── Derivation ────────────────────────────────────────────────
 /**
@@ -185,6 +187,12 @@ function computeExposure(input) {
     if (input.antiFraudSignal === true) {
         reasons.push('EXP-017_ANTI_FRAUD_SIGNAL');
     }
+    // EXP-018: Marketing Rule violation — fires for RIA tenant when
+    // RIAMR-004 (cherry-picked results), RIAMR-003 without disclosure,
+    // or RIAMR-001 with CRITICAL severity is detected.
+    if (input.marketingRuleViolation === true) {
+        reasons.push('EXP-018_MARKETING_RULE_VIOLATION');
+    }
     // ── Level derivation ───────────────────────────────────────
     // A. PRINCIPAL_REQUIRED: transaction-based compensation types
     //    that inherently create broker-dealer-like liability
@@ -223,6 +231,10 @@ function computeExposure(input) {
     }
     // A5c. PRINCIPAL_REQUIRED: ISSUER anti-fraud signal — Section 17(a)
     if (level !== 'PRINCIPAL_REQUIRED' && input.antiFraudSignal === true) {
+        level = 'PRINCIPAL_REQUIRED';
+    }
+    // A5d. PRINCIPAL_REQUIRED: RIA Marketing Rule violation signal
+    if (level !== 'PRINCIPAL_REQUIRED' && input.marketingRuleViolation === true) {
         level = 'PRINCIPAL_REQUIRED';
     }
     // A6. PRINCIPAL_REQUIRED: compensated solicitation with transaction-based

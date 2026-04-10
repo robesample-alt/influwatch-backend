@@ -121,6 +121,20 @@ function buildSystemPrompt(postureDescription: string, tenantType?: string): str
     '- Is the compensation relationship between the promoter and issuer disclosed?',
   ].join('\n') : '';
 
+  const riaContext = tenantType === 'RIA' ? [
+    '',
+    'IMPORTANT — RIA context: This content is from a promoter for an SEC-registered investment adviser.',
+    'Primary regulatory authority: SEC Investment Advisers Act Marketing Rule 206(4)-1.',
+    'Evaluate additionally:',
+    '- Does the content constitute a testimonial or endorsement of the investment adviser?',
+    '- Does any performance claim include required context — time period, benchmark, material conditions?',
+    '- Does the content present hypothetical or backtested performance without required disclosures (Marketing Rule 206(4)-1(d))?',
+    '- Does the content present cherry-picked or non-representative client results?',
+    '- Is the compensation relationship between the promoter and adviser disclosed?',
+    '- Does the content make guarantees about future performance or investment outcomes?',
+    '- Is the promoter potentially an ineligible person — someone with a disciplinary history that would disqualify them from being compensated for endorsements?',
+  ].join('\n') : '';
+
   return [
     'You are a FINRA compliance analyst reviewing content from a compensated external promoter.',
     `The promoter\'s compensation structure is: ${postureDescription}`,
@@ -148,7 +162,7 @@ function buildSystemPrompt(postureDescription: string, tenantType?: string): str
     '- The matchedPhrase must be a verbatim substring of the content — do not paraphrase.',
     '- If the content does not reference a specific investment product or financial service, return an empty array.',
     '- An absent compensation disclosure is itself an LLM-002 finding, even when the content seems benign, if the compensation posture above indicates disclosure is required.',
-  ].join('\n') + regCfContext + issuerContext;
+  ].join('\n') + regCfContext + issuerContext + riaContext;
 }
 
 function buildUserContent(bodyText: string, transcriptText?: string | null): string {

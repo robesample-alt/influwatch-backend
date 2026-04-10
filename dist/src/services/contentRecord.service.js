@@ -290,6 +290,12 @@ async function createContentRecord(tenantId, input) {
         const hasAntiFraudSignal = tenantType === 'ISSUER' && hits.some(h => h.ruleCode === 'REGA-001' ||
             (h.ruleCode === 'REGA-002' && h.severity === 'CRITICAL') ||
             h.ruleCode === 'REGA-005');
+        // Check for RIA Marketing Rule violation signal (EXP-018)
+        // Fires when RIAMR-004 (cherry-picked results), RIAMR-003 without disclosure,
+        // or RIAMR-001 with CRITICAL severity is detected
+        const hasMarketingRuleViolation = tenantType === 'RIA' && hits.some(h => h.ruleCode === 'RIAMR-004' ||
+            h.ruleCode === 'RIAMR-005' ||
+            (h.ruleCode === 'RIAMR-001' && h.severity === 'CRITICAL'));
         // ── Exposure classification (Phase 2 + Phase 3 routing + Phase 4 drift) ─
         const exposure = (0, exposureEngine_1.computeExposure)({
             compensationType: compensationStructure?.compensationType ?? null,
@@ -305,6 +311,7 @@ async function createContentRecord(tenantId, input) {
             unauthorizedPromoter,
             portalProhibitedSolicitation: hasPortalSolicitation,
             antiFraudSignal: hasAntiFraudSignal,
+            marketingRuleViolation: hasMarketingRuleViolation,
             tenantType,
         });
         const record = await tx.contentRecord.create({
