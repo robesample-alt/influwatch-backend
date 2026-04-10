@@ -107,7 +107,8 @@ app.use('/api/influwatch/auth', rateLimiter_1.loginLimiter, auth_router_1.defaul
 // ── Phyllo webhook (public — no JWT, verified by Phyllo) ──
 app.post('/api/influwatch/phyllo/webhook', phyllo_routes_1.phylloWebhookHandler);
 // ── Promoter Portal Auth (public — magic link flow) ──
-app.use('/api/influwatch/promoter/auth', rateLimiter_1.loginLimiter, promoterAuth_routes_1.default);
+// Distinct path from authenticated /promoter routes to avoid mount overlap.
+app.use('/api/influwatch/promoter-auth', rateLimiter_1.loginLimiter, promoterAuth_routes_1.default);
 // ── Promoter Portal API (authenticated with promoter JWT) ──
 app.use('/api/influwatch/promoter', authenticatePromoter_1.authenticatePromoter, promoter_routes_1.default);
 // ── Protected Routes ──────────────────────

@@ -21,7 +21,7 @@ import logger from '../utils/logger';
 const router = Router();
 
 // ─────────────────────────────────────────
-// POST /promoter/auth/request-link
+// POST /promoter-auth/request-link
 //
 // Public. Accepts an email, looks up matching ambassador profile
 // across all tenants, generates a magic link, sends via email.

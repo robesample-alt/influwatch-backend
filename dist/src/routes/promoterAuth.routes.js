@@ -19,7 +19,7 @@ const mailer_1 = require("../utils/mailer");
 const logger_1 = __importDefault(require("../utils/logger"));
 const router = (0, express_1.Router)();
 // ─────────────────────────────────────────
-// POST /promoter/auth/request-link
+// POST /promoter-auth/request-link
 //
 // Public. Accepts an email, looks up matching ambassador profile
 // across all tenants, generates a magic link, sends via email.

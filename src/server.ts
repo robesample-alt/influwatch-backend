@@ -80,7 +80,8 @@ app.use('/api/influwatch/auth', loginLimiter, authRouter);
 app.post('/api/influwatch/phyllo/webhook', phylloWebhookHandler);
 
 // ── Promoter Portal Auth (public — magic link flow) ──
-app.use('/api/influwatch/promoter/auth', loginLimiter, promoterAuthRouter);
+// Distinct path from authenticated /promoter routes to avoid mount overlap.
+app.use('/api/influwatch/promoter-auth', loginLimiter, promoterAuthRouter);
 
 // ── Promoter Portal API (authenticated with promoter JWT) ──
 app.use('/api/influwatch/promoter', authenticatePromoter, promoterRouter);
