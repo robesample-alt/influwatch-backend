@@ -204,6 +204,8 @@ model Tenant {
   compensationEvents      CompensationEvent[]
   campaignPromoters       CampaignPromoter[]
   campaignPolicies        CampaignPolicy[]
+  promoterMagicLinks      PromoterMagicLink[]
+  promoterSubmissions     PromoterSubmission[]
 
   @@map("tenants")
 }
@@ -246,6 +248,7 @@ model InternalActor {
   assignedPreApprovals   PreApprovalRequest[]     @relation("AssignedPrincipal")
   campaignPrincipalAssignments CampaignPromoter[]  @relation("CampaignPrincipal")
   activatedPolicies      CampaignPolicy[]          @relation("PolicyActivator")
+  reviewedSubmissions    PromoterSubmission[]      @relation("PromoterSubmissionReviewer")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -293,6 +296,8 @@ model AmbassadorProfile {
   tailPeriods         TailPeriod[]
   preApprovalRequests PreApprovalRequest[]
   campaignAssignments CampaignPromoter[]
+  magicLinks          PromoterMagicLink[]
+  submissions         PromoterSubmission[]
 
   @@index([tenantId])
   @@index([handle])
@@ -301,6 +306,59 @@ model AmbassadorProfile {
   @@index([phylloAccountId])
   @@index([assignedSupervisorId])
   @@map("ambassador_profiles")
+}
+
+// ─────────────────────────────────────────
+// PROMOTER PORTAL — magic link auth tokens
+// ─────────────────────────────────────────
+
+model PromoterMagicLink {
+  id           String    @id @default(cuid())
+  ambassadorId String
+  tenantId     String
+  email        String
+  tokenHash    String
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  ambassador   AmbassadorProfile @relation(fields: [ambassadorId], references: [id], onDelete: Cascade)
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([ambassadorId])
+  @@index([email])
+  @@map("promoter_magic_links")
+}
+
+// ─────────────────────────────────────────
+// PROMOTER SUBMISSIONS — pre-approval requests from the portal
+// ─────────────────────────────────────────
+
+model PromoterSubmission {
+  id            String    @id @default(cuid())
+  tenantId      String
+  ambassadorId  String
+  platform      String
+  contentType   String
+  draftText     String?
+  url           String?
+  notes         String?
+  status        String    @default("PENDING")
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  reviewNotes   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ambassador    AmbassadorProfile @relation(fields: [ambassadorId], references: [id], onDelete: Cascade)
+  reviewer      InternalActor?    @relation("PromoterSubmissionReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([ambassadorId])
+  @@index([status])
+  @@map("promoter_submissions")
 }
 
 // ─────────────────────────────────────────

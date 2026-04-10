@@ -1177,7 +1177,7 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
     </div>
   </div>
   <table>
-    <thead><tr><th style="width:24px"></th><th>Promoter ID</th><th>Name / Handle</th><th>Platform(s)</th><th>Risk Tier</th><th>Cert Status</th><th>Open Flags</th><th>Reviewer</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th style="width:24px"></th><th>Promoter ID</th><th>Name / Handle</th><th>Platform(s)</th><th>Risk Tier</th><th>Cert Status</th><th>Open Flags</th><th>Reviewer</th><th>Status</th><th>Portal</th><th></th></tr></thead>
     <tbody>
       <tr onclick="go('promoter-detail')">
         <td class="mono">PR-004</td>
@@ -2662,6 +2662,16 @@ html body:not([data-role="promoter"]) .promoter-only { display:none !important; 
   </div>
   <!-- Campaign activation banner -->
   <div id="preapproval-campaign-banner" style="display:none;margin:14px 18px 0;background:var(--amber-dim);border:1px solid var(--amber-bdr);padding:11px 14px;font-size:11px;color:var(--text-secondary)"></div>
+
+  <!-- Section 0: Promoter Portal Submissions (live from portal) -->
+  <div style="padding:10px 16px 5px;font-size:9px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.16em;color:var(--cyan);border-bottom:1px solid var(--border)">Promoter Portal Submissions <span style="color:var(--text-muted);font-size:8px;text-transform:none;letter-spacing:0;margin-left:8px">— from promoter-facing portal at portal.influwatch.app</span></div>
+  <table>
+    <thead><tr><th>Promoter</th><th>Platform</th><th>Type</th><th>Draft Preview</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody id="portal-submissions-tbody">
+      <tr><td colspan="7" style="text-align:center;padding:20px 0;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px">LOADING PORTAL SUBMISSIONS…</td></tr>
+    </tbody>
+  </table>
+
   <!-- Section 1: Pending Requests -->
   <div style="padding:10px 16px 5px;font-size:9px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.16em;color:var(--amber);border-bottom:1px solid var(--border)">Pending Principal Sign-Off</div>
   <table>
@@ -8095,7 +8105,7 @@ async function loadPromoters() {
   const tbody = document.querySelector('#screen-promoters table tbody');
   if (!tbody) return;
   _expandedPromoters = {};
-  tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace;letter-spacing:0.08em">LOADING…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="11" style="padding:20px;text-align:center;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace;letter-spacing:0.08em">LOADING…</td></tr>';
   try {
     const res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/ambassadors/monitor', {
       headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {},
@@ -8108,7 +8118,7 @@ async function loadPromoters() {
     const platLabel   = { YOUTUBE: 'YouTube', INSTAGRAM: 'Instagram', TWITTER_X: 'Twitter/X', TIKTOK: 'TikTok', LINKEDIN: 'LinkedIn', FACEBOOK: 'Facebook', TELEGRAM: 'Telegram', EMAIL: 'Email', PODCAST: 'Podcast', BLOG: 'Blog', OTHER: 'Other' };
 
     if (!ambassadors.length) {
-      tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--text-muted)">No promoters found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" style="padding:20px;text-align:center;color:var(--text-muted)">No promoters found</td></tr>';
       return;
     }
 
@@ -8131,17 +8141,57 @@ async function loadPromoters() {
         <td><span style="font-family:'IBM Plex Mono',monospace;font-weight:700;color:${flagColor}">${flagCount}</span></td>
         <td class="muted" style="font-size:10.5px">${esc(sup)}</td>
         <td><span class="stat ${esc(statCls)}">${esc(statLbl)}</span></td>
+        <td id="portal-status-${esc(a.id)}" style="font-size:9.5px;font-family:'IBM Plex Mono',monospace;color:var(--text-muted)">…</td>
         <td><button class="btn btn-ghost btn-sm" onclick="selectAndViewPromoter('${esc(a.id)}');event.stopPropagation()">View →</button></td>
       </tr>
-      <tr id="promo-expand-${esc(a.id)}" style="display:none"><td colspan="10" style="padding:0;background:var(--bg-panel)"><div id="promo-detail-${esc(a.id)}" style="padding:12px 18px">LOADING…</div></td></tr>`;
+      <tr id="promo-expand-${esc(a.id)}" style="display:none"><td colspan="11" style="padding:0;background:var(--bg-panel)"><div id="promo-detail-${esc(a.id)}" style="padding:12px 18px">LOADING…</div></td></tr>`;
     }).join('');
 
     const pagerInfo = document.querySelector('#screen-promoters .pg-info');
     if (pagerInfo) pagerInfo.textContent = `${ambassadors.length} promoters`;
     const sub = document.querySelector('#screen-promoters .ph-sub');
     if (sub) sub.textContent = `${ambassadors.length} supervised promoters · Phase 1 scope`;
+
+    // Async fetch portal status for each promoter (fire and forget)
+    ambassadors.forEach(function(a) {
+      fetch('https://influwatch-backend.onrender.com/api/influwatch/promoter-submissions/portal-status/' + encodeURIComponent(a.id), {
+        headers: { 'Authorization': 'Bearer ' + authToken },
+      }).then(function(r) { return r.ok ? r.json() : null; }).then(function(data) {
+        if (!data) return;
+        var cell = document.getElementById('portal-status-' + a.id);
+        if (!cell) return;
+        var status = data.status || 'NOT_INVITED';
+        var colorMap = { ACTIVE: 'var(--green)', INVITED: 'var(--amber)', NOT_INVITED: 'var(--text-muted)' };
+        var labelMap = { ACTIVE: 'ACTIVE', INVITED: 'INVITED', NOT_INVITED: 'NOT INVITED' };
+        var html = '<span style="color:' + colorMap[status] + '">' + labelMap[status] + '</span>';
+        if (status === 'NOT_INVITED') {
+          html += ' <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 6px;margin-left:4px" onclick="event.stopPropagation();sendPortalInvite(\'' + esc(a.id) + '\',\'' + esc(a.handle || '') + '\')">+ Invite</button>';
+        }
+        cell.innerHTML = html;
+      }).catch(function() {});
+    });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="10" style="padding:16px;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px">⚠ ${esc(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="padding:16px;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px">⚠ ${esc(err.message)}</td></tr>`;
+  }
+}
+
+async function sendPortalInvite(ambassadorId, handle) {
+  var email = window.prompt('Promoter email address for portal invite:', handle && handle.includes('@') ? handle : '');
+  if (!email) return;
+  try {
+    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/promoter-submissions/send-invite', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ambassadorId: ambassadorId, email: email }),
+    });
+    if (!res.ok) {
+      var data = await res.json().catch(function() { return {}; });
+      throw new Error(data.error || 'HTTP ' + res.status);
+    }
+    showToast('Portal invite sent to ' + email);
+    loadPromoters();
+  } catch (err) {
+    showToast('Failed: ' + err.message);
   }
 }
 
@@ -10778,6 +10828,61 @@ async function loadPreApprovalCampaignBanner() {
   } catch (_) {}
 }
 
+async function loadPortalSubmissions() {
+  var tbody = document.getElementById('portal-submissions-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px 0;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace;font-size:11px">LOADING PORTAL SUBMISSIONS…</td></tr>';
+  try {
+    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/promoter-submissions?status=PENDING', {
+      headers: { 'Authorization': 'Bearer ' + authToken },
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    var subs = data.submissions || [];
+    if (!subs.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px 0;color:var(--green);font-family:\'IBM Plex Mono\',monospace;font-size:11px">\u2713 No pending portal submissions</td></tr>';
+      return;
+    }
+    tbody.innerHTML = subs.map(function(s) {
+      var preview = (s.draftText || s.url || '').slice(0, 80);
+      var dt = s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014';
+      return '<tr>'
+        + '<td style="font-weight:600">' + esc(s.ambassador?.displayName || '\u2014') + '<div style="font-size:9.5px;color:var(--text-muted)">' + esc(s.ambassador?.handle || '') + '</div></td>'
+        + '<td style="font-size:10.5px">' + esc(s.platform) + '</td>'
+        + '<td style="font-size:10.5px">' + esc(s.contentType) + '</td>'
+        + '<td style="font-size:10.5px;max-width:240px;color:var(--text-secondary)">' + esc(preview) + (preview.length >= 80 ? '\u2026' : '') + '</td>'
+        + '<td style="font-size:10px;color:var(--text-muted);font-family:\'IBM Plex Mono\',monospace">' + dt + '</td>'
+        + '<td><span class="badge badge-amber">PENDING</span></td>'
+        + '<td><div style="display:flex;gap:4px"><button class="btn btn-primary btn-sm" onclick="reviewPortalSubmission(\'' + esc(s.id) + '\',\'APPROVED\')">Approve</button><button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="reviewPortalSubmission(\'' + esc(s.id) + '\',\'REJECTED\')">Reject</button></div></td>'
+        + '</tr>';
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px 0;color:var(--red);font-family:\'IBM Plex Mono\',monospace;font-size:11px">ERROR: ' + esc(err.message) + '</td></tr>';
+  }
+}
+
+async function reviewPortalSubmission(id, status) {
+  var notes = '';
+  if (status === 'REJECTED') {
+    notes = window.prompt('Reason for rejection (visible to promoter):');
+    if (!notes) return;
+  } else {
+    notes = window.prompt('Approval note (optional):') || '';
+  }
+  try {
+    var res = await fetch('https://influwatch-backend.onrender.com/api/influwatch/promoter-submissions/' + encodeURIComponent(id) + '/review', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: status, reviewNotes: notes }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('Submission ' + status.toLowerCase());
+    loadPortalSubmissions();
+  } catch (err) {
+    showToast('Failed: ' + err.message);
+  }
+}
+
 async function loadPreApprovals() {
   const pendingTbody = document.getElementById('preapproval-pending-tbody');
   const decidedTbody = document.getElementById('preapproval-decided-tbody');
@@ -11081,7 +11186,7 @@ go = function(name) {
   if (name === 'progcert')        loadProgramCerts();
   if (name === 'export')          loadExports();
   if (name === 'ingest')          loadIngest();
-  if (name === 'preapproval')     { loadPreApprovals(); loadPreApprovalCampaignBanner(); }
+  if (name === 'preapproval')     { loadPreApprovals(); loadPreApprovalCampaignBanner(); loadPortalSubmissions(); }
   if (name === 'referral')        loadAffiliateLinks();
   if (name === 'rules')           loadRuleEngine();
   if (name === 'compensation-config') loadCompStructures();

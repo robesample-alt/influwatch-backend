@@ -47,3 +47,68 @@ export async function sendEscalationAlert(opts: {
     console.error('[mailer] Failed to send escalation alert:', err);
   }
 }
+
+// ── Promoter Portal — magic link emails ───────────────────────
+
+const PORTAL_URL = process.env.PORTAL_URL ?? 'https://portal.influwatch.app';
+
+export async function sendPromoterInvite(opts: {
+  email:         string;
+  promoterName:  string;
+  firmName:      string;
+  token:         string;
+}): Promise<void> {
+  const resend = getClient();
+  if (!resend) return; // silent no-op
+
+  const link = `${PORTAL_URL}/?token=${encodeURIComponent(opts.token)}`;
+  const subject = `You've been invited to the InfluWatch compliance portal`;
+  const text = [
+    `Hi ${opts.promoterName},`,
+    ``,
+    `${opts.firmName} has registered you as a promoter in their compliance supervision system.`,
+    ``,
+    `Click the link below to access your portal. It expires in 72 hours.`,
+    ``,
+    link,
+    ``,
+    `If you weren't expecting this email, you can safely ignore it.`,
+    ``,
+    `— The InfluWatch team`,
+  ].join('\n');
+
+  try {
+    await resend.emails.send({ from: FROM, to: opts.email, subject, text });
+  } catch (err) {
+    console.error('[mailer] Failed to send promoter invite:', err);
+  }
+}
+
+export async function sendPromoterLoginLink(opts: {
+  email:        string;
+  promoterName: string;
+  token:        string;
+}): Promise<void> {
+  const resend = getClient();
+  if (!resend) return;
+
+  const link = `${PORTAL_URL}/?token=${encodeURIComponent(opts.token)}`;
+  const subject = `Your InfluWatch login link`;
+  const text = [
+    `Hi ${opts.promoterName},`,
+    ``,
+    `Here's your login link. It expires in 60 minutes.`,
+    ``,
+    link,
+    ``,
+    `If you didn't request this, you can safely ignore it.`,
+    ``,
+    `— The InfluWatch team`,
+  ].join('\n');
+
+  try {
+    await resend.emails.send({ from: FROM, to: opts.email, subject, text });
+  } catch (err) {
+    console.error('[mailer] Failed to send promoter login link:', err);
+  }
+}

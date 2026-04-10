@@ -28,6 +28,10 @@ import compensationStructureRouter   from './routes/compensationStructure.routes
 import affiliateLinksRouter          from './routes/affiliateLinks.routes';
 import phylloRouter, { phylloWebhookHandler } from './routes/phyllo.routes';
 import campaignSetupRouter from './routes/campaignSetup.routes';
+import promoterAuthRouter  from './routes/promoterAuth.routes';
+import promoterRouter      from './routes/promoter.routes';
+import promoterSubmissionsRouter from './routes/promoterSubmissions.routes';
+import { authenticatePromoter } from './middleware/authenticatePromoter';
 import debugRouter         from './routes/debug.routes';
 import { authenticate }    from './middleware/authenticate';
 import { tenantGuard }     from './middleware/tenantGuard';
@@ -75,6 +79,12 @@ app.use('/api/influwatch/auth', loginLimiter, authRouter);
 // ── Phyllo webhook (public — no JWT, verified by Phyllo) ──
 app.post('/api/influwatch/phyllo/webhook', phylloWebhookHandler);
 
+// ── Promoter Portal Auth (public — magic link flow) ──
+app.use('/api/influwatch/promoter/auth', loginLimiter, promoterAuthRouter);
+
+// ── Promoter Portal API (authenticated with promoter JWT) ──
+app.use('/api/influwatch/promoter', authenticatePromoter, promoterRouter);
+
 // ── Protected Routes ──────────────────────
 // All routes below require a valid JWT bearer token + tenant context.
 // tenantGuard sets app.tenant_id in PostgreSQL for RLS enforcement.
@@ -94,6 +104,7 @@ app.use('/api/influwatch/compensation-structures', authenticate, tenantGuard, wr
 app.use('/api/influwatch/affiliate-links',         authenticate, tenantGuard, writeLimiter, affiliateLinksRouter);
 app.use('/api/influwatch/phyllo',                  authenticate, tenantGuard, phylloRouter);
 app.use('/api/influwatch/campaigns',               authenticate, tenantGuard, writeLimiter, campaignSetupRouter);
+app.use('/api/influwatch/promoter-submissions',    authenticate, tenantGuard, promoterSubmissionsRouter);
 app.use('/api/influwatch/debug',                   authenticate, tenantGuard, debugRouter);
 
 // ── Error handler (must be last) ──────────

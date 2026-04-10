@@ -64,6 +64,10 @@ const compensationStructure_routes_1 = __importDefault(require("./routes/compens
 const affiliateLinks_routes_1 = __importDefault(require("./routes/affiliateLinks.routes"));
 const phyllo_routes_1 = __importStar(require("./routes/phyllo.routes"));
 const campaignSetup_routes_1 = __importDefault(require("./routes/campaignSetup.routes"));
+const promoterAuth_routes_1 = __importDefault(require("./routes/promoterAuth.routes"));
+const promoter_routes_1 = __importDefault(require("./routes/promoter.routes"));
+const promoterSubmissions_routes_1 = __importDefault(require("./routes/promoterSubmissions.routes"));
+const authenticatePromoter_1 = require("./middleware/authenticatePromoter");
 const debug_routes_1 = __importDefault(require("./routes/debug.routes"));
 const authenticate_1 = require("./middleware/authenticate");
 const tenantGuard_1 = require("./middleware/tenantGuard");
@@ -102,6 +106,10 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', module: 'influwatch',
 app.use('/api/influwatch/auth', rateLimiter_1.loginLimiter, auth_router_1.default);
 // ── Phyllo webhook (public — no JWT, verified by Phyllo) ──
 app.post('/api/influwatch/phyllo/webhook', phyllo_routes_1.phylloWebhookHandler);
+// ── Promoter Portal Auth (public — magic link flow) ──
+app.use('/api/influwatch/promoter/auth', rateLimiter_1.loginLimiter, promoterAuth_routes_1.default);
+// ── Promoter Portal API (authenticated with promoter JWT) ──
+app.use('/api/influwatch/promoter', authenticatePromoter_1.authenticatePromoter, promoter_routes_1.default);
 // ── Protected Routes ──────────────────────
 // All routes below require a valid JWT bearer token + tenant context.
 // tenantGuard sets app.tenant_id in PostgreSQL for RLS enforcement.
@@ -121,6 +129,7 @@ app.use('/api/influwatch/compensation-structures', authenticate_1.authenticate, 
 app.use('/api/influwatch/affiliate-links', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, affiliateLinks_routes_1.default);
 app.use('/api/influwatch/phyllo', authenticate_1.authenticate, tenantGuard_1.tenantGuard, phyllo_routes_1.default);
 app.use('/api/influwatch/campaigns', authenticate_1.authenticate, tenantGuard_1.tenantGuard, rateLimiter_1.writeLimiter, campaignSetup_routes_1.default);
+app.use('/api/influwatch/promoter-submissions', authenticate_1.authenticate, tenantGuard_1.tenantGuard, promoterSubmissions_routes_1.default);
 app.use('/api/influwatch/debug', authenticate_1.authenticate, tenantGuard_1.tenantGuard, debug_routes_1.default);
 // ── Error handler (must be last) ──────────
 app.use(errorHandler_1.errorHandler);

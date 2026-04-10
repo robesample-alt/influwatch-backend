@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InfluWatch Promoter Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:        #1F3864;
+  --green:       #2ECC71;
+  --green-dim:   rgba(46,204,113,0.1);
+  --green-bdr:   rgba(46,204,113,0.3);
+  --amber:       #F39C12;
+  --amber-dim:   rgba(243,156,18,0.1);
+  --amber-bdr:   rgba(243,156,18,0.3);
+  --red:         #E74C3C;
+  --red-dim:     rgba(231,76,60,0.1);
+  --red-bdr:     rgba(231,76,60,0.3);
+  --blue:        #3498DB;
+  --blue-dim:    rgba(52,152,219,0.1);
+  --blue-bdr:    rgba(52,152,219,0.3);
+  --bg:          #FFFFFF;
+  --bg-soft:     #F7F9FC;
+  --border:      #E1E8ED;
+  --text:        #1F3864;
+  --text-mid:    #5A6C7D;
+  --text-soft:   #8B99A8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg-soft);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { max-width: 720px; margin: 0 auto; padding: 24px 20px; }
+
+.brand {
+  text-align: center;
+  margin-bottom: 32px;
+  padding-top: 24px;
+}
+.brand-logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: var(--navy);
+}
+.brand-logo span { color: var(--amber); }
+.brand-tag {
+  font-size: 11px;
+  color: var(--text-soft);
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-top: 4px;
+}
+
+/* Cards & layout */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+.sub { font-size: 13px; color: var(--text-mid); margin-bottom: 20px; }
+
+/* Forms */
+label.fl {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-mid);
+  margin-bottom: 6px;
+  margin-top: 14px;
+  font-weight: 600;
+}
+.fi {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  outline: none;
+}
+.fi:focus { border-color: var(--navy); }
+textarea.fi { font-family: 'IBM Plex Sans', sans-serif; resize: vertical; min-height: 80px; }
+
+.btn {
+  display: inline-block;
+  padding: 12px 22px;
+  font-size: 14px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.btn-primary { background: var(--navy); color: white; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-secondary { background: var(--bg); color: var(--navy); border-color: var(--border); }
+.btn-ghost { background: transparent; color: var(--text-mid); padding: 6px 12px; font-size: 13px; }
+.btn-block { width: 100%; }
+
+/* Status badges */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  border: 1px solid;
+}
+.b-green  { color: var(--green); background: var(--green-dim); border-color: var(--green-bdr); }
+.b-amber  { color: var(--amber); background: var(--amber-dim); border-color: var(--amber-bdr); }
+.b-red    { color: var(--red);   background: var(--red-dim);   border-color: var(--red-bdr); }
+.b-blue   { color: var(--blue);  background: var(--blue-dim);  border-color: var(--blue-bdr); }
+
+/* Top bar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+.topbar-name { font-weight: 600; font-size: 15px; }
+.topbar-firm { font-size: 11px; color: var(--text-mid); }
+
+/* Alert banners */
+.alert {
+  padding: 14px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  margin-bottom: 16px;
+  border: 1px solid;
+}
+.alert-warn { background: var(--amber-dim); border-color: var(--amber-bdr); color: var(--text); }
+.alert-error { background: var(--red-dim); border-color: var(--red-bdr); color: var(--text); }
+.alert-info { background: var(--blue-dim); border-color: var(--blue-bdr); color: var(--text); }
+.alert-success { background: var(--green-dim); border-color: var(--green-bdr); color: var(--text); }
+
+/* Stats row */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+.stat-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  text-align: center;
+}
+.stat-val { font-size: 22px; font-weight: 700; color: var(--navy); }
+.stat-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-mid); margin-top: 4px; }
+
+/* History table */
+.row {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.row:hover { background: var(--bg-soft); }
+.row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.row-meta { font-size: 11px; color: var(--text-mid); }
+.row-detail {
+  display: none;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-mid);
+}
+.row.expanded .row-detail { display: block; }
+
+/* Hidden by default */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .app { padding: 16px 12px; }
+  .stats { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .stat-val { font-size: 18px; }
+  .card { padding: 18px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="brand">
+    <div class="brand-logo">INFLU<span>WATCH</span></div>
+    <div class="brand-tag">Promoter Compliance Portal</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       SCREEN: Login
+  ═══════════════════════════════════════ -->
+  <div id="screen-login" class="screen">
+    <div class="card">
+      <div class="h1">Sign in to your portal</div>
+      <div class="sub">Enter your registered email and we'll send you a secure login link.</div>
+
+      <div id="login-error" class="alert alert-error" style="display:none"></div>
+      <div id="login-success" class="alert alert-success" style="display:none"></div>
+
+      <label class="fl" for="email">Email address</label>
+      <input id="email" class="fi" type="email" placeholder="you@example.com" autocomplete="email">
+
+      <button class="btn btn-primary btn-block" style="margin-top:18px" onclick="requestLink()">Send Login Link</button>
+
+      <div style="margin-top:18px;font-size:11px;color:var(--text-soft);text-align:center">
+        No password needed. Links expire in 60 minutes.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       SCREEN: Dashboard
+  ═══════════════════════════════════════ -->
+  <div id="screen-dashboard" class="screen">
+    <div class="topbar">
+      <div>
+        <div class="topbar-name" id="d-name">—</div>
+        <div class="topbar-firm" id="d-firm">—</div>
+      </div>
+      <button class="btn btn-ghost" onclick="logout()">Sign out</button>
+    </div>
+
+    <!-- Mandatory pre-approval banner (TRANSACTION_BASED only) -->
+    <div id="d-mandatory-banner" class="alert alert-error" style="display:none">
+      <strong>Pre-approval required:</strong> Your compensation arrangement requires content to be reviewed and approved before posting. Do not publish any content until you receive approval in this portal.
+    </div>
+
+    <div class="card">
+      <div class="h2">Status</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+        <span id="d-monitoring" class="badge b-green">ACTIVE</span>
+        <span id="d-posture" class="badge b-blue">—</span>
+        <span id="d-comptype" class="badge b-blue">—</span>
+      </div>
+      <div id="d-campaigns" style="font-size:12px;color:var(--text-mid)">—</div>
+    </div>
+
+    <div class="card">
+      <div class="h2">Activity</div>
+      <div class="stats">
+        <div class="stat-card"><div class="stat-val" id="d-pending">0</div><div class="stat-lbl">Pending</div></div>
+        <div class="stat-card"><div class="stat-val" id="d-approved">0</div><div class="stat-lbl">Approved</div></div>
+        <div class="stat-card"><div class="stat-val" id="d-revision">0</div><div class="stat-lbl">Needs Revision</div></div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="navigate('submit')">Submit Content for Review</button>
+        <button class="btn btn-secondary" onclick="navigate('history')">View Submission History</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       SCREEN: Submit Content
+  ═══════════════════════════════════════ -->
+  <div id="screen-submit" class="screen">
+    <button class="btn btn-ghost" onclick="navigate('dashboard')">← Back to dashboard</button>
+
+    <div class="card" style="margin-top:14px">
+      <div class="h1">Submit Content for Review</div>
+      <div class="sub">Your content will be reviewed by a compliance officer before you can post. Most reviews complete within 4 hours.</div>
+
+      <div id="submit-error" class="alert alert-error" style="display:none"></div>
+      <div id="submit-success" class="alert alert-success" style="display:none"></div>
+
+      <label class="fl" for="s-platform">Platform</label>
+      <select id="s-platform" class="fi">
+        <option value="YOUTUBE">YouTube</option>
+        <option value="TIKTOK">TikTok</option>
+        <option value="INSTAGRAM">Instagram</option>
+        <option value="TWITTER_X">Twitter / X</option>
+        <option value="LINKEDIN">LinkedIn</option>
+        <option value="OTHER">Other</option>
+      </select>
+
+      <label class="fl" for="s-type">Content Type</label>
+      <select id="s-type" class="fi">
+        <option value="VIDEO">Video</option>
+        <option value="POST">Post</option>
+        <option value="STORY">Story</option>
+        <option value="THREAD">Thread</option>
+        <option value="OTHER">Other</option>
+      </select>
+
+      <label class="fl" for="s-draft">Draft Content</label>
+      <textarea id="s-draft" class="fi" rows="6" placeholder="Paste your caption, script, or content here. Submit exactly what you plan to post."></textarea>
+
+      <label class="fl" for="s-url">URL <span style="text-transform:none;color:var(--text-soft)">— optional</span></label>
+      <input id="s-url" class="fi" type="text" placeholder="Link to draft or unpublished content">
+
+      <label class="fl" for="s-notes">Notes <span style="text-transform:none;color:var(--text-soft)">— optional</span></label>
+      <textarea id="s-notes" class="fi" rows="2" placeholder="Any context that might help the reviewer"></textarea>
+
+      <div class="alert alert-warn" style="margin-top:18px">
+        <strong>Do not post until approved.</strong> Posting without approval may result in suspension of your promoter agreement.
+      </div>
+
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="submitContent()">Submit for Review</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       SCREEN: Submission History
+  ═══════════════════════════════════════ -->
+  <div id="screen-history" class="screen">
+    <button class="btn btn-ghost" onclick="navigate('dashboard')">← Back to dashboard</button>
+
+    <div class="card" style="margin-top:14px">
+      <div class="h1">Submission History</div>
+      <div class="sub">All content you've submitted for compliance review.</div>
+
+      <div id="history-list">
+        <div style="text-align:center;padding:20px;color:var(--text-soft)">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// State + helpers
+// ═══════════════════════════════════════════════
+
+var API = 'https://influwatch-backend.onrender.com/api/influwatch';
+var TOKEN = sessionStorage.getItem('iw_promoter_token') || null;
+var PROMOTER = null;
+var PROFILE = null;
+var SUBMISSIONS = [];
+var REVISING_ID = null;
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function show(name) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  var t = document.getElementById('screen-' + name);
+  if (t) t.classList.add('active');
+}
+
+function navigate(name) {
+  show(name);
+  if (name === 'history') loadHistory();
+  if (name === 'submit' && REVISING_ID) {
+    // pre-fill form with existing submission for revision
+    var sub = SUBMISSIONS.find(function(s) { return s.id === REVISING_ID; });
+    if (sub) {
+      document.getElementById('s-platform').value = sub.platform;
+      document.getElementById('s-type').value = sub.contentType;
+      document.getElementById('s-draft').value = sub.draftText || '';
+      document.getElementById('s-url').value = sub.url || '';
+      document.getElementById('s-notes').value = sub.notes || '';
+    }
+  }
+}
+
+function showError(elId, msg) {
+  var el = document.getElementById(elId);
+  if (el) {
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+}
+
+function showSuccess(elId, msg) {
+  var el = document.getElementById(elId);
+  if (el) {
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+}
+
+function clearMsg(id) {
+  var el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════
+// Auth flow
+// ═══════════════════════════════════════════════
+
+async function requestLink() {
+  clearMsg('login-error');
+  clearMsg('login-success');
+  var email = document.getElementById('email').value.trim();
+  if (!email) {
+    showError('login-error', 'Please enter your email address.');
+    return;
+  }
+  try {
+    var res = await fetch(API + '/promoter/auth/request-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email }),
+    });
+    if (!res.ok) {
+      showError('login-error', 'Unable to send link. Please try again.');
+      return;
+    }
+    showSuccess('login-success', 'Check your email — your login link has been sent. You can close this tab.');
+  } catch (e) {
+    showError('login-error', 'Network error. Please try again.');
+  }
+}
+
+async function verifyToken(token) {
+  try {
+    var res = await fetch(API + '/promoter/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token }),
+    });
+    if (!res.ok) return false;
+    var data = await res.json();
+    TOKEN = data.token;
+    PROMOTER = data.promoter;
+    sessionStorage.setItem('iw_promoter_token', TOKEN);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('iw_promoter_token');
+  TOKEN = null;
+  PROMOTER = null;
+  PROFILE = null;
+  show('login');
+}
+
+// ═══════════════════════════════════════════════
+// Profile + Dashboard
+// ═══════════════════════════════════════════════
+
+async function loadProfile() {
+  if (!TOKEN) return;
+  try {
+    var res = await fetch(API + '/promoter/profile', {
+      headers: { 'Authorization': 'Bearer ' + TOKEN },
+    });
+    if (!res.ok) {
+      logout();
+      return;
+    }
+    PROFILE = await res.json();
+    renderDashboard();
+    // Also load submissions for the stats
+    await loadSubmissions();
+  } catch (e) {
+    showError('login-error', 'Failed to load profile');
+    logout();
+  }
+}
+
+function renderDashboard() {
+  if (!PROFILE) return;
+  var amb = PROFILE.ambassador || {};
+  var comp = PROFILE.compensation || {};
+
+  document.getElementById('d-name').textContent = amb.displayName || '—';
+  document.getElementById('d-firm').textContent = PROFILE.firmName || '—';
+
+  // Monitoring badge
+  var monEl = document.getElementById('d-monitoring');
+  var ms = PROFILE.monitoringStatus || 'ACTIVE';
+  monEl.textContent = ms.replace(/_/g, ' ');
+  monEl.className = 'badge ' + (ms === 'ACTIVE' ? 'b-green' : ms === 'TAIL_PERIOD' ? 'b-amber' : 'b-red');
+
+  // Posture badge
+  var postureEl = document.getElementById('d-posture');
+  var posture = comp.supervisionPosture || 'LOW';
+  postureEl.textContent = 'POSTURE: ' + posture;
+  postureEl.className = 'badge ' + (posture === 'CRITICAL' || posture === 'HIGH' ? 'b-red' : posture === 'MEDIUM' ? 'b-amber' : 'b-green');
+
+  // Comp type
+  var ctEl = document.getElementById('d-comptype');
+  if (comp.compensationType) {
+    ctEl.textContent = comp.compensationType.replace(/_/g, ' ');
+    ctEl.style.display = '';
+  } else {
+    ctEl.style.display = 'none';
+  }
+
+  // Campaigns
+  var cEl = document.getElementById('d-campaigns');
+  if (PROFILE.campaigns && PROFILE.campaigns.length) {
+    cEl.innerHTML = '<strong>Active campaigns:</strong> ' + PROFILE.campaigns.map(function(c) { return esc(c.name); }).join(', ');
+  } else {
+    cEl.textContent = 'No active campaigns assigned.';
+  }
+
+  // Mandatory pre-approval banner
+  var banner = document.getElementById('d-mandatory-banner');
+  if (comp.isTransactionBased || comp.transactionalityClass === 'TRANSACTION_BASED') {
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+async function loadSubmissions() {
+  if (!TOKEN) return;
+  try {
+    var res = await fetch(API + '/promoter/submissions', {
+      headers: { 'Authorization': 'Bearer ' + TOKEN },
+    });
+    if (!res.ok) return;
+    var data = await res.json();
+    SUBMISSIONS = data.submissions || [];
+
+    // Update dashboard stats
+    var pending = SUBMISSIONS.filter(function(s) { return s.status === 'PENDING'; }).length;
+    var thisMonth = new Date();
+    thisMonth.setDate(1);
+    thisMonth.setHours(0,0,0,0);
+    var approved = SUBMISSIONS.filter(function(s) {
+      return s.status === 'APPROVED' && s.reviewedAt && new Date(s.reviewedAt) >= thisMonth;
+    }).length;
+    var revision = SUBMISSIONS.filter(function(s) { return s.status === 'REJECTED'; }).length;
+
+    document.getElementById('d-pending').textContent = pending;
+    document.getElementById('d-approved').textContent = approved;
+    document.getElementById('d-revision').textContent = revision;
+  } catch (e) {}
+}
+
+// ═══════════════════════════════════════════════
+// Submit content
+// ═══════════════════════════════════════════════
+
+async function submitContent() {
+  clearMsg('submit-error');
+  clearMsg('submit-success');
+
+  var platform = document.getElementById('s-platform').value;
+  var contentType = document.getElementById('s-type').value;
+  var draftText = document.getElementById('s-draft').value.trim();
+  var url = document.getElementById('s-url').value.trim();
+  var notes = document.getElementById('s-notes').value.trim();
+
+  if (!draftText && !url) {
+    showError('submit-error', 'Please provide your draft content or a URL.');
+    return;
+  }
+
+  try {
+    var path, method;
+    if (REVISING_ID) {
+      path = '/promoter/submissions/' + encodeURIComponent(REVISING_ID) + '/revise';
+      method = 'PATCH';
+    } else {
+      path = '/promoter/submit';
+      method = 'POST';
+    }
+    var res = await fetch(API + path, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + TOKEN,
+      },
+      body: JSON.stringify({ platform: platform, contentType: contentType, draftText: draftText, url: url, notes: notes }),
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      showError('submit-error', err.error || 'Failed to submit');
+      return;
+    }
+    showSuccess('submit-success', 'Submitted. Your content is under review. Do not post until you receive approval.');
+    // Clear form
+    document.getElementById('s-draft').value = '';
+    document.getElementById('s-url').value = '';
+    document.getElementById('s-notes').value = '';
+    REVISING_ID = null;
+    // Reload submissions for stats
+    await loadSubmissions();
+    setTimeout(function() { navigate('dashboard'); }, 1500);
+  } catch (e) {
+    showError('submit-error', 'Network error. Please try again.');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// History
+// ═══════════════════════════════════════════════
+
+async function loadHistory() {
+  await loadSubmissions();
+  var listEl = document.getElementById('history-list');
+  if (!SUBMISSIONS.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-soft)">No submissions yet. Submit your first content for review.</div>';
+    return;
+  }
+  listEl.innerHTML = SUBMISSIONS.map(function(s) {
+    var statusClass = s.status === 'APPROVED' ? 'b-green' : s.status === 'REJECTED' ? 'b-red' : 'b-amber';
+    var dt = s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    var preview = (s.draftText || s.url || '').slice(0, 80);
+    var rejectButton = s.status === 'REJECTED'
+      ? '<button class="btn btn-secondary" style="margin-top:10px" onclick="event.stopPropagation();reviseSubmission(\'' + esc(s.id) + '\')">Revise and Resubmit</button>'
+      : '';
+    return '<div class="row" onclick="this.classList.toggle(\'expanded\')">'
+      + '<div class="row-head">'
+        + '<div><span class="badge ' + statusClass + '">' + esc(s.status) + '</span> <span style="margin-left:8px;font-size:12px;color:var(--text-mid)">' + esc(s.platform) + ' · ' + esc(s.contentType) + '</span></div>'
+        + '<div class="row-meta">' + dt + '</div>'
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--text-mid);margin-top:4px">' + esc(preview) + (preview.length >= 80 ? '…' : '') + '</div>'
+      + '<div class="row-detail">'
+        + (s.draftText ? '<div style="margin-bottom:8px"><strong>Draft:</strong> ' + esc(s.draftText) + '</div>' : '')
+        + (s.url ? '<div style="margin-bottom:8px"><strong>URL:</strong> ' + esc(s.url) + '</div>' : '')
+        + (s.reviewNotes ? '<div style="margin-bottom:8px;padding:8px;background:var(--red-dim);border:1px solid var(--red-bdr);border-radius:4px"><strong>Reviewer notes:</strong> ' + esc(s.reviewNotes) + '</div>' : '')
+        + rejectButton
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
+function reviseSubmission(id) {
+  REVISING_ID = id;
+  navigate('submit');
+}
+
+// ═══════════════════════════════════════════════
+// Boot
+// ═══════════════════════════════════════════════
+
+(async function init() {
+  // Check URL for ?token= (magic link verification)
+  var urlParams = new URLSearchParams(window.location.search);
+  var urlToken = urlParams.get('token');
+  if (urlToken) {
+    var ok = await verifyToken(urlToken);
+    if (ok) {
+      // Clear URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      await loadProfile();
+      show('dashboard');
+      return;
+    } else {
+      show('login');
+      showError('login-error', 'This link is invalid or expired. Please request a new one.');
+      return;
+    }
+  }
+
+  // No URL token — check sessionStorage
+  if (TOKEN) {
+    await loadProfile();
+    if (PROFILE) {
+      show('dashboard');
+      return;
+    }
+  }
+
+  // Default: show login
+  show('login');
+})();
+</script>
+
+</body>
+</html>
