@@ -6127,6 +6127,49 @@ let authToken = localStorage.getItem('iw_token') || null;
 let currentRole = localStorage.getItem('iw_role') || null;
 let currentTenantType = localStorage.getItem('iw_tenantType') || null;
 
+// ── Global 401 handler — auto-logout on expired session ───────────────
+// Wraps window.fetch so any 401 from the backend triggers a clean logout
+// and shows the login screen with a "Session expired" message. Prevents
+// users from getting stuck on broken UI when their JWT expires (24h).
+(function installGlobalAuthHandler() {
+  if (window._iwFetchWrapped) return;
+  window._iwFetchWrapped = true;
+  var _origFetch = window.fetch.bind(window);
+  var _logoutFired = false;
+  window.fetch = async function(input, init) {
+    var res = await _origFetch(input, init);
+    // Only react to 401s from our own backend, and only fire logout once
+    var url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (res.status === 401 && url.indexOf('influwatch-backend.onrender.com') !== -1 && !_logoutFired) {
+      // Skip the login endpoint itself — bad credentials shouldn't trigger logout
+      if (url.indexOf('/auth/login') === -1) {
+        _logoutFired = true;
+        try {
+          localStorage.removeItem('iw_token');
+          localStorage.removeItem('iw_role');
+          localStorage.removeItem('iw_tenantType');
+          localStorage.removeItem('iw_displayName');
+          localStorage.removeItem('iw_initials');
+          localStorage.removeItem('iw_roleLabel');
+          authToken = null;
+          currentRole = null;
+        } catch (_) {}
+        // Show login screen with expired-session notice
+        var loginScreen = document.getElementById('login-screen');
+        var mainShell = document.getElementById('main-shell');
+        if (loginScreen) loginScreen.style.display = 'flex';
+        if (mainShell) mainShell.style.display = 'none';
+        var errEl = document.getElementById('login-error');
+        if (errEl) {
+          errEl.textContent = 'Your session has expired. Please log in again.';
+          errEl.style.display = 'block';
+        }
+      }
+    }
+    return res;
+  };
+})();
+
 async function submitLogin() {
   const email    = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
