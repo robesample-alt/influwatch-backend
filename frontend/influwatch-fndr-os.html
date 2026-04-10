@@ -9209,6 +9209,29 @@ async function scanVideoUrl() {
   if (btn) { btn.disabled = false; btn.textContent = 'Run Compliance Scan'; }
 }
 
+// Clipboard paste handler — Ctrl+V on Compliance Scan screen accepts images
+(function installComplianceScanPasteHandler() {
+  if (window._iwScanPasteWired) return;
+  window._iwScanPasteWired = true;
+  document.addEventListener('paste', function(e) {
+    var screen = document.getElementById('screen-compliance-scan');
+    if (!screen || !screen.classList.contains('active')) return;
+    var items = (e.clipboardData || {}).items || [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (it.kind === 'file' && it.type && it.type.indexOf('image/') === 0) {
+        var file = it.getAsFile();
+        if (file) {
+          e.preventDefault();
+          showToast('Screenshot pasted — scanning…');
+          scanImageFile(file);
+          return;
+        }
+      }
+    }
+  });
+})();
+
 async function scanImageFile(file) {
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) { showToast('Image too large \u2014 max 10MB'); return; }
