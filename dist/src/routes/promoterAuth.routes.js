@@ -25,7 +25,7 @@ const router = (0, express_1.Router)();
 // across all tenants, generates a magic link, sends via email.
 // Always returns 200 — never reveals whether the email exists.
 // ─────────────────────────────────────────
-router.post('/auth/request-link', async (req, res, next) => {
+router.post('/request-link', async (req, res, next) => {
     try {
         const { email } = req.body;
         if (!email || typeof email !== 'string') {
@@ -102,7 +102,7 @@ router.post('/auth/request-link', async (req, res, next) => {
 // Public. Accepts a token, validates against promoter_magic_links,
 // marks it used, returns a promoter JWT.
 // ─────────────────────────────────────────
-router.post('/auth/verify', async (req, res, next) => {
+router.post('/verify', async (req, res, next) => {
     try {
         const { token } = req.body;
         if (!token || typeof token !== 'string') {

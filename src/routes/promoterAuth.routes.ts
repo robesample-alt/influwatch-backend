@@ -28,7 +28,7 @@ const router = Router();
 // Always returns 200 — never reveals whether the email exists.
 // ─────────────────────────────────────────
 
-router.post('/auth/request-link', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/request-link', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
     if (!email || typeof email !== 'string') {
@@ -116,7 +116,7 @@ router.post('/auth/request-link', async (req: Request, res: Response, next: Next
 // marks it used, returns a promoter JWT.
 // ─────────────────────────────────────────
 
-router.post('/auth/verify', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/verify', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { token } = req.body;
     if (!token || typeof token !== 'string') {
