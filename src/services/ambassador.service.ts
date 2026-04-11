@@ -117,7 +117,9 @@ export async function createAmbassador(tenantId: string, input: {
     supervisionPosture?:    string;
     transactionalityClass?: string;
     compensationRate?:      string;
+    acknowledged?:          boolean;
   };
+  actorId?: string;  // for stamping the ack actor
 }) {
   const { valid, errors } = validateCreateAmbassador(input);
   if (!valid) {
@@ -145,6 +147,8 @@ export async function createAmbassador(tenantId: string, input: {
     // Create CompensationStructure if compensation data provided
     if (input.compensation) {
       const c = input.compensation;
+      const requiresAck = c.supervisionPosture === 'CRITICAL' || c.supervisionPosture === 'HIGH';
+      const ackProvided = requiresAck && c.acknowledged === true;
       await tx.compensationStructure.create({
         data: {
           tenantId,
@@ -156,12 +160,14 @@ export async function createAmbassador(tenantId: string, input: {
           isSecurityLinked:     c.isSecurityLinked ?? false,
           isCompensationVariable: c.isTransactionBased ?? false,
           requiresDisclosure:   c.isSecurityLinked || c.isTransactionBased || false,
-          requiresPrincipalReview: c.supervisionPosture === 'CRITICAL' || c.supervisionPosture === 'HIGH',
+          requiresPrincipalReview: requiresAck,
           supervisionPosture:   c.supervisionPosture ?? 'LOW',
           writtenAgreementRequired: true,
           compensationType:     c.compensationType ?? null,
           transactionalityClass: c.transactionalityClass ?? null,
           notes:                c.compensationRate ? `Rate: ${c.compensationRate}` : null,
+          acknowledgedAt:       ackProvided ? new Date() : null,
+          acknowledgedBy:       ackProvided ? (input.actorId ?? null) : null,
         },
       });
     }

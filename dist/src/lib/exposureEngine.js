@@ -88,6 +88,7 @@ function computeExposure(input) {
     const compType = (input.compensationType || '').toUpperCase();
     const txnClass = (input.transactionalityClass || '').toUpperCase();
     const sev = (input.severity || 'LOW').toUpperCase();
+    const tenant = (input.tenantType || '').toUpperCase();
     // Derive which detection categories are present from the hit rule codes
     const categories = new Set();
     for (const code of input.hitRuleCodes) {
@@ -95,9 +96,33 @@ function computeExposure(input) {
     }
     const hasSolicitation = categories.has('SOLICITATION');
     const hasDisclosure = categories.has('DISCLOSURE') || categories.has('COMPENSATION_DISCLOSURE');
-    const hasPerformance = categories.has('PERFORMANCE_CLAIM');
     const hasGuarantee = input.hitRuleCodes.some(c => c === 'RISK-001' || c === 'LLM-003');
-    const hasUrgency = categories.has('URGENCY_PRESSURE');
+    // Specific rule presence flags used by the new escalation rules
+    const ruleSet = new Set(input.hitRuleCodes);
+    const hasDisc001 = ruleSet.has('DISC-001');
+    const hasFintech003 = ruleSet.has('FINTECH-003');
+    const hasFintech004 = ruleSet.has('FINTECH-004');
+    const hasRiamr001 = ruleSet.has('RIAMR-001');
+    const hasRega001 = ruleSet.has('REGA-001');
+    const hasRega002 = ruleSet.has('REGA-002');
+    const hasRega003 = ruleSet.has('REGA-003');
+    const hasRega005 = ruleSet.has('REGA-005');
+    const hasExp013Trigger = hasSolicitation && (input.hasAffiliateLink || input.hasReferralCode);
+    // Approximate count of HIGH+ severity findings present in the hit list.
+    // The exposure engine doesn't have per-hit severity, so we approximate by
+    // counting rule codes that are inherently HIGH/CRITICAL by category.
+    const highHitCount = input.hitRuleCodes.filter(c => {
+        return c.startsWith('RISK-')
+            || c.startsWith('REGA-')
+            || c === 'FINTECH-003'
+            || c === 'FINTECH-004'
+            || c === 'RIAMR-001'
+            || c === 'RIAMR-004'
+            || c === 'RIAMR-005'
+            || c === 'LLM-003'
+            || c === 'REGCF-001';
+    }).length;
+    const threePlusHighFindings = highHitCount >= 3;
     // ── Reason code accumulation ───────────────────────────────
     // EXP-001: Transaction-based compensation structure
     if (txnClass === 'TRANSACTION_BASED' || input.isTransactionBased) {
@@ -194,92 +219,77 @@ function computeExposure(input) {
         reasons.push('EXP-018_MARKETING_RULE_VIOLATION');
     }
     // ── Level derivation ───────────────────────────────────────
-    // A. PRINCIPAL_REQUIRED: transaction-based compensation types
-    //    that inherently create broker-dealer-like liability
-    const principalRequiredCompTypes = new Set([
-        'PER_ACCOUNT_OPENED_AND_FUNDED',
-        'PER_DOLLAR_INVESTED',
-        'REVENUE_SHARE_SECURITIES',
-        'PER_LEAD_CONVERTED_TO_INVESTOR',
-    ]);
-    if (principalRequiredCompTypes.has(compType)) {
-        level = 'PRINCIPAL_REQUIRED';
+    //
+    // New floor-based model. Compensation posture sets the supervision
+    // FLOOR (the minimum level we will ever land on). Detection signals
+    // ESCALATE above the floor. Compensation alone never escalates.
+    //
+    //   NON_TRANSACTIONAL              → floor NONE
+    //   ELEVATED_NON_TRANSACTIONAL     → floor NONE
+    //                                    (any violation goes to REVIEWER)
+    //   POTENTIALLY_TRANSACTIONAL      → floor REVIEWER
+    //   TRANSACTION_BASED              → floor REVIEWER
+    //                                    (human eyes on every record,
+    //                                     nothing more from comp alone)
+    //
+    // ───────────────────────────────────────────────────────────
+    // Step 1 — Floor by compensation class
+    let floor = 'NONE';
+    if (txnClass === 'POTENTIALLY_TRANSACTIONAL' || txnClass === 'TRANSACTION_BASED') {
+        floor = 'REVIEWER';
     }
-    // A2. PRINCIPAL_REQUIRED: transaction-based + solicitation/guarantee signal
-    if (level !== 'PRINCIPAL_REQUIRED' &&
-        txnClass === 'TRANSACTION_BASED' &&
-        (hasSolicitation || hasGuarantee)) {
-        level = 'PRINCIPAL_REQUIRED';
-    }
-    // A3. PRINCIPAL_REQUIRED: explicit campaign compensation drift (Phase 4)
-    if (level !== 'PRINCIPAL_REQUIRED' && input.compensationMismatchWithCampaign === true) {
-        level = 'PRINCIPAL_REQUIRED';
-    }
-    // A4. PRINCIPAL_REQUIRED: campaign not activated by principal — no
-    // structural supervisory sign-off exists, so every record must go
-    // through principal review until the campaign is activated.
-    if (level !== 'PRINCIPAL_REQUIRED' && input.campaignNotActivated === true) {
-        level = 'PRINCIPAL_REQUIRED';
-    }
-    // A5. PRINCIPAL_REQUIRED: unauthorized promoter — not on campaign roster
-    if (level !== 'PRINCIPAL_REQUIRED' && input.unauthorizedPromoter === true) {
-        level = 'PRINCIPAL_REQUIRED';
-    }
-    // A5b. PRINCIPAL_REQUIRED: Reg CF portal-prohibited solicitation
-    if (level !== 'PRINCIPAL_REQUIRED' && input.portalProhibitedSolicitation === true) {
-        level = 'PRINCIPAL_REQUIRED';
-    }
-    // A5c. PRINCIPAL_REQUIRED: ISSUER anti-fraud signal — Section 17(a)
-    if (level !== 'PRINCIPAL_REQUIRED' && input.antiFraudSignal === true) {
-        level = 'PRINCIPAL_REQUIRED';
-    }
-    // A5d. PRINCIPAL_REQUIRED: RIA Marketing Rule violation signal
-    if (level !== 'PRINCIPAL_REQUIRED' && input.marketingRuleViolation === true) {
-        level = 'PRINCIPAL_REQUIRED';
-    }
-    // A6. PRINCIPAL_REQUIRED: compensated solicitation with transaction-based
-    // or security-linked compensation. The full triangle:
-    // solicitation behavior + tracked distribution + transactional comp.
-    if (level !== 'PRINCIPAL_REQUIRED' &&
-        hasSolicitation &&
-        hasDistributionMechanism &&
-        (input.isTransactionBased || input.isSecurityLinked)) {
-        level = 'PRINCIPAL_REQUIRED';
-    }
-    // B. PRINCIPAL_EXCEPTION: transaction-based without strong signal,
-    //    or potentially-transactional with HIGH/CRITICAL severity
-    if (level !== 'PRINCIPAL_REQUIRED') {
-        if (txnClass === 'TRANSACTION_BASED') {
-            // Transaction-based but no solicitation/guarantee — still needs
-            // principal attention, just not the automatic-required level
-            level = 'PRINCIPAL_EXCEPTION';
-        }
-        else if (txnClass === 'POTENTIALLY_TRANSACTIONAL' &&
-            (sev === 'CRITICAL' || sev === 'HIGH')) {
-            level = 'PRINCIPAL_EXCEPTION';
+    else if (txnClass === 'ELEVATED_NON_TRANSACTIONAL') {
+        // Any violation lifts ELEVATED_NON_TRANSACTIONAL to REVIEWER. With
+        // zero violations it stays at NONE.
+        if (input.hitRuleCodes.length > 0) {
+            floor = 'REVIEWER';
         }
     }
-    // C. REVIEWER_PLUS_SUPERVISOR: HIGH/CRITICAL severity but
-    //    compensation context is not principal-level
-    if (EXPOSURE_RANK[level] < EXPOSURE_RANK['REVIEWER_PLUS_SUPERVISOR']) {
-        if (sev === 'CRITICAL' || sev === 'HIGH') {
-            level = 'REVIEWER_PLUS_SUPERVISOR';
-        }
+    level = floor;
+    // Step 2 — REVIEWER → REVIEWER_PLUS_SUPERVISOR
+    const isCompensatedPromoter = input.isTransactionBased
+        || input.isSecurityLinked
+        || (txnClass && txnClass !== 'NON_TRANSACTIONAL');
+    let escalateToSupervisor = sev === 'HIGH' || sev === 'CRITICAL' ||
+        (hasDisc001 && isCompensatedPromoter) ||
+        hasFintech003 ||
+        hasRiamr001 ||
+        (tenant === 'ISSUER' && (hasRega002 || hasRega003));
+    if (escalateToSupervisor && EXPOSURE_RANK[level] < EXPOSURE_RANK['REVIEWER_PLUS_SUPERVISOR']) {
+        level = 'REVIEWER_PLUS_SUPERVISOR';
     }
-    // D. REVIEWER: MEDIUM severity, no stronger trigger
-    if (EXPOSURE_RANK[level] < EXPOSURE_RANK['REVIEWER']) {
-        if (sev === 'MEDIUM') {
-            level = 'REVIEWER';
-        }
+    // Step 3 — REVIEWER_PLUS_SUPERVISOR → PRINCIPAL_REQUIRED
+    let escalateToPrincipal = hasExp013Trigger || // EXP-013
+        (txnClass === 'TRANSACTION_BASED' && hasGuarantee) || // EXP-009 on TRANSACTION_BASED
+        (txnClass === 'TRANSACTION_BASED' && hasDisc001 && (sev === 'HIGH' || sev === 'CRITICAL')) ||
+        (txnClass === 'TRANSACTION_BASED' && hasFintech004) ||
+        hasRega001 || // REGA-001 — testing-the-waters
+        (tenant === 'ISSUER' && hasRega005) ||
+        input.portalProhibitedSolicitation === true || // EXP-016 — absolute
+        input.antiFraudSignal === true || // EXP-017
+        input.marketingRuleViolation === true || // EXP-018
+        input.campaignNotActivated === true || // EXP-014
+        input.unauthorizedPromoter === true || // EXP-015
+        threePlusHighFindings;
+    if (escalateToPrincipal) {
+        level = 'PRINCIPAL_REQUIRED';
     }
-    // E. NONE: LOW severity, no exposure triggers
-    // (already the default)
-    // Boost: if guarantee/fraud signal exists and level is below
-    // PRINCIPAL_EXCEPTION, promote. A guarantee claim is serious
-    // regardless of compensation structure.
-    if (hasGuarantee &&
-        EXPOSURE_RANK[level] < EXPOSURE_RANK['PRINCIPAL_EXCEPTION']) {
-        level = 'PRINCIPAL_EXCEPTION';
+    // Step 4 — REG_CF absolute override.
+    // Reg CF Rule 402(a) is an absolute prohibition on funding-portal
+    // solicitation. ANY transaction-based compensation in a Reg CF
+    // tenant goes to PRINCIPAL_REQUIRED regardless of content quality.
+    if (tenant === 'REG_CF' && txnClass === 'TRANSACTION_BASED') {
+        level = 'PRINCIPAL_REQUIRED';
+    }
+    // Step 5 — Severity-only safety net
+    // If no comp class set a floor (true UNCOMPENSATED) but the content
+    // itself is HIGH/CRITICAL severity, route to REVIEWER_PLUS_SUPERVISOR.
+    // MEDIUM severity uncompensated content goes to REVIEWER.
+    if (EXPOSURE_RANK[level] < EXPOSURE_RANK['REVIEWER_PLUS_SUPERVISOR'] && (sev === 'HIGH' || sev === 'CRITICAL')) {
+        level = 'REVIEWER_PLUS_SUPERVISOR';
+    }
+    if (EXPOSURE_RANK[level] < EXPOSURE_RANK['REVIEWER'] && sev === 'MEDIUM') {
+        level = 'REVIEWER';
     }
     // ── ISSUER threshold adjustment ─────────────────────────────
     // Direct issuers have a single designated compliance contact, not a
@@ -287,25 +297,14 @@ function computeExposure(input) {
     // Downgrade PRINCIPAL_REQUIRED to REVIEWER_PLUS_SUPERVISOR unless a
     // clear anti-fraud signal is present: EXP-017, guarantee/fraud,
     // missing disclosure on HIGH+ content, or 3+ HIGH severity findings.
-    if (input.tenantType === 'ISSUER' && level === 'PRINCIPAL_REQUIRED') {
-        const hasAntiFraudSignal = input.antiFraudSignal === true;
+    if (tenant === 'ISSUER' && level === 'PRINCIPAL_REQUIRED') {
+        const hasAntiFraudSignalPresent = input.antiFraudSignal === true;
         const hasGuaranteeFraud = hasGuarantee;
         const missingDiscWithHigh = hasDisclosure && (sev === 'CRITICAL' || sev === 'HIGH');
-        const highHitCount = input.hitRuleCodes.filter(c => {
-            // Approximate HIGH+ hit count from rule codes that are typically HIGH/CRITICAL
-            return c.startsWith('RISK-') || c.startsWith('REGA-') || c.startsWith('FINTECH-004') || c.startsWith('LLM-');
-        }).length;
-        const multipleHighHits = highHitCount >= 3;
-        if (!hasAntiFraudSignal && !hasGuaranteeFraud && !missingDiscWithHigh && !multipleHighHits) {
+        const multipleHighHits = threePlusHighFindings;
+        if (!hasAntiFraudSignalPresent && !hasGuaranteeFraud && !missingDiscWithHigh && !multipleHighHits) {
             level = 'REVIEWER_PLUS_SUPERVISOR';
         }
-    }
-    // Boost: undisclosed compensation on a compensated promoter with
-    // security-linked product warrants at least supervisor review
-    if (hasDisclosure &&
-        input.isSecurityLinked &&
-        EXPOSURE_RANK[level] < EXPOSURE_RANK['REVIEWER_PLUS_SUPERVISOR']) {
-        level = 'REVIEWER_PLUS_SUPERVISOR';
     }
     // ── Output ─────────────────────────────────────────────────
     // Phase 3 correction: only PRINCIPAL_REQUIRED sets the mandatory

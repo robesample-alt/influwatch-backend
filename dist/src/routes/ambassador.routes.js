@@ -74,6 +74,14 @@ async function createAmbassador(req, res, next) {
                 error: 'displayName, handle, and primaryPlatform are required',
             });
         }
+        // Counsel-reviewed acknowledgment is required for elevated postures.
+        if (compensation && (compensation.supervisionPosture === 'CRITICAL' || compensation.supervisionPosture === 'HIGH')) {
+            if (compensation.acknowledged !== true) {
+                return res.status(400).json({
+                    error: 'Counsel-reviewed acknowledgment is required for transaction-based or potentially-transactional compensation arrangements.',
+                });
+            }
+        }
         const ambassador = await AmbassadorService.createAmbassador(tenantId, {
             displayName,
             handle,
@@ -83,6 +91,7 @@ async function createAmbassador(req, res, next) {
             assignedSupervisorId: assignedSupervisorId ?? undefined,
             supervisoryRelationship: supervisoryRelationship ?? 'SUPERVISED',
             compensation: compensation ?? undefined,
+            actorId: req.user.id,
         });
         return res.status(201).json(ambassador);
     }

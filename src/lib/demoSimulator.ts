@@ -2,12 +2,25 @@
 // FUNDUREX — INFLUWATCH
 // Demo Simulator — Realistic Content Ingestion Pool
 //
-// 30 content scenarios across 7 demo promoters. Each scenario
+// 60+ content scenarios across 7 demo promoters. Each scenario
 // flows through the full pipeline: phrase detection → LLM
 // analysis → severity floor → exposure engine → referral code
 // matching → principal routing.
 //
-// ~60% clean content, ~25% minor issues, ~15% serious flags.
+// ── REBALANCED FOR FLOOR-BASED EXPOSURE ENGINE ─────────────
+// Target distribution after engine rebalance (2026-04-11):
+//   ~60%  NONE / REVIEWER          (clean or low-impact content)
+//   ~25%  REVIEWER_PLUS_SUPERVISOR (HIGH severity content)
+//   ~10%  PRINCIPAL_REQUIRED       (EXP-013/14/15/16/17/18 or
+//                                   transaction-based triggers)
+//   ~5%   edge cases               (unactivated campaigns,
+//                                   unauthorized promoters,
+//                                   absolute Reg CF prohibitions)
+//
+// The engine itself is the primary driver of this distribution.
+// expectedRisk on each scenario is documentation only — the
+// real exposure level is computed at ingestion time from the
+// content text + the promoter's compensation structure.
 // Each scenario has 2 variants to avoid dedup collisions.
 // ============================================================
 
@@ -51,7 +64,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-01', sourcePlatform: 'YOUTUBE', contentType: 'SHORT_FORM_VIDEO',
-    expectedRisk: 'HIGH',
+    expectedRisk: 'MEDIUM',
     description: 'Marcus — guarantee language without disclosure', tenantType: 'BD',
     bodyVariants: [
       'I have never been more confident in an investment. Apex Growth I will outperform everything else this year. The management team knows exactly what they are doing. Mark my words.',
@@ -74,7 +87,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-DEMO-02', sourcePlatform: 'INSTAGRAM', contentType: 'REEL',
-    campaignId: 'CAMP-HCD', expectedRisk: 'CRITICAL',
+    campaignId: 'CAMP-HCD', expectedRisk: 'HIGH',
     description: 'Jordan — risk-free language + no disclosure', tenantType: 'BD',
     bodyVariants: [
       'This is not a drill. Horizon Capital Distribution is offering risk free investment returns that will change your life. I quit my job because of opportunities like this. You cannot lose with this structure. DM me for the link.',
@@ -180,7 +193,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-DEMO-05', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
-    campaignId: 'CAMP-HCD', expectedRisk: 'HIGH',
+    campaignId: 'CAMP-HCD', expectedRisk: 'MEDIUM',
     description: 'Priya — revenue share ownership without full disclosure', tenantType: 'BD',
     bodyVariants: [
       'Horizon Capital Distribution deep dive. I have a financial interest in this fund and I believe it will generate above market returns for the next 3-5 years. This is a ground floor opportunity that serious investors should not ignore. Revenue share disclosure in description.',
@@ -221,7 +234,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-DEMO-07', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
-    campaignId: 'CAMP-AGI', expectedRisk: 'CRITICAL',
+    campaignId: 'CAMP-AGI', expectedRisk: 'HIGH',
     description: 'Leah — post-termination guarantee language', tenantType: 'BD',
     bodyVariants: [
       'Still getting messages about Apex Growth I. Yes the fund is still accepting investors. No I am no longer officially promoting it — but I still think it will double your money. Just my opinion.',
@@ -230,7 +243,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-07', sourcePlatform: 'INSTAGRAM', contentType: 'REEL',
-    expectedRisk: 'HIGH',
+    expectedRisk: 'MEDIUM',
     description: 'Leah — undisclosed promotion during tail period', tenantType: 'BD',
     bodyVariants: [
       'Finance girlies listen up. I know I said I stopped doing sponsored posts but honestly some of these investment opportunities are too good to ignore. Can not miss this one. Link in bio (not sponsored, just sharing).',
@@ -245,7 +258,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'Moomoo — solicitation with referral code + bonus offer', tenantType: 'FINTECH',
     bodyVariants: [
       'Stop guessing when to trade. MooMoo AI earnings hub shows you exactly when stocks move most. Use code MOOMOO2026 to download and grab up to 4600 dollars in welcome bonuses. Hit the link in my bio.',
@@ -300,7 +313,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'Fintech — app referral with per-account bonus', tenantType: 'FINTECH',
     bodyVariants: [
       'Download MooMoo right now and get a free stock plus up to 4600 dollars in welcome bonuses. Use my code MOOMOO2026 at signup. I get paid when you open and fund your account so we both win. Link in bio.',
@@ -318,7 +331,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-02', sourcePlatform: 'INSTAGRAM', contentType: 'REEL',
-    expectedRisk: 'HIGH',
+    expectedRisk: 'MEDIUM',
     description: 'Fintech — commission-free claim without balance', tenantType: 'FINTECH',
     bodyVariants: [
       'Trading is completely free on this platform. Zero fees ever. Why would you pay commissions anywhere else when you can trade for free here. No catches no hidden costs just free money.',
@@ -336,7 +349,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
-    expectedRisk: 'HIGH',
+    expectedRisk: 'MEDIUM',
     description: 'Fintech — referral earnings claim', tenantType: 'FINTECH',
     bodyVariants: [
       'I have made over 10000 dollars just referring friends to this trading app. The referral program is insane. Every person who signs up and deposits gets a free stock and I get paid. Easiest money I have ever made.',
@@ -350,7 +363,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-DEMO-05', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'RIA — unqualified performance + misleading testimonial + no disclosure', tenantType: 'RIA',
     bodyVariants: [
       'My adviser at Vertex Capital has generated 34 percent returns for me over the last 18 months — best investment decision I ever made! Link in bio.',
@@ -359,7 +372,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-05', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
-    expectedRisk: 'HIGH',
+    expectedRisk: 'MEDIUM',
     description: 'RIA — hypothetical performance without context', tenantType: 'RIA',
     bodyVariants: [
       'Backtested results show this strategy returned 22 percent annually over 10 years — ask me how to get started.',
@@ -368,7 +381,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-05', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'RIA — cherry-picked client results', tenantType: 'RIA',
     bodyVariants: [
       'Client spotlight: John started with $50K and now has $180K after 3 years with our firm! Results like this are why we love what we do.',
@@ -409,7 +422,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-DEMO-02', sourcePlatform: 'INSTAGRAM', contentType: 'REEL',
-    expectedRisk: 'HIGH',
+    expectedRisk: 'MEDIUM',
     description: 'Issuer — direct offering promotion without BD', tenantType: 'ISSUER',
     bodyVariants: [
       'This Reg A offering is still open and accepting investors. I get paid for every funded account so yes I have skin in the game. The returns projected for this company are incredible. Do not miss this window. Link in bio to invest directly.',
@@ -441,8 +454,8 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-DEMO-02', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
-    expectedRisk: 'HIGH',
-    description: 'Reg CF — portal promoter solicitation', tenantType: 'REG_CF',
+    expectedRisk: 'CRITICAL',
+    description: 'Reg CF — portal promoter solicitation (EXP-016 absolute)', tenantType: 'REG_CF',
     bodyVariants: [
       'This crowdfunding campaign is blowing up. I get paid for every funded investor and honestly this company deserves it. The growth potential is unreal. Invest now through the portal before the round closes. Link in bio.',
       'Backed this company on the crowdfunding portal and you should too. I earn a commission for referrals so full transparency. But even without that I believe in this business. Do not miss this round. Invest through the link in my bio.',
@@ -473,7 +486,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'Fintech — account opening solicitation + urgency + referral', tenantType: 'FINTECH',
     bodyVariants: [
       'Open a Moomoo account with my link and get 5 free stocks — limited time! Use my code MOOMOO2026 before the offer ends. I have been using this platform for months and it is incredible.',
@@ -482,7 +495,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
-    expectedRisk: 'MEDIUM',
+    expectedRisk: 'LOW',
     description: 'Fintech — commission-free claim without disclosure', tenantType: 'FINTECH',
     bodyVariants: [
       'Commission-free trading on Moomoo — I switched and never looked back. The interface is clean, execution is fast, and you do not pay any fees. Compared to my old broker this is a game changer.',
@@ -491,7 +504,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
-    expectedRisk: 'HIGH',
+    expectedRisk: 'MEDIUM',
     description: 'Fintech — personal performance claims', tenantType: 'FINTECH',
     bodyVariants: [
       'I made $847 last week using Moomoo options tools. My portfolio is up 23% this quarter. DM me for my strategy. This platform gives you everything you need to start earning.',
@@ -509,7 +522,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'Fintech — promissory language + solicitation + referral', tenantType: 'FINTECH',
     bodyVariants: [
       'You will profit with this strategy. Use my code MOOMOO2026 and start making money today. This proven strategy works every time. Open an account now before the bonus expires.',
@@ -573,7 +586,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   {
     ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
     expectedRisk: 'CRITICAL',
-    description: 'Issuer — testing the waters violation + offering term misrep', tenantType: 'ISSUER',
+    description: 'Issuer — testing the waters violation + offering term misrep (REGA-001 → EXP-017)', tenantType: 'ISSUER',
     bodyVariants: [
       'Get in early before this offering goes public — reserve your shares now at the lowest price before qualification. Anyone can invest. Get in for just $100.',
       'Pre-offering access to this Reg A+ deal — invest before we launch. Open to all investors. Coming soon to investors at exclusive pricing.',
@@ -581,7 +594,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'YOUTUBE', contentType: 'VIDEO',
-    expectedRisk: 'HIGH',
+    expectedRisk: 'MEDIUM',
     description: 'Issuer — capability claim with disclosure', tenantType: 'ISSUER',
     bodyVariants: [
       "Their patented AI technology has no competition — this is a revolutionary product breakthrough. I receive a referral fee for this post #ad. Past performance does not guarantee future results.",
@@ -590,7 +603,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-04', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'Issuer — fabricated traction + no disclosure', tenantType: 'ISSUER',
     bodyVariants: [
       'This company has 500,000 customers and is growing 40% per month — explosive growth. Use my link to invest. Market leader in their space.',
@@ -622,7 +635,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
 
   {
     ambassadorId: 'AMB-MOOMOO-TEST', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'Fintech TikTok — POV performance + urgency + referral', tenantType: 'FINTECH',
     bodyVariants: [
       'POV: you started with $500 last month and now look at this 👀 use code MOOMOO2026 to open your account today — offer expires Friday 🔥',
@@ -645,7 +658,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'INSTAGRAM', contentType: 'IMAGE_POST',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'Reg CF — equity solicitation + urgency + referral', tenantType: 'REG_CF',
     bodyVariants: [
       'Own equity in a real company for as little as $100 — campaign closes Friday! Use my referral link to become an investor before the campaign ending soon.',
@@ -654,7 +667,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'TWITTER_X', contentType: 'TWEET',
-    expectedRisk: 'CRITICAL',
+    expectedRisk: 'HIGH',
     description: 'Reg CF — investment limit misrepresentation', tenantType: 'REG_CF',
     bodyVariants: [
       'Invest as much as you want in this Reg CF offering — no limits! #ad I am compensated for this content.',
@@ -672,7 +685,7 @@ export const SCENARIO_POOL: ContentScenario[] = [
   },
   {
     ambassadorId: 'AMB-DEMO-03', sourcePlatform: 'TIKTOK', contentType: 'SHORT_FORM_VIDEO',
-    expectedRisk: 'HIGH',
+    expectedRisk: 'MEDIUM',
     description: 'Reg CF — misleading issuer capability claims', tenantType: 'REG_CF',
     bodyVariants: [
       "Their proprietary technology is unlike anything else in the market — patented technology that's revolutionary. The only platform of its kind. Proven business model. #ad",
