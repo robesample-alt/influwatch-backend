@@ -66,6 +66,150 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // ─────────────────────────────────────────
+// GET /campaigns/overview
+// Cross-campaign supervisory dashboard. Returns each campaign with
+// counts of promoters, content this week, pending review, principal
+// required, last activity, and a derived risk level for sorting.
+// All aggregations run in a single tenant-scoped transaction.
+// ─────────────────────────────────────────
+
+router.get('/overview', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const result = await withTenantContext({ tenantId }, async (tx) => {
+      // Single fetch of campaigns + grouped aggregations.
+      const campaigns = await tx.campaign.findMany({
+        where: { tenantId },
+        select: {
+          id: true,
+          campaignName: true,
+          campaignType: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (campaigns.length === 0) return { campaigns: [], summary: { totalActive: 0, totalPendingReview: 0, totalPrincipalRequired: 0, totalPromoters: 0 } };
+
+      const campaignIds = campaigns.map(c => c.id);
+
+      // Promoter counts per campaign
+      const promoterGroups = await tx.campaignPromoter.groupBy({
+        by:    ['campaignId'],
+        where: { tenantId, campaignId: { in: campaignIds }, status: 'ACTIVE' },
+        _count: { _all: true },
+      });
+      const promoterCountMap = new Map<string, number>();
+      for (const g of promoterGroups) {
+        if (g.campaignId) promoterCountMap.set(g.campaignId, g._count._all);
+      }
+
+      // Content this week (last 7 days) per campaign
+      const contentWeekGroups = await tx.contentRecord.groupBy({
+        by:    ['campaignId'],
+        where: {
+          tenantId,
+          campaignId: { in: campaignIds },
+          capturedAt: { gte: sevenDaysAgo },
+        },
+        _count: { _all: true },
+      });
+      const contentWeekMap = new Map<string, number>();
+      for (const g of contentWeekGroups) {
+        if (g.campaignId) contentWeekMap.set(g.campaignId, g._count._all);
+      }
+
+      // Pending review per campaign
+      const pendingGroups = await tx.contentRecord.groupBy({
+        by:    ['campaignId'],
+        where: {
+          tenantId,
+          campaignId: { in: campaignIds },
+          archiveStatus: 'PENDING_REVIEW',
+        },
+        _count: { _all: true },
+      });
+      const pendingMap = new Map<string, number>();
+      for (const g of pendingGroups) {
+        if (g.campaignId) pendingMap.set(g.campaignId, g._count._all);
+      }
+
+      // Principal required per campaign (only counted while still pending)
+      const principalGroups = await tx.contentRecord.groupBy({
+        by:    ['campaignId'],
+        where: {
+          tenantId,
+          campaignId: { in: campaignIds },
+          requiresPrincipalReview: true,
+          archiveStatus: 'PENDING_REVIEW',
+        },
+        _count: { _all: true },
+      });
+      const principalMap = new Map<string, number>();
+      for (const g of principalGroups) {
+        if (g.campaignId) principalMap.set(g.campaignId, g._count._all);
+      }
+
+      // Last activity (max capturedAt) per campaign
+      const lastActivityGroups = await tx.contentRecord.groupBy({
+        by:    ['campaignId'],
+        where: { tenantId, campaignId: { in: campaignIds } },
+        _max:  { capturedAt: true },
+      });
+      const lastActivityMap = new Map<string, Date | null>();
+      for (const g of lastActivityGroups) {
+        if (g.campaignId) lastActivityMap.set(g.campaignId, g._max.capturedAt);
+      }
+
+      // Build per-campaign overview rows
+      const enriched = campaigns.map(c => {
+        const promoterCount     = promoterCountMap.get(c.id) ?? 0;
+        const contentThisWeek   = contentWeekMap.get(c.id)   ?? 0;
+        const pendingReview     = pendingMap.get(c.id)       ?? 0;
+        const principalRequired = principalMap.get(c.id)     ?? 0;
+        const lastActivity      = lastActivityMap.get(c.id)  ?? null;
+
+        let riskLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+        if (principalRequired > 0)      riskLevel = 'CRITICAL';
+        else if (pendingReview > 10)    riskLevel = 'HIGH';
+        else if (pendingReview > 0)     riskLevel = 'MEDIUM';
+        else                             riskLevel = 'LOW';
+
+        return {
+          id: c.id,
+          campaignName: c.campaignName,
+          campaignType: c.campaignType,
+          status:       c.status,
+          createdAt:    c.createdAt,
+          promoterCount,
+          contentThisWeek,
+          pendingReview,
+          principalRequired,
+          lastActivity,
+          riskLevel,
+        };
+      });
+
+      // Tenant-wide summary metrics
+      const ACTIVE_STATUSES = new Set(['LIVE', 'APPROVED']);
+      const summary = {
+        totalActive: enriched.filter(e => ACTIVE_STATUSES.has(e.status)).length,
+        totalPendingReview:     enriched.reduce((acc, e) => acc + e.pendingReview, 0),
+        totalPrincipalRequired: enriched.reduce((acc, e) => acc + e.principalRequired, 0),
+        totalPromoters:         enriched.reduce((acc, e) => acc + e.promoterCount, 0),
+      };
+
+      return { campaigns: enriched, summary };
+    });
+
+    return res.json(result);
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────
 // POST /campaigns/:id/promoters
 // ─────────────────────────────────────────
 
