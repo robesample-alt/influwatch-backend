@@ -50,7 +50,17 @@ export async function sendEscalationAlert(opts: {
 
 // ── Promoter Portal — magic link emails ───────────────────────
 
-const PORTAL_URL = process.env.PORTAL_URL ?? 'https://portal.influwatch.app';
+const PORTAL_URL = process.env.PORTAL_URL ?? 'https://influwatch-app.vercel.app/portal.html';
+
+function buildMagicLinkUrl(token: string): string {
+  // PORTAL_URL may already contain a path (e.g. /portal.html) — append ?token=
+  const sep = PORTAL_URL.includes('?') ? '&' : '?';
+  return `${PORTAL_URL}${sep}token=${encodeURIComponent(token)}`;
+}
+
+function buttonHtml(url: string, label: string): string {
+  return `<a href="${url}" style="background:#1F3864;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-family:Arial,sans-serif;font-size:14px;display:inline-block;">${label}</a>`;
+}
 
 export async function sendPromoterInvite(opts: {
   email:         string;
@@ -61,8 +71,9 @@ export async function sendPromoterInvite(opts: {
   const resend = getClient();
   if (!resend) return; // silent no-op
 
-  const link = `${PORTAL_URL}/?token=${encodeURIComponent(opts.token)}`;
+  const magicLinkUrl = buildMagicLinkUrl(opts.token);
   const subject = `You've been invited to the InfluWatch compliance portal`;
+
   const text = [
     `Hi ${opts.promoterName},`,
     ``,
@@ -70,15 +81,27 @@ export async function sendPromoterInvite(opts: {
     ``,
     `Click the link below to access your portal. It expires in 72 hours.`,
     ``,
-    link,
+    magicLinkUrl,
     ``,
     `If you weren't expecting this email, you can safely ignore it.`,
     ``,
     `— The InfluWatch team`,
   ].join('\n');
 
+  const html = `
+    <div style="font-family:Arial,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:560px;">
+      <p>Hi ${opts.promoterName},</p>
+      <p><strong>${opts.firmName}</strong> has registered you as a promoter in their compliance supervision system.</p>
+      <p>Click the button below to access your portal. It expires in 72 hours.</p>
+      <p style="margin:24px 0;">${buttonHtml(magicLinkUrl, 'Access Your Portal')}</p>
+      <p style="font-size:12px;color:#666;">Or copy this link: <a href="${magicLinkUrl}">${magicLinkUrl}</a></p>
+      <p style="font-size:12px;color:#666;">If you weren't expecting this email, you can safely ignore it.</p>
+      <p style="font-size:12px;color:#666;">— The InfluWatch team</p>
+    </div>
+  `.trim();
+
   try {
-    await resend.emails.send({ from: FROM, to: opts.email, subject, text });
+    await resend.emails.send({ from: FROM, to: opts.email, subject, text, html });
   } catch (err) {
     console.error('[mailer] Failed to send promoter invite:', err);
   }
@@ -92,22 +115,34 @@ export async function sendPromoterLoginLink(opts: {
   const resend = getClient();
   if (!resend) return;
 
-  const link = `${PORTAL_URL}/?token=${encodeURIComponent(opts.token)}`;
+  const magicLinkUrl = buildMagicLinkUrl(opts.token);
   const subject = `Your InfluWatch login link`;
+
   const text = [
     `Hi ${opts.promoterName},`,
     ``,
     `Here's your login link. It expires in 60 minutes.`,
     ``,
-    link,
+    magicLinkUrl,
     ``,
     `If you didn't request this, you can safely ignore it.`,
     ``,
     `— The InfluWatch team`,
   ].join('\n');
 
+  const html = `
+    <div style="font-family:Arial,sans-serif;font-size:14px;color:#222;line-height:1.5;max-width:560px;">
+      <p>Hi ${opts.promoterName},</p>
+      <p>Here's your login link. It expires in 60 minutes.</p>
+      <p style="margin:24px 0;">${buttonHtml(magicLinkUrl, 'Log In To Portal')}</p>
+      <p style="font-size:12px;color:#666;">Or copy this link: <a href="${magicLinkUrl}">${magicLinkUrl}</a></p>
+      <p style="font-size:12px;color:#666;">If you didn't request this, you can safely ignore it.</p>
+      <p style="font-size:12px;color:#666;">— The InfluWatch team</p>
+    </div>
+  `.trim();
+
   try {
-    await resend.emails.send({ from: FROM, to: opts.email, subject, text });
+    await resend.emails.send({ from: FROM, to: opts.email, subject, text, html });
   } catch (err) {
     console.error('[mailer] Failed to send promoter login link:', err);
   }
