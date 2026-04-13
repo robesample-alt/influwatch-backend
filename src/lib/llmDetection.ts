@@ -70,13 +70,14 @@ function getClient(): Anthropic | null {
 // ── Public types ──────────────────────────────────────────────
 
 export interface LlmDetectionInput {
-  bodyText:           string;
-  transcriptText?:    string | null;
-  supervisionPosture: string;
-  compensationForm:   string;
-  isTransactionBased: boolean;
-  isSecurityLinked:   boolean;
-  tenantType?:        string;
+  bodyText:            string;
+  transcriptText?:     string | null;
+  supervisionPosture:  string;
+  compensationForm:    string;
+  isTransactionBased:  boolean;
+  isSecurityLinked:    boolean;
+  tenantType?:         string;
+  isAssociatedPerson?: boolean;
 }
 
 export interface LlmFinding {
@@ -97,7 +98,17 @@ export interface LlmDetectionResult {
 
 // ── Prompt construction ───────────────────────────────────────
 
-function buildSystemPrompt(postureDescription: string, tenantType?: string): string {
+function buildSystemPrompt(postureDescription: string, tenantType?: string, isAssociatedPerson?: boolean): string {
+  const associatedPersonNote = (tenantType === 'ISSUER' && isAssociatedPerson === true) ? [
+    '',
+    'IMPORTANT — Associated Person of Issuer:',
+    'This content was created by an associated person of the issuer (officer, director, employee, or significant shareholder).',
+    'They are exempt from broker-dealer registration requirements when promoting the issuer\'s own offering under Securities Act Section 4(a)(2), Reg A Rule 255(b), and Reg CF Rule 204.',
+    'Focus analysis on anti-fraud signals, misleading statements, forward-looking statement risk, and disclosure compliance.',
+    'Do NOT flag solicitation language as a transaction-based compensation concern — that framework does not apply to associated persons.',
+    'Do flag any false statements, omitted material risks, capability claims, traction claims, or testing-the-waters violations.',
+  ].join('\n') : '';
+
   const regCfContext = tenantType === 'REG_CF' ? [
     '',
     'IMPORTANT — Reg CF context: This content is from a promoter associated with a funding portal intermediary.',
@@ -162,7 +173,7 @@ function buildSystemPrompt(postureDescription: string, tenantType?: string): str
     '- The matchedPhrase must be a verbatim substring of the content — do not paraphrase.',
     '- If the content does not reference a specific investment product or financial service, return an empty array.',
     '- An absent compensation disclosure is itself an LLM-002 finding, even when the content seems benign, if the compensation posture above indicates disclosure is required.',
-  ].join('\n') + regCfContext + issuerContext + riaContext;
+  ].join('\n') + regCfContext + issuerContext + riaContext + associatedPersonNote;
 }
 
 function buildUserContent(bodyText: string, transcriptText?: string | null): string {
@@ -289,7 +300,7 @@ export async function runLlmDetection(input: LlmDetectionInput): Promise<LlmDete
     compensationForm:   input.compensationForm,
     isTransactionBased: input.isTransactionBased,
     isSecurityLinked:   input.isSecurityLinked,
-  }), input.tenantType);
+  }), input.tenantType, input.isAssociatedPerson);
   const userContent = buildUserContent(input.bodyText, input.transcriptText);
 
   try {

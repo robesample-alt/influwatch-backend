@@ -270,6 +270,7 @@ model AmbassadorProfile {
   displayName     String
   handle          String
   email           String?           // Promoter contact email — used for portal magic-link login
+  isAssociatedPerson Boolean        @default(false) // ISSUER tenants only — officer/director/employee/significant shareholder of the issuer; exempt from broker-dealer registration analysis
   primaryPlatform SourcePlatform
   status          AmbassadorStatus  @default(ACTIVE)
   createdAt       DateTime          @default(now())

@@ -164,6 +164,17 @@ async function createContentRecord(tenantId, input) {
         // ── Tenant type (needed for LLM context + Reg CF adjustments) ──────────
         const tenant = await tx.tenant.findFirst({ where: { id: tenantId }, select: { tenantType: true } });
         const tenantType = tenant?.tenantType ?? 'BD';
+        // ── ISSUER associated-person flag ──────────────────────────────────────
+        // Promoters classified as associated persons of the issuer (officers,
+        // directors, employees, significant shareholders) are exempt from
+        // broker-dealer registration analysis when promoting their own
+        // offering. The flag is fetched once and passed through to the
+        // exposure engine and the LLM detection prompt.
+        const ambassadorRow = await tx.ambassadorProfile.findFirst({
+            where: { id: input.ambassadorId, tenantId },
+            select: { isAssociatedPerson: true },
+        });
+        const isAssociatedPerson = ambassadorRow?.isAssociatedPerson === true;
         // ── Phrase-based detection (fast, deterministic) ─────────────────────────
         const phraseHits = (0, ruleRegistry_1.detectRuleHits)(bodyText, compensationCtx);
         // ── LLM contextual detection (semantic, fail-open) ───────────────────────
@@ -186,6 +197,7 @@ async function createContentRecord(tenantId, input) {
                 isTransactionBased: compensationStructure.isTransactionBased,
                 isSecurityLinked: compensationStructure.isSecurityLinked,
                 tenantType,
+                isAssociatedPerson,
             });
         }
         // Merge LLM findings into the unified hits list so the downstream
@@ -313,6 +325,7 @@ async function createContentRecord(tenantId, input) {
             antiFraudSignal: hasAntiFraudSignal,
             marketingRuleViolation: hasMarketingRuleViolation,
             tenantType,
+            isAssociatedPerson,
         });
         const record = await tx.contentRecord.create({
             data: {

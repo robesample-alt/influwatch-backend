@@ -124,20 +124,29 @@ function computeExposure(input) {
     }).length;
     const threePlusHighFindings = highHitCount >= 3;
     // ── Reason code accumulation ───────────────────────────────
+    //
+    // EXP-001 through EXP-004 are transaction-based compensation triggers.
+    // They are suppressed for associated persons of an ISSUER tenant
+    // because their economic interest is ownership of the issuer rather
+    // than a contracted promotion arrangement, and their communications
+    // about their own offering are exempt from broker-dealer registration
+    // analysis under Securities Act Section 4(a)(2), Reg A Rule 255(b),
+    // and Reg CF Rule 204. Anti-fraud and disclosure rules still apply.
+    const isAssociatedPerson = input.isAssociatedPerson === true;
     // EXP-001: Transaction-based compensation structure
-    if (txnClass === 'TRANSACTION_BASED' || input.isTransactionBased) {
+    if (!isAssociatedPerson && (txnClass === 'TRANSACTION_BASED' || input.isTransactionBased)) {
         reasons.push('EXP-001_TRANSACTION_BASED_COMP');
     }
     // EXP-002: Funded account trigger
-    if (compType === 'PER_ACCOUNT_OPENED_AND_FUNDED') {
+    if (!isAssociatedPerson && compType === 'PER_ACCOUNT_OPENED_AND_FUNDED') {
         reasons.push('EXP-002_FUNDED_ACCOUNT_TRIGGER');
     }
     // EXP-003: Per dollar invested
-    if (compType === 'PER_DOLLAR_INVESTED') {
+    if (!isAssociatedPerson && compType === 'PER_DOLLAR_INVESTED') {
         reasons.push('EXP-003_PER_DOLLAR_INVESTED');
     }
     // EXP-004: Revenue share on securities
-    if (compType === 'REVENUE_SHARE_SECURITIES') {
+    if (!isAssociatedPerson && compType === 'REVENUE_SHARE_SECURITIES') {
         reasons.push('EXP-004_REVENUE_SHARE_SECURITIES');
     }
     // EXP-005: Repeat offender — TODO: requires promoter history query

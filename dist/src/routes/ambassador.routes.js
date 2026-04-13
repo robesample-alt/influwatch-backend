@@ -68,14 +68,18 @@ async function listAmbassadors(req, res, next) {
 async function createAmbassador(req, res, next) {
     try {
         const tenantId = req.user.tenantId;
-        const { displayName, handle, email, primaryPlatform, riskTier, assignedSupervisorId, supervisoryRelationship, compensation } = req.body;
+        const { displayName, handle, email, isAssociatedPerson, primaryPlatform, riskTier, assignedSupervisorId, supervisoryRelationship, compensation } = req.body;
         if (!displayName || !handle || !primaryPlatform) {
             return res.status(400).json({
                 error: 'displayName, handle, and primaryPlatform are required',
             });
         }
-        // Counsel-reviewed acknowledgment is required for elevated postures.
-        if (compensation && (compensation.supervisionPosture === 'CRITICAL' || compensation.supervisionPosture === 'HIGH')) {
+        // Counsel-reviewed acknowledgment is required for elevated postures —
+        // but associated persons of the issuer are exempt because their economic
+        // interest is ownership rather than a contracted promotion arrangement.
+        if (compensation &&
+            isAssociatedPerson !== true &&
+            (compensation.supervisionPosture === 'CRITICAL' || compensation.supervisionPosture === 'HIGH')) {
             if (compensation.acknowledged !== true) {
                 return res.status(400).json({
                     error: 'Counsel-reviewed acknowledgment is required for transaction-based or potentially-transactional compensation arrangements.',
@@ -86,6 +90,7 @@ async function createAmbassador(req, res, next) {
             displayName,
             handle,
             email,
+            isAssociatedPerson: isAssociatedPerson === true,
             primaryPlatform,
             riskTier: riskTier ?? undefined,
             assignedSupervisorId: assignedSupervisorId ?? undefined,

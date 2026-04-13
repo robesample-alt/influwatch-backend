@@ -105,6 +105,7 @@ export async function createAmbassador(tenantId: string, input: {
   displayName:              string;
   handle:                   string;
   email?:                   string;
+  isAssociatedPerson?:      boolean;
   primaryPlatform:          string;
   riskTier?:                string;
   assignedSupervisorId?:    string;
@@ -135,6 +136,7 @@ export async function createAmbassador(tenantId: string, input: {
         displayName:          input.displayName,
         handle:               input.handle,
         email:                input.email?.trim().toLowerCase() || null,
+        isAssociatedPerson:   input.isAssociatedPerson === true,
         primaryPlatform:      input.primaryPlatform as SourcePlatform,
         riskTier:             (input.riskTier as PromoterRiskTier) ?? null,
         status:               AmbassadorStatus.ACTIVE,
@@ -265,6 +267,7 @@ export async function getMonitorSummary(tenantId: string) {
         primaryPlatform:    a.primaryPlatform,
         status:             a.status,
         riskTier:           a.riskTier,
+        isAssociatedPerson: a.isAssociatedPerson,
         assignedSupervisor: a.assignedSupervisor,
         totalCaptures,
         pendingCount,
